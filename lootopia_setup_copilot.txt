@@ -1,0 +1,587 @@
+=======================================================
+LOOTOPIA - INSTRUCTIONS SETUP REPO (pour GitHub Copilot / VS Code)
+=======================================================
+
+Tu es un assistant de développement. Ton rôle est de générer le squelette complet
+du projet Lootopia, sans implémenter aucune feature métier. Uniquement la structure
+de dossiers, les fichiers de configuration, et les dépendances. Rien ne doit être
+"développé" : pas de logique métier, pas de composants fonctionnels complets, juste
+des fichiers vides ou avec des commentaires TODO là où le code viendra plus tard.
+
+=======================================================
+1. VUE D'ENSEMBLE DU PROJET
+=======================================================
+
+Lootopia est une application de chasses au trésor géolocalisées.
+Le repo est un monorepo organisé en 3 packages :
+
+  /apps
+    /mobile       → App joueurs (React Native)
+    /backoffice   → Interface partenaires (React Web)
+    /admin        → Console administrateurs (React Web)
+
+  /packages
+    /api          → Backend (Node.js + NestJS)
+    /shared       → Types TypeScript partagés entre tous les packages
+
+Structure racine du monorepo géré avec npm workspaces (ou Turborepo si tu préfères).
+
+=======================================================
+2. CONFIGURATION RACINE DU MONOREPO
+=======================================================
+
+Créer à la racine :
+
+- package.json          → workspaces: ["apps/*", "packages/*"]
+- .gitignore            → ignorer node_modules, dist, .env, .expo, ios/, android/
+- .env.example          → variables d'environnement vides (voir section 6)
+- README.md             → description du projet et instructions de démarrage
+- turbo.json (optionnel) → si Turborepo est utilisé
+
+=======================================================
+3. PACKAGE : /packages/api  (NestJS + Node.js)
+=======================================================
+
+INITIALISATION :
+  npx @nestjs/cli new api --skip-git --package-manager npm
+
+DÉPENDANCES À INSTALLER (npm install) :
+  @nestjs/common
+  @nestjs/core
+  @nestjs/platform-express
+  @nestjs/jwt
+  @nestjs/passport
+  @nestjs/typeorm
+  @nestjs/config
+  @nestjs/swagger
+  passport
+  passport-jwt
+  passport-local
+  typeorm
+  pg
+  class-validator
+  class-transformer
+  bcrypt
+  uuid
+  reflect-metadata
+  rxjs
+
+DÉPENDANCES DEV :
+  @types/passport-jwt
+  @types/passport-local
+  @types/bcrypt
+  @types/uuid
+  @types/node
+  typescript
+  ts-node
+  nodemon
+
+STRUCTURE DES DOSSIERS À CRÉER (vides, avec fichier index.ts vide ou commenté) :
+
+  src/
+    main.ts                          → bootstrap NestJS (à garder fonctionnel)
+    app.module.ts                    → AppModule racine (à garder fonctionnel)
+    app.controller.ts                → health check basique GET /
+    app.service.ts
+
+    config/
+      database.config.ts             → TODO: configuration TypeORM + PostGIS
+      jwt.config.ts                  → TODO: configuration JWT
+
+    modules/
+      auth/
+        auth.module.ts
+        auth.controller.ts           → TODO: POST /auth/login, POST /auth/register
+        auth.service.ts              → TODO: logique login/register
+        auth.guard.ts                → TODO: JWT guard
+        dto/
+          login.dto.ts               → TODO: LoginDto
+          register.dto.ts            → TODO: RegisterDto
+
+      users/
+        users.module.ts
+        users.controller.ts          → TODO: CRUD users
+        users.service.ts
+        users.repository.ts
+        entities/
+          user.entity.ts             → TODO: entité User (UUID, email, role, timestamps)
+        dto/
+          create-user.dto.ts
+          update-user.dto.ts
+
+      hunts/
+        hunts.module.ts
+        hunts.controller.ts          → TODO: CRUD chasses
+        hunts.service.ts
+        hunts.repository.ts
+        entities/
+          hunt.entity.ts             → TODO: entité Hunt (title, description, location, difficulty, duration, points, is_active)
+        dto/
+          create-hunt.dto.ts
+          update-hunt.dto.ts
+
+      steps/
+        steps.module.ts
+        steps.controller.ts          → TODO: CRUD étapes
+        steps.service.ts
+        steps.repository.ts
+        entities/
+          step.entity.ts             → TODO: entité Step avec GEOGRAPHY(Point,4326) PostGIS, validation_radius, ar_content JSONB
+        dto/
+          create-step.dto.ts
+          update-step.dto.ts
+
+      progress/
+        progress.module.ts
+        progress.controller.ts       → TODO: progression joueur sur une chasse
+        progress.service.ts
+        progress.repository.ts
+        entities/
+          progress.entity.ts         → TODO: entité Progress (user_id, hunt_id, current_step, completed_steps[], total_points)
+
+      badges/
+        badges.module.ts
+        badges.controller.ts         → TODO: attribution et lecture des badges
+        badges.service.ts
+        badges.repository.ts
+        entities/
+          badge.entity.ts            → TODO: entité Badge (user_id, badge_type, earned_at)
+
+      geo/
+        geo.module.ts
+        geo.service.ts               → TODO: calculs géographiques ST_DWithin (vérification rayon, chasses à proximité)
+
+      files/
+        files.module.ts
+        files.controller.ts          → TODO: upload fichiers (plans, images AR)
+        files.service.ts             → TODO: intégration stockage externe
+
+    common/
+      enums/
+        role.enum.ts                 → export enum Role { PLAYER, PARTNER, ADMIN }
+      decorators/
+        roles.decorator.ts           → TODO: décorateur @Roles()
+      guards/
+        roles.guard.ts               → TODO: guard vérification rôles
+      filters/
+        http-exception.filter.ts     → TODO: filtre global erreurs HTTP
+
+  test/                              → dossier tests e2e (vide pour l'instant)
+
+FICHIERS DE CONFIG :
+  .env                               → (ignoré par git, voir .env.example)
+  ormconfig.ts ou dans database.config.ts
+  tsconfig.json                      → config TypeScript NestJS standard
+  nest-cli.json                      → config CLI NestJS standard
+
+=======================================================
+4. PACKAGE : /apps/mobile  (React Native)
+=======================================================
+
+INITIALISATION :
+  npx create-expo-app mobile --template blank-typescript
+
+DÉPENDANCES À INSTALLER :
+  @react-navigation/native
+  @react-navigation/native-stack
+  @react-navigation/bottom-tabs
+  react-native-screens
+  react-native-safe-area-context
+  @maplibre/maplibre-react-native     → intégration MapLibre (open-source, pas de clé requise)
+  expo-location
+  expo-camera
+  expo-file-system
+  axios
+  @tanstack/react-query
+  zustand                            → gestion état global
+  react-native-async-storage/async-storage
+  react-native-vector-icons
+  nativewind                         → Tailwind pour React Native
+  viro-react (ou @reactvision/react-viro) → support AR
+
+DÉPENDANCES DEV :
+  typescript
+  @types/react
+  @types/react-native
+  babel-plugin-nativewind
+
+STRUCTURE DES DOSSIERS À CRÉER :
+
+  src/
+    app/
+      index.tsx                      → point d'entrée navigation racine
+
+    navigation/
+      RootNavigator.tsx              → TODO: navigation principale (auth / app)
+      AppNavigator.tsx               → TODO: tabs joueur
+      AuthNavigator.tsx              → TODO: stack login/register
+
+    screens/
+      auth/
+        LoginScreen.tsx              → TODO
+        RegisterScreen.tsx           → TODO
+      map/
+        MapScreen.tsx                → TODO: carte MapLibre avec chasses
+      hunt/
+        HuntDetailScreen.tsx         → TODO
+        StepScreen.tsx               → TODO
+        ARScreen.tsx                 → TODO: vue réalité augmentée
+      profile/
+        ProfileScreen.tsx            → TODO
+        BadgesScreen.tsx             → TODO
+
+    components/
+      common/
+        Button.tsx                   → TODO: composant bouton réutilisable
+        Input.tsx                    → TODO
+        LoadingSpinner.tsx           → TODO
+      hunt/
+        HuntCard.tsx                 → TODO
+        StepCard.tsx                 → TODO
+      map/
+        HuntMarker.tsx               → TODO
+
+    hooks/
+      useAuth.ts                     → TODO: hook authentification
+      useLocation.ts                 → TODO: hook géolocalisation
+      useHunts.ts                    → TODO: hook fetch chasses
+
+    services/
+      api.ts                         → TODO: instance axios + intercepteurs JWT
+      auth.service.ts                → TODO: appels API auth
+      hunts.service.ts               → TODO: appels API chasses
+      progress.service.ts            → TODO: appels API progression
+
+    store/
+      auth.store.ts                  → TODO: store Zustand utilisateur connecté
+      hunts.store.ts                 → TODO: store Zustand chasses
+
+    types/                           → réexporter depuis /packages/shared
+      index.ts
+
+    utils/
+      geo.utils.ts                   → TODO: utilitaires calcul distance côté client
+      format.utils.ts                → TODO
+
+    constants/
+      api.constants.ts               → BASE_URL et routes API
+      map.constants.ts               → style URL MapLibre (lue depuis .env, ex: style OpenFreeMap ou PMTiles)
+
+  assets/                            → images, icônes, fonts
+  app.json                           → config Expo
+  babel.config.js
+  tsconfig.json
+  tailwind.config.js
+
+=======================================================
+5. PACKAGES : /apps/backoffice et /apps/admin  (React Web)
+=======================================================
+
+INITIALISATION (même process pour les deux) :
+  npm create vite@latest backoffice -- --template react-ts
+  npm create vite@latest admin -- --template react-ts
+
+DÉPENDANCES À INSTALLER (identiques pour les deux) :
+  react-router-dom
+  axios
+  @tanstack/react-query
+  zustand
+  tailwindcss
+  postcss
+  autoprefixer
+  recharts                           → graphiques/statistiques
+  react-hook-form
+  zod
+  @hookform/resolvers
+
+DÉPENDANCES DEV :
+  typescript
+  @types/react
+  @types/react-dom
+  vite
+
+STRUCTURE /apps/backoffice/src/ :
+
+  main.tsx
+  App.tsx
+
+  router/
+    index.tsx                        → TODO: routes React Router
+
+  pages/
+    LoginPage.tsx                    → TODO
+    DashboardPage.tsx                → TODO: KPI partenaire
+    HuntsPage.tsx                    → TODO: liste chasses
+    HuntCreatePage.tsx               → TODO: création chasse
+    HuntEditPage.tsx                 → TODO: édition chasse
+    StepsPage.tsx                    → TODO: gestion étapes
+    StatsPage.tsx                    → TODO: métriques
+
+  components/
+    layout/
+      Sidebar.tsx                    → TODO
+      Header.tsx                     → TODO
+      Layout.tsx                     → TODO
+    hunt/
+      HuntManager.tsx                → TODO
+      StepEditor.tsx                 → TODO
+    stats/
+      StatsViewer.tsx                → TODO
+
+  services/
+    api.ts                           → TODO
+    auth.service.ts                  → TODO
+    hunts.service.ts                 → TODO
+
+  store/
+    auth.store.ts                    → TODO
+
+  types/
+    index.ts                         → réexporter depuis /packages/shared
+
+  hooks/
+    useAuth.ts                       → TODO
+
+STRUCTURE /apps/admin/src/ :
+  (même structure que backoffice, adapter les pages)
+
+  pages/
+    LoginPage.tsx                    → TODO
+    DashboardPage.tsx                → TODO: KPI global plateforme
+    UsersPage.tsx                    → TODO: gestion tous les utilisateurs
+    PartnersPage.tsx                 → TODO: validation partenaires
+    HuntsPage.tsx                    → TODO: modération chasses
+    BadgesPage.tsx                   → TODO: gestion types de badges
+
+=======================================================
+6. PACKAGE : /packages/shared  (Types TypeScript partagés)
+=======================================================
+
+INITIALISATION :
+  Créer manuellement (pas de framework)
+
+  package.json :
+    name: "@lootopia/shared"
+    main: "src/index.ts"
+
+  src/
+    index.ts                         → barrel export de tous les types
+
+    types/
+      user.types.ts                  → TODO: interfaces User, Role enum
+      hunt.types.ts                  → TODO: interfaces Hunt, HuntStatus
+      step.types.ts                  → TODO: interfaces Step, ARContent
+      progress.types.ts              → TODO: interfaces Progress
+      badge.types.ts                 → TODO: interfaces Badge, BadgeType
+      api.types.ts                   → TODO: interfaces réponses API (ApiResponse<T>, PaginatedResponse<T>)
+      geo.types.ts                   → TODO: interfaces Coordinates, GeoPoint
+
+  tsconfig.json
+
+=======================================================
+7. VARIABLES D'ENVIRONNEMENT (.env.example)
+=======================================================
+
+Créer ce fichier à la racine ET dans /packages/api :
+
+# API
+PORT=3000
+NODE_ENV=development
+
+# Database (PostgreSQL + PostGIS via Docker)
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=lootopia
+DB_PASSWORD=changeme
+DB_NAME=lootopia
+
+# JWT
+JWT_SECRET=
+JWT_EXPIRES_IN=7d
+
+# MapLibre (pas de clé API requise, open-source)
+# Renseigner l'URL du style de tuiles si besoin (ex: OpenFreeMap, MapTiler free tier)
+MAPLIBRE_STYLE_URL=https://demotiles.maplibre.org/style.json
+
+# MinIO (stockage fichiers compatible S3)
+S3_ENDPOINT=http://localhost:9000
+S3_ACCESS_KEY=minioadmin
+S3_SECRET_KEY=minioadmin123
+S3_BUCKET=lootopia
+
+# pgAdmin (interface administration BDD)
+PGADMIN_EMAIL=admin@lootopia.local
+PGADMIN_PASSWORD=admin
+
+=======================================================
+8. DOCKER - INFRASTRUCTURE LOCALE
+=======================================================
+
+Créer les fichiers suivants à la racine du repo :
+
+─────────────────────────────────────────
+8a. docker-compose.yml  (copier tel quel)
+─────────────────────────────────────────
+
+services:
+  # ──────────────── PostgreSQL 15 + PostGIS 3.3 ────────────────
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: lootopia_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-lootopia}
+      POSTGRES_USER: ${DB_USER:-lootopia}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - lootopia_db_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-lootopia} -d ${DB_NAME:-lootopia}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - lootopia_network
+
+  # ──────────────── pgAdmin 4 ────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: lootopia_pgadmin
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@lootopia.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - lootopia_pgadmin_data:/var/lib/pgadmin
+    networks:
+      - lootopia_network
+
+  # ──────────────── MinIO (compatible S3) ────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: lootopia_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Console Web
+    volumes:
+      - lootopia_minio_data:/data
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin123}
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - lootopia_network
+
+  # ──────────────── MinIO init bucket ────────────────
+  minio-init:
+    image: minio/mc:latest
+    container_name: lootopia_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${S3_ACCESS_KEY:-minioadmin} ${S3_SECRET_KEY:-minioadmin123} &&
+      mc mb --ignore-existing local/${S3_BUCKET:-lootopia} &&
+      mc anonymous set download local/${S3_BUCKET:-lootopia}/public &&
+      echo 'MinIO bucket initialized.'
+      "
+    networks:
+      - lootopia_network
+
+volumes:
+  lootopia_db_data:
+    name: lootopia_db_data
+  lootopia_pgadmin_data:
+    name: lootopia_pgadmin_data
+  lootopia_minio_data:
+    name: lootopia_minio_data
+
+networks:
+  lootopia_network:
+    name: lootopia_network
+    driver: bridge
+
+─────────────────────────────────────────
+8b. postgres/init.sql  (créer ce fichier)
+─────────────────────────────────────────
+
+Ce fichier est monté automatiquement au premier démarrage du conteneur postgres.
+Il doit activer l'extension PostGIS et créer le schéma initial.
+
+Contenu minimal à mettre dans postgres/init.sql :
+
+  -- Activation de PostGIS
+  CREATE EXTENSION IF NOT EXISTS postgis;
+  CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+  -- Les tables seront créées par TypeORM (synchronize: true en dev)
+  -- Ce fichier sert uniquement à initialiser les extensions nécessaires.
+
+─────────────────────────────────────────
+8c. Commandes utiles Docker
+─────────────────────────────────────────
+
+  Démarrer l'infrastructure :
+    docker compose up -d
+
+  Arrêter :
+    docker compose down
+
+  Tout réinitialiser (supprime les volumes) :
+    docker compose down -v
+
+  Accès pgAdmin : http://localhost:5050
+    email    : admin@lootopia.local
+    password : admin
+
+  Accès MinIO console : http://localhost:9001
+    user     : minioadmin
+    password : minioadmin123
+
+  API S3 MinIO : http://localhost:9000
+
+=======================================================
+9. INSTRUCTIONS FINALES POUR COPILOT
+=======================================================
+
+- Ne pas implémenter de logique métier dans aucun fichier
+- Chaque fichier .ts / .tsx doit exister avec soit :
+    a) Un export vide commenté "// TODO: implement"
+    b) Le strict minimum pour que le projet compile (ex: AppModule, main.ts)
+- Tous les modules NestJS doivent être déclarés dans app.module.ts mais peuvent être vides
+- Le projet doit pouvoir démarrer sans erreur avec "npm run dev" dans chaque app
+- Installer toutes les dépendances listées ci-dessus
+- Vérifier que TypeScript compile sans erreur dans chaque package
+- Créer le fichier postgres/init.sql avec l'activation des extensions PostGIS et uuid-ossp
+- Créer le docker-compose.yml exactement comme indiqué en section 8a
+- Créer un README.md à la racine avec :
+    - Description du projet
+    - Prérequis (Node.js, Docker, Expo CLI)
+    - Commandes de démarrage de chaque app
+    - Commandes Docker (up, down, reset)
+    - URLs des services locaux (API, pgAdmin, MinIO)
+- MapLibre est utilisé à la place de Mapbox : pas de clé API requise,
+  utiliser @maplibre/maplibre-react-native pour le mobile
+
+=======================================================
+FIN DU FICHIER D'INSTRUCTIONS
+=======================================================

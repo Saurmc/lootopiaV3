@@ -1,0 +1,96 @@
+services:
+  # ──────────────── PostgreSQL 15 + PostGIS 3.3 ────────────────
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: lootopia_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-lootopia}
+      POSTGRES_USER: ${DB_USER:-lootopia}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - lootopia_db_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-lootopia} -d ${DB_NAME:-lootopia}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - lootopia_network
+
+  # ──────────────── pgAdmin 4 ────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: lootopia_pgadmin
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@lootopia.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - lootopia_pgadmin_data:/var/lib/pgadmin
+    networks:
+      - lootopia_network
+
+  # ──────────────── MinIO (compatible S3) ────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: lootopia_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Console Web
+    volumes:
+      - lootopia_minio_data:/data
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin123}
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - lootopia_network
+
+  # ──────────────── MinIO init bucket ────────────────
+  minio-init:
+    image: minio/mc:latest
+    container_name: lootopia_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${S3_ACCESS_KEY:-minioadmin} ${S3_SECRET_KEY:-minioadmin123} &&
+      mc mb --ignore-existing local/${S3_BUCKET:-lootopia} &&
+      mc anonymous set download local/${S3_BUCKET:-lootopia}/public &&
+      echo 'MinIO bucket initialized.'
+      "
+    networks:
+      - lootopia_network
+
+volumes:
+  lootopia_db_data:
+    name: lootopia_db_data
+  lootopia_pgadmin_data:
+    name: lootopia_pgadmin_data
+  lootopia_minio_data:
+    name: lootopia_minio_data
+
+networks:
+  lootopia_network:
+    name: lootopia_network
+    driver: bridge
