@@ -8,3 +8,4 @@ android/
 coverage/
 *.log
 .DS_Store
+.idea/
