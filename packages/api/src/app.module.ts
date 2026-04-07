@@ -12,6 +12,7 @@ import { ProgressModule } from './modules/progress/progress.module';
 import { BadgesModule } from './modules/badges/badges.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { FilesModule } from './modules/files/files.module';
+import { RgpdModule } from './modules/rgpd/rgpd.module';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 
@@ -46,6 +47,7 @@ import jwtConfig from './config/jwt.config';
     BadgesModule,
     GeoModule,
     FilesModule,
+    RgpdModule,
   ],
   controllers: [AppController],
   providers: [AppService],
