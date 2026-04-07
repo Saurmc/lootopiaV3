@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -12,12 +13,13 @@ import { BadgesModule } from './modules/badges/badges.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { FilesModule } from './modules/files/files.module';
 import databaseConfig from './config/database.config';
+import jwtConfig from './config/jwt.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig],
+      load: [databaseConfig, jwtConfig],
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
@@ -31,6 +33,10 @@ import databaseConfig from './config/database.config';
         autoLoadEntities: true,
         synchronize: config.get<boolean>('database.synchronize'),
       }),
+    }),
+    // Rate limiting : 60 requêtes max par minute par IP
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60000, limit: 60 }],
     }),
     AuthModule,
     UsersModule,
