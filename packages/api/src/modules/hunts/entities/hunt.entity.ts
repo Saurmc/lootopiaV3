@@ -31,6 +31,15 @@ export class HuntEntity {
   @Column({ type: 'varchar', nullable: true })
   location: string | null;
 
+  // Coordonnées GPS de la chasse pour l'affichage sur carte (PostGIS)
+  @Column({
+    type: 'geography',
+    spatialFeatureType: 'Point',
+    srid: 4326,
+    nullable: true,
+  })
+  coordinates: object | null;
+
   @Column({ type: 'varchar', nullable: true })
   difficulty: string | null;
 

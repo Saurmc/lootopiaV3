@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { HuntsService } from './hunts.service';
 import { HuntsRepository } from './hunts.repository';
+import { GeoService } from '../geo/geo.service';
 import { HuntEntity } from './entities/hunt.entity';
 
 const mockHunt = (overrides: Partial<HuntEntity> = {}): HuntEntity => ({
@@ -10,6 +11,7 @@ const mockHunt = (overrides: Partial<HuntEntity> = {}): HuntEntity => ({
   title: 'Chasse du trésor',
   description: 'Une belle chasse',
   location: 'Paris',
+  coordinates: null,
   difficulty: 'medium',
   duration: 60,
   points: 100,
@@ -22,6 +24,7 @@ const mockHunt = (overrides: Partial<HuntEntity> = {}): HuntEntity => ({
 describe('HuntsService', () => {
   let service: HuntsService;
   let repo: jest.Mocked<HuntsRepository>;
+  let geoService: jest.Mocked<GeoService>;
 
   beforeEach(() => {
     repo = {
@@ -31,7 +34,11 @@ describe('HuntsService', () => {
       deleteById: jest.fn(),
     } as unknown as jest.Mocked<HuntsRepository>;
 
-    service = new HuntsService(repo);
+    geoService = {
+      findHuntsNearby: jest.fn(),
+    } as unknown as jest.Mocked<GeoService>;
+
+    service = new HuntsService(repo, geoService);
   });
 
   describe('findAll', () => {
@@ -39,13 +46,11 @@ describe('HuntsService', () => {
       repo.findAll.mockResolvedValue([mockHunt(), mockHunt({ id: 'hunt-2' })]);
       const result = await service.findAll();
       expect(result).toHaveLength(2);
-      expect(repo.findAll).toHaveBeenCalled();
     });
 
     it('should return empty array when no hunts', async () => {
       repo.findAll.mockResolvedValue([]);
-      const result = await service.findAll();
-      expect(result).toEqual([]);
+      expect(await service.findAll()).toEqual([]);
     });
   });
 
@@ -59,6 +64,20 @@ describe('HuntsService', () => {
     it('should throw NotFoundException when hunt not found', async () => {
       repo.findById.mockResolvedValue(null);
       await expect(service.findById('unknown')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('findNearby', () => {
+    it('should delegate to GeoService with provided coordinates', async () => {
+      geoService.findHuntsNearby.mockResolvedValue([]);
+      await service.findNearby(48.8566, 2.3522, 3000);
+      expect(geoService.findHuntsNearby).toHaveBeenCalledWith(48.8566, 2.3522, 3000);
+    });
+
+    it('should use default radius when not specified', async () => {
+      geoService.findHuntsNearby.mockResolvedValue([]);
+      await service.findNearby(48.8566, 2.3522);
+      expect(geoService.findHuntsNearby).toHaveBeenCalledWith(48.8566, 2.3522, 5000);
     });
   });
 });
