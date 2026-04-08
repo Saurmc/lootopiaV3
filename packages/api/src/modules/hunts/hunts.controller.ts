@@ -90,6 +90,18 @@ export class HuntsController {
   }
 
   /**
+   * GET /hunts/:id/participants — liste des participants (partenaire propriétaire ou admin)
+   */
+  @Auth(Role.PARTNER, Role.ADMIN)
+  @Get(':id/participants')
+  getParticipants(
+    @Param('id') huntId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.huntsService.getParticipants(huntId, user.id);
+  }
+
+  /**
    * GET /hunts/:id/stats — statistiques d'une chasse (partenaire propriétaire ou admin)
    */
   @Auth(Role.PARTNER, Role.ADMIN)
