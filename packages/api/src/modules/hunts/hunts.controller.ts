@@ -34,6 +34,6 @@ export class HuntsController {
     @Param('id') id: string,
     @CurrentUser() _user: AuthenticatedUser | null,
   ) {
-    return this.huntsService.findById(id);
+    return this.huntsService.getDetail(id);
   }
 }

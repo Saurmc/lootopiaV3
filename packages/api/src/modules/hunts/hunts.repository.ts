@@ -30,6 +30,14 @@ export class HuntsRepository {
     return this.repo.findOneBy({ id });
   }
 
+  findByIdWithSteps(id: string): Promise<HuntEntity | null> {
+    return this.repo.findOne({
+      where: { id },
+      relations: ['steps'],
+      order: { steps: { order: 'ASC' } },
+    });
+  }
+
   save(hunt: Partial<HuntEntity>): Promise<HuntEntity> {
     return this.repo.save(hunt);
   }

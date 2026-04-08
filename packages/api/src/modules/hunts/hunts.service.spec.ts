@@ -30,6 +30,7 @@ describe('HuntsService', () => {
     repo = {
       findAll: jest.fn(),
       findById: jest.fn(),
+      findByIdWithSteps: jest.fn(),
       search: jest.fn(),
       save: jest.fn(),
       deleteById: jest.fn(),
@@ -65,6 +66,47 @@ describe('HuntsService', () => {
     it('should throw NotFoundException when hunt not found', async () => {
       repo.findById.mockResolvedValue(null);
       await expect(service.findById('unknown')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getDetail', () => {
+    it('should return HuntDetailDto with mapped steps', async () => {
+      const hunt = mockHunt({
+        steps: [
+          {
+            id: 'step-1',
+            hunt_id: 'hunt-uuid',
+            hunt: undefined as any,
+            order: 1,
+            title: 'Étape 1',
+            description: 'Desc',
+            location: null,
+            validation_radius: 50,
+            ar_content: null,
+            created_at: new Date(),
+          },
+        ],
+      });
+      repo.findByIdWithSteps.mockResolvedValue(hunt);
+
+      const result = await service.getDetail('hunt-uuid');
+
+      expect(result.id).toBe('hunt-uuid');
+      expect(result.step_count).toBe(1);
+      expect(result.steps[0].order).toBe(1);
+      expect(result.steps[0]).not.toHaveProperty('location');
+    });
+
+    it('should throw NotFoundException when hunt not found', async () => {
+      repo.findByIdWithSteps.mockResolvedValue(null);
+      await expect(service.getDetail('unknown')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should return step_count 0 when no steps', async () => {
+      repo.findByIdWithSteps.mockResolvedValue(mockHunt({ steps: [] }));
+      const result = await service.getDetail('hunt-uuid');
+      expect(result.step_count).toBe(0);
+      expect(result.steps).toEqual([]);
     });
   });
 
