@@ -1,9 +1,12 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ProgressRepository } from './progress.repository';
 import { HuntsRepository } from '../hunts/hunts.repository';
 import { UsersRepository } from '../users/users.repository';
+import { StepsRepository } from '../steps/steps.repository';
+import { GeoService } from '../geo/geo.service';
 import { ProgressEntity } from './entities/progress.entity';
 import { ProgressMapDto, StepMapDto, StepStatus } from './dto/progress-map.dto';
+import { ValidateStepDto } from './dto/validate-step.dto';
 
 @Injectable()
 export class ProgressService {
@@ -11,6 +14,8 @@ export class ProgressService {
     private readonly progressRepository: ProgressRepository,
     private readonly huntsRepository: HuntsRepository,
     private readonly usersRepository: UsersRepository,
+    private readonly stepsRepository: StepsRepository,
+    private readonly geoService: GeoService,
   ) {}
 
   async joinHunt(userId: string, huntId: string): Promise<ProgressEntity> {
@@ -39,6 +44,56 @@ export class ProgressService {
       throw new NotFoundException('No progress found for this hunt');
     }
     return progress;
+  }
+
+  async validateStep(
+    userId: string,
+    huntId: string,
+    stepId: string,
+    dto: ValidateStepDto,
+  ): Promise<ProgressEntity> {
+    const progress = await this.progressRepository.findByUserAndHunt(userId, huntId);
+    if (!progress) {
+      throw new NotFoundException('No progress found for this hunt');
+    }
+
+    const step = await this.stepsRepository.findById(stepId);
+    if (!step || step.hunt_id !== huntId) {
+      throw new NotFoundException(`Step ${stepId} not found in this hunt`);
+    }
+
+    if (progress.completed_steps.includes(step.order)) {
+      throw new ConflictException('Step already validated');
+    }
+
+    if (step.order !== progress.current_step) {
+      throw new BadRequestException('This is not the current step');
+    }
+
+    if (!step.location) {
+      throw new BadRequestException('Step has no location configured');
+    }
+
+    const within = await this.geoService.isWithinRadius(
+      dto.lat,
+      dto.lng,
+      step.location,
+      step.validation_radius,
+    );
+
+    if (!within) {
+      throw new BadRequestException('Player is not within validation radius');
+    }
+
+    const hunt = await this.huntsRepository.findById(huntId);
+    const pointsEarned = hunt ? Math.floor(hunt.points / Math.max(1, progress.completed_steps.length + 1)) : 0;
+
+    return this.progressRepository.save({
+      ...progress,
+      completed_steps: [...progress.completed_steps, step.order],
+      current_step: progress.current_step + 1,
+      total_points: progress.total_points + pointsEarned,
+    });
   }
 
   async getProgressWithSteps(userId: string, huntId: string): Promise<ProgressMapDto> {
