@@ -45,6 +45,19 @@ export class HuntsController {
   }
 
   /**
+   * GET /hunts/:id/progress — progression du joueur sur la chasse (JWT requis)
+   * Retourne les étapes avec leur statut et coordonnées GPS (si consentement donné).
+   */
+  @Auth()
+  @Get(':id/progress')
+  getProgress(
+    @Param('id') huntId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.progressService.getProgressWithSteps(user.id, huntId);
+  }
+
+  /**
    * POST /hunts/:id/join — rejoindre une chasse (JWT requis)
    * Crée une entrée de progression pour le joueur connecté.
    * Mode invité non supporté : la progression ne peut pas être sauvegardée.
