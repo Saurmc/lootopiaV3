@@ -3,6 +3,8 @@ import { HuntsService } from './hunts.service';
 import { HuntsRepository } from './hunts.repository';
 import { GeoService } from '../geo/geo.service';
 import { HuntEntity } from './entities/hunt.entity';
+import { ProgressRepository } from '../progress/progress.repository';
+import { ProgressEntity } from '../progress/entities/progress.entity';
 
 const mockHunt = (overrides: Partial<HuntEntity> = {}): HuntEntity => ({
   id: 'hunt-uuid',
@@ -25,6 +27,21 @@ describe('HuntsService', () => {
   let service: HuntsService;
   let repo: jest.Mocked<HuntsRepository>;
   let geoService: jest.Mocked<GeoService>;
+  let progressRepo: jest.Mocked<ProgressRepository>;
+
+  const mockProgress = (overrides: Partial<ProgressEntity> = {}): ProgressEntity => ({
+    id: 'progress-uuid',
+    user_id: 'user-uuid',
+    user: undefined as any,
+    hunt_id: 'hunt-uuid',
+    hunt: undefined as any,
+    current_step: 2,
+    completed_steps: [0, 1],
+    total_points: 50,
+    started_at: new Date(),
+    completed_at: new Date(),
+    ...overrides,
+  });
 
   beforeEach(() => {
     repo = {
@@ -40,7 +57,11 @@ describe('HuntsService', () => {
       findHuntsNearby: jest.fn(),
     } as unknown as jest.Mocked<GeoService>;
 
-    service = new HuntsService(repo, geoService);
+    progressRepo = {
+      findAllByHunt: jest.fn(),
+    } as unknown as jest.Mocked<ProgressRepository>;
+
+    service = new HuntsService(repo, geoService, progressRepo);
   });
 
   describe('findAll', () => {
@@ -235,6 +256,45 @@ describe('HuntsService', () => {
       repo.findById.mockResolvedValue(mockHunt({ partner_id: 'other-partner' }));
       await expect(service.deleteHunt('hunt-uuid', 'partner-uuid')).rejects.toThrow(NotFoundException);
       expect(repo.deleteById).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getStats', () => {
+    it('should return correct stats for a hunt with participants', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'partner-uuid' }));
+      progressRepo.findAllByHunt.mockResolvedValue([
+        mockProgress({ total_points: 100, completed_at: new Date() }),
+        mockProgress({ total_points: 50, completed_at: new Date() }),
+        mockProgress({ total_points: 0, completed_at: null }),
+      ]);
+
+      const result = await service.getStats('hunt-uuid', 'partner-uuid');
+
+      expect(result.participant_count).toBe(3);
+      expect(result.completed_count).toBe(2);
+      expect(result.completion_rate).toBe(67);
+      expect(result.average_points).toBe(50);
+    });
+
+    it('should return zeros when no participants', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'partner-uuid' }));
+      progressRepo.findAllByHunt.mockResolvedValue([]);
+
+      const result = await service.getStats('hunt-uuid', 'partner-uuid');
+
+      expect(result.participant_count).toBe(0);
+      expect(result.completion_rate).toBe(0);
+      expect(result.average_points).toBe(0);
+    });
+
+    it('should throw NotFoundException when hunt not found', async () => {
+      repo.findById.mockResolvedValue(null);
+      await expect(service.getStats('unknown', 'partner-uuid')).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when partner does not own hunt', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'other-partner' }));
+      await expect(service.getStats('hunt-uuid', 'partner-uuid')).rejects.toThrow(NotFoundException);
     });
   });
 
