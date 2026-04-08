@@ -1,7 +1,12 @@
-import { IsNumber, IsOptional, Max, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, Max, Min, MaxLength } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class NearbyQueryDto {
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  q?: string;
+
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

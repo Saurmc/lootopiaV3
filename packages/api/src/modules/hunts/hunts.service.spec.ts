@@ -30,6 +30,7 @@ describe('HuntsService', () => {
     repo = {
       findAll: jest.fn(),
       findById: jest.fn(),
+      search: jest.fn(),
       save: jest.fn(),
       deleteById: jest.fn(),
     } as unknown as jest.Mocked<HuntsRepository>;
@@ -64,6 +65,21 @@ describe('HuntsService', () => {
     it('should throw NotFoundException when hunt not found', async () => {
       repo.findById.mockResolvedValue(null);
       await expect(service.findById('unknown')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('search', () => {
+    it('should delegate to repository with query string', async () => {
+      repo.search.mockResolvedValue([mockHunt()]);
+      const result = await service.search('trésor');
+      expect(repo.search).toHaveBeenCalledWith('trésor');
+      expect(result).toHaveLength(1);
+    });
+
+    it('should return empty array when no match', async () => {
+      repo.search.mockResolvedValue([]);
+      const result = await service.search('xxxxxx');
+      expect(result).toEqual([]);
     });
   });
 
