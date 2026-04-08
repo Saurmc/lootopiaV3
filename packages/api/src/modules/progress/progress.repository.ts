@@ -18,6 +18,10 @@ export class ProgressRepository {
     return this.repo.find({ where: { user_id: userId } });
   }
 
+  findAllByHunt(huntId: string): Promise<ProgressEntity[]> {
+    return this.repo.find({ where: { hunt_id: huntId } });
+  }
+
   save(progress: Partial<ProgressEntity>): Promise<ProgressEntity> {
     return this.repo.save(progress);
   }

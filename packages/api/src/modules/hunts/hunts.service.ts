@@ -5,6 +5,15 @@ import { GeoService, NearbyHuntRow } from '../geo/geo.service';
 import { HuntDetailDto } from './dto/hunt-detail.dto';
 import { CreateHuntDto } from './dto/create-hunt.dto';
 import { UpdateHuntDto } from './dto/update-hunt.dto';
+import { ProgressRepository } from '../progress/progress.repository';
+
+export interface HuntStatsDto {
+  hunt_id: string;
+  participant_count: number;
+  completed_count: number;
+  completion_rate: number;
+  average_points: number;
+}
 
 const DEFAULT_RADIUS_METERS = 5000;
 
@@ -13,6 +22,7 @@ export class HuntsService {
   constructor(
     private readonly huntsRepository: HuntsRepository,
     private readonly geoService: GeoService,
+    private readonly progressRepository: ProgressRepository,
   ) {}
 
   createHunt(partnerId: string, dto: CreateHuntDto): Promise<HuntEntity> {
@@ -60,6 +70,31 @@ export class HuntsService {
     }
 
     return this.huntsRepository.save(updates);
+  }
+
+  async getStats(huntId: string, partnerId: string): Promise<HuntStatsDto> {
+    const hunt = await this.huntsRepository.findById(huntId);
+    if (!hunt) {
+      throw new NotFoundException(`Hunt ${huntId} not found`);
+    }
+    if (hunt.partner_id !== partnerId) {
+      throw new NotFoundException(`Hunt ${huntId} not found`);
+    }
+
+    const progresses = await this.progressRepository.findAllByHunt(huntId);
+    const participant_count = progresses.length;
+    const completed = progresses.filter((p) => p.completed_at !== null);
+    const completed_count = completed.length;
+    const completion_rate =
+      participant_count > 0
+        ? Math.round((completed_count / participant_count) * 100)
+        : 0;
+    const average_points =
+      participant_count > 0
+        ? Math.round(progresses.reduce((sum, p) => sum + p.total_points, 0) / participant_count)
+        : 0;
+
+    return { hunt_id: huntId, participant_count, completed_count, completion_rate, average_points };
   }
 
   async deleteHunt(huntId: string, partnerId: string): Promise<void> {

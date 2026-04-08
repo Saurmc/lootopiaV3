@@ -90,6 +90,18 @@ export class HuntsController {
   }
 
   /**
+   * GET /hunts/:id/stats — statistiques d'une chasse (partenaire propriétaire ou admin)
+   */
+  @Auth(Role.PARTNER, Role.ADMIN)
+  @Get(':id/stats')
+  getStats(
+    @Param('id') huntId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.huntsService.getStats(huntId, user.id);
+  }
+
+  /**
    * GET /hunts/:id/progress — progression du joueur sur la chasse (JWT requis)
    * Retourne les étapes avec leur statut et coordonnées GPS (si consentement donné).
    */
