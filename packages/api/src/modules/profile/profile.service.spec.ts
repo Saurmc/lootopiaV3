@@ -66,6 +66,31 @@ describe('ProfileService', () => {
     });
   });
 
+  describe('getActiveProgresses', () => {
+    it('should return only non-completed progresses', async () => {
+      progressRepo.findAllByUser.mockResolvedValue([
+        mockProgress({ hunt_id: 'hunt-1', completed_at: null }),
+        mockProgress({ hunt_id: 'hunt-2', completed_at: new Date() }),
+      ]);
+
+      const result = await service.getActiveProgresses('user-uuid');
+
+      expect(result).toHaveLength(1);
+      expect(result[0].hunt_id).toBe('hunt-1');
+      expect('completed_at' in result[0]).toBe(false);
+    });
+
+    it('should return empty array when all hunts are completed', async () => {
+      progressRepo.findAllByUser.mockResolvedValue([
+        mockProgress({ completed_at: new Date() }),
+      ]);
+
+      const result = await service.getActiveProgresses('user-uuid');
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
   describe('getHuntHistory', () => {
     it('should return mapped hunt history', async () => {
       progressRepo.findAllByUser.mockResolvedValue([
