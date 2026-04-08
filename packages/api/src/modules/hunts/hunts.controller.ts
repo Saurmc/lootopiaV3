@@ -20,6 +20,9 @@ export class HuntsController {
     @Query() query: NearbyQueryDto,
     @CurrentUser() _user: AuthenticatedUser | null,
   ) {
+    if (query.q) {
+      return this.huntsService.search(query.q);
+    }
     if (query.lat !== undefined && query.lng !== undefined) {
       return this.huntsService.findNearby(query.lat, query.lng, query.radius);
     }

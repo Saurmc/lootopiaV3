@@ -14,6 +14,18 @@ export class HuntsRepository {
     return this.repo.find({ where: { is_active: true } });
   }
 
+  search(q: string): Promise<HuntEntity[]> {
+    const term = `%${q.toLowerCase()}%`;
+    return this.repo
+      .createQueryBuilder('hunt')
+      .where('hunt.is_active = true')
+      .andWhere(
+        '(LOWER(hunt.title) LIKE :term OR LOWER(hunt.description) LIKE :term)',
+        { term },
+      )
+      .getMany();
+  }
+
   findById(id: string): Promise<HuntEntity | null> {
     return this.repo.findOneBy({ id });
   }

@@ -24,6 +24,10 @@ export class HuntsService {
     return hunt;
   }
 
+  search(q: string): Promise<HuntEntity[]> {
+    return this.huntsRepository.search(q);
+  }
+
   findNearby(
     lat: number,
     lng: number,
