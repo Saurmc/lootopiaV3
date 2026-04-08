@@ -171,6 +171,50 @@ describe('HuntsService', () => {
     });
   });
 
+  describe('updateHunt', () => {
+    it('should update allowed fields and return saved hunt', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'partner-uuid' }));
+      repo.save.mockResolvedValue(mockHunt({ title: 'Titre modifié', is_active: true }));
+
+      const result = await service.updateHunt('hunt-uuid', 'partner-uuid', {
+        title: 'Titre modifié',
+        is_active: true,
+      });
+
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'hunt-uuid', title: 'Titre modifié', is_active: true }),
+      );
+      expect(result.title).toBe('Titre modifié');
+    });
+
+    it('should build GeoJSON coordinates when lat/lng provided', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'partner-uuid' }));
+      repo.save.mockResolvedValue(mockHunt());
+
+      await service.updateHunt('hunt-uuid', 'partner-uuid', { lat: 48.8566, lng: 2.3522 });
+
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          coordinates: { type: 'Point', coordinates: [2.3522, 48.8566] },
+        }),
+      );
+    });
+
+    it('should throw NotFoundException when hunt not found', async () => {
+      repo.findById.mockResolvedValue(null);
+      await expect(
+        service.updateHunt('unknown', 'partner-uuid', { title: 'X' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException when partner does not own the hunt', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'other-partner' }));
+      await expect(
+        service.updateHunt('hunt-uuid', 'partner-uuid', { title: 'X' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('findNearby', () => {
     it('should delegate to GeoService with provided coordinates', async () => {
       geoService.findHuntsNearby.mockResolvedValue([]);
