@@ -259,6 +259,47 @@ describe('HuntsService', () => {
     });
   });
 
+  describe('getParticipants', () => {
+    it('should return mapped participant list', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'partner-uuid' }));
+      progressRepo.findAllByHuntWithUser = jest.fn().mockResolvedValue([
+        mockProgress({
+          user_id: 'user-1',
+          user: { id: 'user-1', email: 'alice@test.com' } as any,
+          total_points: 80,
+          completed_at: new Date(),
+        }),
+        mockProgress({
+          user_id: 'user-2',
+          user: { id: 'user-2', email: 'bob@test.com' } as any,
+          total_points: 30,
+          completed_at: null,
+        }),
+      ]);
+
+      const result = await service.getParticipants('hunt-uuid', 'partner-uuid');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].email).toBe('alice@test.com');
+      expect(result[0].completed_at).not.toBeNull();
+      expect(result[1].email).toBe('bob@test.com');
+      expect(result[1].completed_at).toBeNull();
+    });
+
+    it('should return empty array when no participants', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'partner-uuid' }));
+      progressRepo.findAllByHuntWithUser = jest.fn().mockResolvedValue([]);
+
+      const result = await service.getParticipants('hunt-uuid', 'partner-uuid');
+      expect(result).toEqual([]);
+    });
+
+    it('should throw NotFoundException when partner does not own hunt', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'other-partner' }));
+      await expect(service.getParticipants('hunt-uuid', 'partner-uuid')).rejects.toThrow(NotFoundException);
+    });
+  });
+
   describe('getStats', () => {
     it('should return correct stats for a hunt with participants', async () => {
       repo.findById.mockResolvedValue(mockHunt({ partner_id: 'partner-uuid' }));

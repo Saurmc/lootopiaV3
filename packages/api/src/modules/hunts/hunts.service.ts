@@ -7,6 +7,16 @@ import { CreateHuntDto } from './dto/create-hunt.dto';
 import { UpdateHuntDto } from './dto/update-hunt.dto';
 import { ProgressRepository } from '../progress/progress.repository';
 
+export interface ParticipantDto {
+  user_id: string;
+  email: string | null;
+  current_step: number;
+  completed_steps: number[];
+  total_points: number;
+  started_at: Date;
+  completed_at: Date | null;
+}
+
 export interface HuntStatsDto {
   hunt_id: string;
   participant_count: number;
@@ -95,6 +105,27 @@ export class HuntsService {
         : 0;
 
     return { hunt_id: huntId, participant_count, completed_count, completion_rate, average_points };
+  }
+
+  async getParticipants(huntId: string, partnerId: string): Promise<ParticipantDto[]> {
+    const hunt = await this.huntsRepository.findById(huntId);
+    if (!hunt) {
+      throw new NotFoundException(`Hunt ${huntId} not found`);
+    }
+    if (hunt.partner_id !== partnerId) {
+      throw new NotFoundException(`Hunt ${huntId} not found`);
+    }
+
+    const progresses = await this.progressRepository.findAllByHuntWithUser(huntId);
+    return progresses.map((p) => ({
+      user_id: p.user_id,
+      email: p.user?.email ?? null,
+      current_step: p.current_step,
+      completed_steps: p.completed_steps,
+      total_points: p.total_points,
+      started_at: p.started_at,
+      completed_at: p.completed_at,
+    }));
   }
 
   async deleteHunt(huntId: string, partnerId: string): Promise<void> {
