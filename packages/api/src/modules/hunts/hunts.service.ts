@@ -62,6 +62,17 @@ export class HuntsService {
     return this.huntsRepository.save(updates);
   }
 
+  async deleteHunt(huntId: string, partnerId: string): Promise<void> {
+    const hunt = await this.huntsRepository.findById(huntId);
+    if (!hunt) {
+      throw new NotFoundException(`Hunt ${huntId} not found`);
+    }
+    if (hunt.partner_id !== partnerId) {
+      throw new NotFoundException(`Hunt ${huntId} not found`);
+    }
+    await this.huntsRepository.deleteById(huntId);
+  }
+
   findAll(): Promise<HuntEntity[]> {
     return this.huntsRepository.findAll();
   }

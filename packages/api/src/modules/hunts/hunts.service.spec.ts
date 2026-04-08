@@ -215,6 +215,29 @@ describe('HuntsService', () => {
     });
   });
 
+  describe('deleteHunt', () => {
+    it('should delete hunt when partner owns it', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'partner-uuid' }));
+      repo.deleteById.mockResolvedValue(undefined);
+
+      await service.deleteHunt('hunt-uuid', 'partner-uuid');
+
+      expect(repo.deleteById).toHaveBeenCalledWith('hunt-uuid');
+    });
+
+    it('should throw NotFoundException when hunt not found', async () => {
+      repo.findById.mockResolvedValue(null);
+      await expect(service.deleteHunt('unknown', 'partner-uuid')).rejects.toThrow(NotFoundException);
+      expect(repo.deleteById).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when partner does not own the hunt', async () => {
+      repo.findById.mockResolvedValue(mockHunt({ partner_id: 'other-partner' }));
+      await expect(service.deleteHunt('hunt-uuid', 'partner-uuid')).rejects.toThrow(NotFoundException);
+      expect(repo.deleteById).not.toHaveBeenCalled();
+    });
+  });
+
   describe('findNearby', () => {
     it('should delegate to GeoService with provided coordinates', async () => {
       geoService.findHuntsNearby.mockResolvedValue([]);

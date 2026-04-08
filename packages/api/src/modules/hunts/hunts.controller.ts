@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { HuntsService } from './hunts.service';
 import { ProgressService } from '../progress/progress.service';
 import { ValidateStepDto } from '../progress/dto/validate-step.dto';
@@ -43,6 +43,20 @@ export class HuntsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.huntsService.updateHunt(huntId, user.id, dto);
+  }
+
+  /**
+   * DELETE /hunts/:id — supprimer une chasse (partenaire propriétaire ou admin)
+   * Retourne 404 si la chasse n'existe pas ou n'appartient pas au partenaire.
+   */
+  @Auth(Role.PARTNER, Role.ADMIN)
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteHunt(
+    @Param('id') huntId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.huntsService.deleteHunt(huntId, user.id);
   }
 
   /**
