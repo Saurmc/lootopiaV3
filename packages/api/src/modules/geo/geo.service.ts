@@ -24,6 +24,27 @@ export class GeoService {
   ) {}
 
   /**
+   * Vérifie si un point (lat, lng) est dans le rayon d'une étape.
+   * Utilise PostGIS ST_DWithin — les coordonnées joueur ne sont jamais stockées.
+   */
+  async isWithinRadius(
+    playerLat: number,
+    playerLng: number,
+    stepLocation: object,
+    radiusMeters: number,
+  ): Promise<boolean> {
+    const rows = await this.dataSource.query(
+      `SELECT ST_DWithin(
+        $1::geography,
+        ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
+        $4
+      ) AS within`,
+      [JSON.stringify(stepLocation), playerLat, playerLng, radiusMeters],
+    );
+    return rows[0]?.within === true;
+  }
+
+  /**
    * Retourne les chasses actives dans un rayon donné (mètres)
    * autour d'un point GPS (lat, lng), triées par distance croissante.
    * Utilise PostGIS ST_DWithin sur la colonne coordinates des hunts.

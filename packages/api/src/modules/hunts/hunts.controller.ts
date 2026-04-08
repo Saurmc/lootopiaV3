@@ -1,6 +1,7 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { HuntsService } from './hunts.service';
 import { ProgressService } from '../progress/progress.service';
+import { ValidateStepDto } from '../progress/dto/validate-step.dto';
 import { JwtOptionalAuthGuard } from '../auth/guards/jwt-optional-auth.guard';
 import { Auth } from '../../common/guards/auth-roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -55,6 +56,22 @@ export class HuntsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.progressService.getProgressWithSteps(user.id, huntId);
+  }
+
+  /**
+   * POST /hunts/:id/steps/:stepId/validate — valider une étape par proximité GPS
+   * Vérifie via PostGIS que le joueur est dans le rayon de l'étape courante.
+   */
+  @Auth()
+  @Post(':id/steps/:stepId/validate')
+  @HttpCode(HttpStatus.OK)
+  validateStep(
+    @Param('id') huntId: string,
+    @Param('stepId') stepId: string,
+    @Body() dto: ValidateStepDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.progressService.validateStep(user.id, huntId, stepId, dto);
   }
 
   /**

@@ -1,10 +1,13 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { ProgressService } from './progress.service';
 import { ProgressRepository } from './progress.repository';
 import { HuntsRepository } from '../hunts/hunts.repository';
 import { UsersRepository } from '../users/users.repository';
+import { StepsRepository } from '../steps/steps.repository';
+import { GeoService } from '../geo/geo.service';
 import { ProgressEntity } from './entities/progress.entity';
 import { HuntEntity } from '../hunts/entities/hunt.entity';
+import { StepEntity } from '../steps/entities/step.entity';
 import { UserEntity } from '../users/entities/user.entity';
 import { Role } from '../../common/enums/role.enum';
 
@@ -54,6 +57,8 @@ describe('ProgressService', () => {
   let progressRepo: jest.Mocked<ProgressRepository>;
   let huntsRepo: jest.Mocked<HuntsRepository>;
   let usersRepo: jest.Mocked<UsersRepository>;
+  let stepsRepo: jest.Mocked<StepsRepository>;
+  let geoService: jest.Mocked<GeoService>;
 
   beforeEach(() => {
     progressRepo = {
@@ -79,7 +84,19 @@ describe('ProgressService', () => {
       updateConsentGps: jest.fn(),
     } as unknown as jest.Mocked<UsersRepository>;
 
-    service = new ProgressService(progressRepo, huntsRepo, usersRepo);
+    stepsRepo = {
+      findById: jest.fn(),
+      findByHuntId: jest.fn(),
+      save: jest.fn(),
+      deleteById: jest.fn(),
+    } as unknown as jest.Mocked<StepsRepository>;
+
+    geoService = {
+      isWithinRadius: jest.fn(),
+      findHuntsNearby: jest.fn(),
+    } as unknown as jest.Mocked<GeoService>;
+
+    service = new ProgressService(progressRepo, huntsRepo, usersRepo, stepsRepo, geoService);
   });
 
   describe('joinHunt', () => {
@@ -184,6 +201,88 @@ describe('ProgressService', () => {
       progressRepo.findByUserAndHunt.mockResolvedValue(null);
       await expect(
         service.getProgressWithSteps('user-uuid', 'hunt-uuid'),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('validateStep', () => {
+    const mockStep = (overrides: Partial<StepEntity> = {}): StepEntity => ({
+      id: 'step-uuid',
+      hunt_id: 'hunt-uuid',
+      hunt: undefined as any,
+      order: 0,
+      title: 'Étape 1',
+      description: null,
+      location: { type: 'Point', coordinates: [2.3522, 48.8566] },
+      validation_radius: 50,
+      ar_content: null,
+      created_at: new Date(),
+      ...overrides,
+    });
+
+    it('should validate step and update progress', async () => {
+      const progress = mockProgress();
+      progress.current_step = 0;
+      progress.completed_steps = [];
+      progressRepo.findByUserAndHunt.mockResolvedValue(progress);
+      stepsRepo.findById.mockResolvedValue(mockStep());
+      geoService.isWithinRadius.mockResolvedValue(true);
+      huntsRepo.findById.mockResolvedValue(mockHunt());
+      progressRepo.save.mockResolvedValue({
+        ...progress,
+        completed_steps: [0],
+        current_step: 1,
+        total_points: 100,
+      });
+
+      const result = await service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', {
+        lat: 48.8566,
+        lng: 2.3522,
+      });
+
+      expect(progressRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ completed_steps: [0], current_step: 1 }),
+      );
+      expect(result.completed_steps).toContain(0);
+    });
+
+    it('should throw BadRequestException when player is out of radius', async () => {
+      progressRepo.findByUserAndHunt.mockResolvedValue(mockProgress());
+      stepsRepo.findById.mockResolvedValue(mockStep());
+      geoService.isWithinRadius.mockResolvedValue(false);
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { lat: 0, lng: 0 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw ConflictException when step already validated', async () => {
+      const progress = mockProgress();
+      progress.completed_steps = [0];
+      progressRepo.findByUserAndHunt.mockResolvedValue(progress);
+      stepsRepo.findById.mockResolvedValue(mockStep({ order: 0 }));
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { lat: 48.8, lng: 2.3 }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('should throw BadRequestException when step is not the current step', async () => {
+      const progress = mockProgress();
+      progress.current_step = 2;
+      progress.completed_steps = [0, 1];
+      progressRepo.findByUserAndHunt.mockResolvedValue(progress);
+      stepsRepo.findById.mockResolvedValue(mockStep({ order: 3 }));
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { lat: 48.8, lng: 2.3 }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException when no progress found', async () => {
+      progressRepo.findByUserAndHunt.mockResolvedValue(null);
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { lat: 48.8, lng: 2.3 }),
       ).rejects.toThrow(NotFoundException);
     });
   });
