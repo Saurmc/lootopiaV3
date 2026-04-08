@@ -22,7 +22,15 @@ export class ProfileController {
   }
 
   /**
-   * GET /me/hunts — historique des chasses du joueur
+   * GET /me/progress — chasses en cours (non terminées), pour reprise de progression
+   */
+  @Get('progress')
+  getActiveProgresses(@CurrentUser() user: AuthenticatedUser) {
+    return this.profileService.getActiveProgresses(user.id);
+  }
+
+  /**
+   * GET /me/hunts — historique complet des chasses du joueur
    */
   @Get('hunts')
   getHuntHistory(@CurrentUser() user: AuthenticatedUser) {

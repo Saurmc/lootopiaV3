@@ -11,6 +11,15 @@ export interface HuntHistoryItem {
   completed_at: Date | null;
 }
 
+export interface ActiveProgressItem {
+  progress_id: string;
+  hunt_id: string;
+  current_step: number;
+  completed_steps: number[];
+  total_points: number;
+  started_at: Date;
+}
+
 export interface PlayerStats {
   total_points: number;
   hunt_count: number;
@@ -38,6 +47,24 @@ export class ProfileService {
       completed_hunts,
       badge_count: badges.length,
     };
+  }
+
+  /**
+   * Retourne les chasses en cours (non terminées) pour permettre la reprise.
+   * Mode invité : non applicable (endpoint protégé par @Auth).
+   */
+  async getActiveProgresses(userId: string): Promise<ActiveProgressItem[]> {
+    const allProgress = await this.progressRepository.findAllByUser(userId);
+    return allProgress
+      .filter((p) => p.completed_at === null)
+      .map((p) => ({
+        progress_id: p.id,
+        hunt_id: p.hunt_id,
+        current_step: p.current_step,
+        completed_steps: p.completed_steps,
+        total_points: p.total_points,
+        started_at: p.started_at,
+      }));
   }
 
   async getHuntHistory(userId: string): Promise<HuntHistoryItem[]> {
