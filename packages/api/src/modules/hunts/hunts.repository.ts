@@ -18,6 +18,12 @@ export class HuntsRepository {
     return this.repo.count();
   }
 
+  findAllForStats(partnerId?: string): Promise<HuntEntity[]> {
+    return partnerId
+      ? this.repo.find({ where: { partner_id: partnerId } })
+      : this.repo.find();
+  }
+
   search(q: string): Promise<HuntEntity[]> {
     const term = `%${q.toLowerCase()}%`;
     return this.repo
