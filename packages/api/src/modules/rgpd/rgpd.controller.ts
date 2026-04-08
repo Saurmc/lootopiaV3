@@ -6,39 +6,36 @@ import {
   HttpCode,
   HttpStatus,
   Patch,
-  Request,
-  UseGuards,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Auth } from '../../common/guards/auth-roles.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { RgpdService } from './rgpd.service';
 import { UpdateConsentDto } from './dto/update-consent.dto';
 
 @Controller('me')
-@UseGuards(JwtAuthGuard)
+@Auth()
 export class RgpdController {
   constructor(private readonly rgpdService: RgpdService) {}
 
-  // GET /me/consent — état du consentement GPS
   @Get('consent')
-  async getConsent(@Request() req: { user: { id: string } }) {
-    const consent = await this.rgpdService.getGpsConsent(req.user.id);
+  async getConsent(@CurrentUser() user: AuthenticatedUser) {
+    const consent = await this.rgpdService.getGpsConsent(user.id);
     return { consent_gps: consent };
   }
 
-  // PATCH /me/consent — mise à jour du consentement GPS
   @Patch('consent')
   async updateConsent(
-    @Request() req: { user: { id: string } },
+    @CurrentUser() user: AuthenticatedUser,
     @Body() dto: UpdateConsentDto,
   ) {
-    await this.rgpdService.updateGpsConsent(req.user.id, dto.consent_gps);
+    await this.rgpdService.updateGpsConsent(user.id, dto.consent_gps);
     return { message: 'Consent updated' };
   }
 
-  // DELETE /me — suppression du compte et de toutes les données associées
   @Delete()
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deleteAccount(@Request() req: { user: { id: string } }) {
-    await this.rgpdService.deleteAccount(req.user.id);
+  async deleteAccount(@CurrentUser() user: AuthenticatedUser) {
+    await this.rgpdService.deleteAccount(user.id);
   }
 }
