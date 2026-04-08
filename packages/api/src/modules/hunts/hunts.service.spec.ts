@@ -125,6 +125,52 @@ describe('HuntsService', () => {
     });
   });
 
+  describe('createHunt', () => {
+    it('should create a hunt with minimal fields', async () => {
+      const created = mockHunt({ title: 'Nouvelle chasse', is_active: false, points: 0 });
+      repo.save.mockResolvedValue(created);
+
+      const result = await service.createHunt('partner-uuid', { title: 'Nouvelle chasse' });
+
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          partner_id: 'partner-uuid',
+          title: 'Nouvelle chasse',
+          points: 0,
+          is_active: false,
+          coordinates: null,
+        }),
+      );
+      expect(result.title).toBe('Nouvelle chasse');
+    });
+
+    it('should build GeoJSON coordinates when lat/lng provided', async () => {
+      repo.save.mockResolvedValue(mockHunt());
+
+      await service.createHunt('partner-uuid', {
+        title: 'Chasse géolocalisée',
+        lat: 48.8566,
+        lng: 2.3522,
+      });
+
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          coordinates: { type: 'Point', coordinates: [2.3522, 48.8566] },
+        }),
+      );
+    });
+
+    it('should set null coordinates when only lat or lng is missing', async () => {
+      repo.save.mockResolvedValue(mockHunt());
+
+      await service.createHunt('partner-uuid', { title: 'Chasse', lat: 48.8566 });
+
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ coordinates: null }),
+      );
+    });
+  });
+
   describe('findNearby', () => {
     it('should delegate to GeoService with provided coordinates', async () => {
       geoService.findHuntsNearby.mockResolvedValue([]);

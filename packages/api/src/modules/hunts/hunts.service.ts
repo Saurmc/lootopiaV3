@@ -3,6 +3,7 @@ import { HuntsRepository } from './hunts.repository';
 import { HuntEntity } from './entities/hunt.entity';
 import { GeoService, NearbyHuntRow } from '../geo/geo.service';
 import { HuntDetailDto } from './dto/hunt-detail.dto';
+import { CreateHuntDto } from './dto/create-hunt.dto';
 
 const DEFAULT_RADIUS_METERS = 5000;
 
@@ -12,6 +13,25 @@ export class HuntsService {
     private readonly huntsRepository: HuntsRepository,
     private readonly geoService: GeoService,
   ) {}
+
+  createHunt(partnerId: string, dto: CreateHuntDto): Promise<HuntEntity> {
+    const coordinates =
+      dto.lat !== undefined && dto.lng !== undefined
+        ? { type: 'Point', coordinates: [dto.lng, dto.lat] }
+        : null;
+
+    return this.huntsRepository.save({
+      partner_id: partnerId,
+      title: dto.title,
+      description: dto.description ?? null,
+      location: dto.location ?? null,
+      coordinates,
+      difficulty: dto.difficulty ?? null,
+      duration: dto.duration ?? null,
+      points: dto.points ?? 0,
+      is_active: dto.is_active ?? false,
+    });
+  }
 
   findAll(): Promise<HuntEntity[]> {
     return this.huntsRepository.findAll();

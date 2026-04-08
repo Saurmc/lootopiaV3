@@ -2,11 +2,13 @@ import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGua
 import { HuntsService } from './hunts.service';
 import { ProgressService } from '../progress/progress.service';
 import { ValidateStepDto } from '../progress/dto/validate-step.dto';
+import { CreateHuntDto } from './dto/create-hunt.dto';
 import { JwtOptionalAuthGuard } from '../auth/guards/jwt-optional-auth.guard';
 import { Auth } from '../../common/guards/auth-roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { NearbyQueryDto } from './dto/nearby-query.dto';
+import { Role } from '../../common/enums/role.enum';
 
 @Controller('hunts')
 export class HuntsController {
@@ -14,6 +16,19 @@ export class HuntsController {
     private readonly huntsService: HuntsService,
     private readonly progressService: ProgressService,
   ) {}
+
+  /**
+   * POST /hunts — créer une nouvelle chasse (partenaire ou admin uniquement)
+   */
+  @Auth(Role.PARTNER, Role.ADMIN)
+  @Post()
+  @HttpCode(HttpStatus.CREATED)
+  createHunt(
+    @Body() dto: CreateHuntDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.huntsService.createHunt(user.id, dto);
+  }
 
   /**
    * GET /hunts — liste toutes les chasses actives
