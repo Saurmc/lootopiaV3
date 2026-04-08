@@ -4,6 +4,7 @@ import { HuntEntity } from './entities/hunt.entity';
 import { GeoService, NearbyHuntRow } from '../geo/geo.service';
 import { HuntDetailDto } from './dto/hunt-detail.dto';
 import { CreateHuntDto } from './dto/create-hunt.dto';
+import { UpdateHuntDto } from './dto/update-hunt.dto';
 
 const DEFAULT_RADIUS_METERS = 5000;
 
@@ -31,6 +32,34 @@ export class HuntsService {
       points: dto.points ?? 0,
       is_active: dto.is_active ?? false,
     });
+  }
+
+  async updateHunt(
+    huntId: string,
+    partnerId: string,
+    dto: UpdateHuntDto,
+  ): Promise<HuntEntity> {
+    const hunt = await this.huntsRepository.findById(huntId);
+    if (!hunt) {
+      throw new NotFoundException(`Hunt ${huntId} not found`);
+    }
+    if (hunt.partner_id !== partnerId) {
+      throw new NotFoundException(`Hunt ${huntId} not found`);
+    }
+
+    const updates: Partial<HuntEntity> = { id: huntId };
+    if (dto.title !== undefined) updates.title = dto.title;
+    if (dto.description !== undefined) updates.description = dto.description;
+    if (dto.location !== undefined) updates.location = dto.location;
+    if (dto.difficulty !== undefined) updates.difficulty = dto.difficulty;
+    if (dto.duration !== undefined) updates.duration = dto.duration;
+    if (dto.points !== undefined) updates.points = dto.points;
+    if (dto.is_active !== undefined) updates.is_active = dto.is_active;
+    if (dto.lat !== undefined && dto.lng !== undefined) {
+      updates.coordinates = { type: 'Point', coordinates: [dto.lng, dto.lat] } as any;
+    }
+
+    return this.huntsRepository.save(updates);
   }
 
   findAll(): Promise<HuntEntity[]> {

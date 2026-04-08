@@ -1,8 +1,9 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { HuntsService } from './hunts.service';
 import { ProgressService } from '../progress/progress.service';
 import { ValidateStepDto } from '../progress/dto/validate-step.dto';
 import { CreateHuntDto } from './dto/create-hunt.dto';
+import { UpdateHuntDto } from './dto/update-hunt.dto';
 import { JwtOptionalAuthGuard } from '../auth/guards/jwt-optional-auth.guard';
 import { Auth } from '../../common/guards/auth-roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -28,6 +29,20 @@ export class HuntsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.huntsService.createHunt(user.id, dto);
+  }
+
+  /**
+   * PATCH /hunts/:id — modifier une chasse (partenaire propriétaire ou admin)
+   * Retourne 404 si la chasse n'existe pas ou n'appartient pas au partenaire.
+   */
+  @Auth(Role.PARTNER, Role.ADMIN)
+  @Patch(':id')
+  updateHunt(
+    @Param('id') huntId: string,
+    @Body() dto: UpdateHuntDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.huntsService.updateHunt(huntId, user.id, dto);
   }
 
   /**
