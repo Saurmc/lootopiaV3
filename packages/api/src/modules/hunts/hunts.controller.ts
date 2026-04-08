@@ -1,20 +1,26 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpCode, HttpStatus, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { HuntsService } from './hunts.service';
+import { ProgressService } from '../progress/progress.service';
 import { JwtOptionalAuthGuard } from '../auth/guards/jwt-optional-auth.guard';
+import { Auth } from '../../common/guards/auth-roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { NearbyQueryDto } from './dto/nearby-query.dto';
 
 @Controller('hunts')
-@UseGuards(JwtOptionalAuthGuard)
 export class HuntsController {
-  constructor(private readonly huntsService: HuntsService) {}
+  constructor(
+    private readonly huntsService: HuntsService,
+    private readonly progressService: ProgressService,
+  ) {}
 
   /**
    * GET /hunts — liste toutes les chasses actives
-   * GET /hunts?lat=48.8&lng=2.3&radius=5000 — chasses dans un rayon (mode carte)
+   * GET /hunts?q= — recherche textuelle
+   * GET /hunts?lat=&lng=&radius= — chasses dans un rayon
    * Accessible en mode invité ET connecté.
    */
+  @UseGuards(JwtOptionalAuthGuard)
   @Get()
   findAll(
     @Query() query: NearbyQueryDto,
@@ -29,11 +35,27 @@ export class HuntsController {
     return this.huntsService.findAll();
   }
 
+  @UseGuards(JwtOptionalAuthGuard)
   @Get(':id')
   findOne(
     @Param('id') id: string,
     @CurrentUser() _user: AuthenticatedUser | null,
   ) {
     return this.huntsService.getDetail(id);
+  }
+
+  /**
+   * POST /hunts/:id/join — rejoindre une chasse (JWT requis)
+   * Crée une entrée de progression pour le joueur connecté.
+   * Mode invité non supporté : la progression ne peut pas être sauvegardée.
+   */
+  @Auth()
+  @Post(':id/join')
+  @HttpCode(HttpStatus.CREATED)
+  joinHunt(
+    @Param('id') huntId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.progressService.joinHunt(user.id, huntId);
   }
 }
