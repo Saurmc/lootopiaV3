@@ -4,6 +4,7 @@ import { HuntsRepository } from '../hunts/hunts.repository';
 import { UsersRepository } from '../users/users.repository';
 import { StepsRepository } from '../steps/steps.repository';
 import { GeoService } from '../geo/geo.service';
+import { BadgesService } from '../badges/badges.service';
 import { ProgressEntity } from './entities/progress.entity';
 import { ProgressMapDto, StepMapDto, StepStatus } from './dto/progress-map.dto';
 import { ValidateStepDto } from './dto/validate-step.dto';
@@ -16,6 +17,7 @@ export class ProgressService {
     private readonly usersRepository: UsersRepository,
     private readonly stepsRepository: StepsRepository,
     private readonly geoService: GeoService,
+    private readonly badgesService: BadgesService,
   ) {}
 
   async joinHunt(userId: string, huntId: string): Promise<ProgressEntity> {
@@ -85,15 +87,30 @@ export class ProgressService {
       throw new BadRequestException('Player is not within validation radius');
     }
 
-    const hunt = await this.huntsRepository.findById(huntId);
-    const pointsEarned = hunt ? Math.floor(hunt.points / Math.max(1, progress.completed_steps.length + 1)) : 0;
+    const hunt = await this.huntsRepository.findByIdWithSteps(huntId);
+    const totalSteps = hunt?.steps?.length ?? 0;
+    const pointsEarned = hunt
+      ? Math.floor(hunt.points / Math.max(1, progress.completed_steps.length + 1))
+      : 0;
 
-    return this.progressRepository.save({
+    const newCompletedSteps = [...progress.completed_steps, step.order];
+    const isHuntComplete = totalSteps > 0 && newCompletedSteps.length === totalSteps;
+
+    const saved = await this.progressRepository.save({
       ...progress,
-      completed_steps: [...progress.completed_steps, step.order],
+      completed_steps: newCompletedSteps,
       current_step: progress.current_step + 1,
       total_points: progress.total_points + pointsEarned,
+      completed_at: isHuntComplete ? new Date() : progress.completed_at,
     });
+
+    if (isHuntComplete) {
+      const allProgress = await this.progressRepository.findAllByUser(userId);
+      const completedCount = allProgress.filter((p) => p.completed_at !== null).length;
+      await this.badgesService.checkAndAwardHuntBadges(userId, completedCount);
+    }
+
+    return saved;
   }
 
   async getProgressWithSteps(userId: string, huntId: string): Promise<ProgressMapDto> {

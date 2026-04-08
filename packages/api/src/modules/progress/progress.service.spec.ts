@@ -5,6 +5,7 @@ import { HuntsRepository } from '../hunts/hunts.repository';
 import { UsersRepository } from '../users/users.repository';
 import { StepsRepository } from '../steps/steps.repository';
 import { GeoService } from '../geo/geo.service';
+import { BadgesService } from '../badges/badges.service';
 import { ProgressEntity } from './entities/progress.entity';
 import { HuntEntity } from '../hunts/entities/hunt.entity';
 import { StepEntity } from '../steps/entities/step.entity';
@@ -59,6 +60,7 @@ describe('ProgressService', () => {
   let usersRepo: jest.Mocked<UsersRepository>;
   let stepsRepo: jest.Mocked<StepsRepository>;
   let geoService: jest.Mocked<GeoService>;
+  let badgesService: jest.Mocked<BadgesService>;
 
   beforeEach(() => {
     progressRepo = {
@@ -96,7 +98,14 @@ describe('ProgressService', () => {
       findHuntsNearby: jest.fn(),
     } as unknown as jest.Mocked<GeoService>;
 
-    service = new ProgressService(progressRepo, huntsRepo, usersRepo, stepsRepo, geoService);
+    badgesService = {
+      getUserBadges: jest.fn(),
+      hasBadge: jest.fn(),
+      awardBadge: jest.fn(),
+      checkAndAwardHuntBadges: jest.fn(),
+    } as unknown as jest.Mocked<BadgesService>;
+
+    service = new ProgressService(progressRepo, huntsRepo, usersRepo, stepsRepo, geoService, badgesService);
   });
 
   describe('joinHunt', () => {
@@ -227,12 +236,14 @@ describe('ProgressService', () => {
       progressRepo.findByUserAndHunt.mockResolvedValue(progress);
       stepsRepo.findById.mockResolvedValue(mockStep());
       geoService.isWithinRadius.mockResolvedValue(true);
-      huntsRepo.findById.mockResolvedValue(mockHunt());
+      huntsRepo.findByIdWithSteps.mockResolvedValue(mockHunt({ steps: [mockStep()] as any }));
+      progressRepo.findAllByUser.mockResolvedValue([]);
       progressRepo.save.mockResolvedValue({
         ...progress,
         completed_steps: [0],
         current_step: 1,
         total_points: 100,
+        completed_at: new Date(),
       });
 
       const result = await service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', {

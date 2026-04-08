@@ -13,6 +13,7 @@ import { BadgesModule } from './modules/badges/badges.module';
 import { GeoModule } from './modules/geo/geo.module';
 import { FilesModule } from './modules/files/files.module';
 import { RgpdModule } from './modules/rgpd/rgpd.module';
+import { ProfileModule } from './modules/profile/profile.module';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 
@@ -48,6 +49,7 @@ import jwtConfig from './config/jwt.config';
     GeoModule,
     FilesModule,
     RgpdModule,
+    ProfileModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -8,6 +8,7 @@ import { HuntsModule } from '../hunts/hunts.module';
 import { UsersModule } from '../users/users.module';
 import { StepsModule } from '../steps/steps.module';
 import { GeoModule } from '../geo/geo.module';
+import { BadgesModule } from '../badges/badges.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { GeoModule } from '../geo/geo.module';
     UsersModule,
     StepsModule,
     GeoModule,
+    BadgesModule,
   ],
   controllers: [ProgressController],
   providers: [ProgressService, ProgressRepository],
