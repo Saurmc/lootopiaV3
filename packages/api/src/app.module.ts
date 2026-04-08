@@ -14,6 +14,7 @@ import { GeoModule } from './modules/geo/geo.module';
 import { FilesModule } from './modules/files/files.module';
 import { RgpdModule } from './modules/rgpd/rgpd.module';
 import { ProfileModule } from './modules/profile/profile.module';
+import { AdminModule } from './modules/admin/admin.module';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 
@@ -50,6 +51,7 @@ import jwtConfig from './config/jwt.config';
     FilesModule,
     RgpdModule,
     ProfileModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

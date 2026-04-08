@@ -10,6 +10,10 @@ export class ProgressRepository {
     private readonly repo: Repository<ProgressEntity>,
   ) {}
 
+  findAll(): Promise<ProgressEntity[]> {
+    return this.repo.find();
+  }
+
   findByUserAndHunt(userId: string, huntId: string): Promise<ProgressEntity | null> {
     return this.repo.findOneBy({ user_id: userId, hunt_id: huntId });
   }
