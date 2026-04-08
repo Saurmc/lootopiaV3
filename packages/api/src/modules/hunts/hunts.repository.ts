@@ -14,6 +14,10 @@ export class HuntsRepository {
     return this.repo.find({ where: { is_active: true } });
   }
 
+  count(): Promise<number> {
+    return this.repo.count();
+  }
+
   search(q: string): Promise<HuntEntity[]> {
     const term = `%${q.toLowerCase()}%`;
     return this.repo

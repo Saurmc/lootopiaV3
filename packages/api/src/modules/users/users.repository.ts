@@ -10,6 +10,10 @@ export class UsersRepository {
     private readonly repo: Repository<UserEntity>,
   ) {}
 
+  findAll(): Promise<UserEntity[]> {
+    return this.repo.find();
+  }
+
   findById(id: string): Promise<UserEntity | null> {
     return this.repo.findOneBy({ id });
   }
