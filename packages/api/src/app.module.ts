@@ -16,6 +16,7 @@ import { RgpdModule } from './modules/rgpd/rgpd.module';
 import { ProfileModule } from './modules/profile/profile.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { StatsModule } from './modules/stats/stats.module';
+import { ZonesModule } from './modules/zones/zones.module';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 
@@ -54,6 +55,7 @@ import jwtConfig from './config/jwt.config';
     ProfileModule,
     AdminModule,
     StatsModule,
+    ZonesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
