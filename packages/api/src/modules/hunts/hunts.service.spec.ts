@@ -18,6 +18,7 @@ const mockHunt = (overrides: Partial<HuntEntity> = {}): HuntEntity => ({
   duration: 60,
   points: 100,
   is_active: true,
+  image_url: null,
   steps: [],
   created_at: new Date(),
   ...overrides,

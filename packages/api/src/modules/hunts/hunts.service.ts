@@ -74,6 +74,7 @@ export class HuntsService {
       duration: dto.duration ?? null,
       points: dto.points ?? 0,
       is_active: dto.is_active ?? false,
+      image_url: dto.image_url ?? null,
     });
   }
 
@@ -98,6 +99,7 @@ export class HuntsService {
     if (dto.duration !== undefined) updates.duration = dto.duration;
     if (dto.points !== undefined) updates.points = dto.points;
     if (dto.is_active !== undefined) updates.is_active = dto.is_active;
+    if (dto.image_url !== undefined) updates.image_url = dto.image_url;
     if (dto.lat !== undefined && dto.lng !== undefined) {
       updates.coordinates = { type: 'Point', coordinates: [dto.lng, dto.lat] } as any;
     }
@@ -188,6 +190,7 @@ export class HuntsService {
       duration: hunt.duration,
       points: hunt.points,
       is_active: hunt.is_active,
+      image_url: hunt.image_url ?? null,
       step_count: hunt.steps?.length ?? 0,
       steps: (hunt.steps ?? []).map((s) => ({
         id: s.id,
