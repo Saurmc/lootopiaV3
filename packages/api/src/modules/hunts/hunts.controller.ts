@@ -60,6 +60,29 @@ export class HuntsController {
   }
 
   /**
+   * GET /hunts/templates — liste des templates disponibles (PARTNER/ADMIN)
+   * Doit être déclaré AVANT GET /hunts/:id pour éviter le conflit de route.
+   */
+  @Auth(Role.PARTNER, Role.ADMIN)
+  @Get('templates')
+  getTemplates() {
+    return this.huntsService.getTemplates();
+  }
+
+  /**
+   * POST /hunts/from-template/:templateId — créer une chasse depuis un template (PARTNER/ADMIN)
+   */
+  @Auth(Role.PARTNER, Role.ADMIN)
+  @Post('from-template/:templateId')
+  @HttpCode(HttpStatus.CREATED)
+  createFromTemplate(
+    @Param('templateId') templateId: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.huntsService.createHuntFromTemplate(user.id, templateId);
+  }
+
+  /**
    * GET /hunts — liste toutes les chasses actives
    * GET /hunts?q= — recherche textuelle
    * GET /hunts?lat=&lng=&radius= — chasses dans un rayon
