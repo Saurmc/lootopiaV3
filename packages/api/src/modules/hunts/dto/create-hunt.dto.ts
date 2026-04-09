@@ -60,4 +60,8 @@ export class CreateHuntDto {
   @IsBoolean()
   @IsOptional()
   is_active?: boolean;
+
+  @IsString()
+  @IsOptional()
+  image_url?: string;
 }

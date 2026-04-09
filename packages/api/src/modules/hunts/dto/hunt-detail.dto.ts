@@ -19,6 +19,7 @@ export class HuntDetailDto {
   duration: number | null;
   points: number;
   is_active: boolean;
+  image_url: string | null;
   steps: StepSummaryDto[];
   step_count: number;
   created_at: Date;

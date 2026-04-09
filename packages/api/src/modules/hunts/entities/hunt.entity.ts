@@ -52,6 +52,10 @@ export class HuntEntity {
   @Column({ type: 'boolean', default: false })
   is_active: boolean;
 
+  // URL du plan ou de l'image associée à la chasse (uploadée via POST /files/upload)
+  @Column({ type: 'varchar', nullable: true })
+  image_url: string | null;
+
   @OneToMany(() => StepEntity, (step) => step.hunt)
   steps: StepEntity[];
 
