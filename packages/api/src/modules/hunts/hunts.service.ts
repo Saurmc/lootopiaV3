@@ -6,6 +6,7 @@ import { HuntDetailDto } from './dto/hunt-detail.dto';
 import { CreateHuntDto } from './dto/create-hunt.dto';
 import { UpdateHuntDto } from './dto/update-hunt.dto';
 import { ProgressRepository } from '../progress/progress.repository';
+import { HUNT_TEMPLATES, HuntTemplate } from './hunt-templates.constants';
 
 export interface ParticipantDto {
   user_id: string;
@@ -34,6 +35,28 @@ export class HuntsService {
     private readonly geoService: GeoService,
     private readonly progressRepository: ProgressRepository,
   ) {}
+
+  getTemplates(): HuntTemplate[] {
+    return HUNT_TEMPLATES;
+  }
+
+  async createHuntFromTemplate(partnerId: string, templateId: string): Promise<HuntEntity> {
+    const template = HUNT_TEMPLATES.find((t) => t.id === templateId);
+    if (!template) {
+      throw new NotFoundException(`Template ${templateId} not found`);
+    }
+    return this.huntsRepository.save({
+      partner_id: partnerId,
+      title: template.defaults.title,
+      description: template.defaults.description,
+      difficulty: template.defaults.difficulty,
+      duration: template.defaults.duration,
+      points: template.defaults.points,
+      location: null,
+      coordinates: null,
+      is_active: false,
+    });
+  }
 
   createHunt(partnerId: string, dto: CreateHuntDto): Promise<HuntEntity> {
     const coordinates =

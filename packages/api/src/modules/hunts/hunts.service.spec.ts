@@ -146,6 +146,39 @@ describe('HuntsService', () => {
     });
   });
 
+  describe('getTemplates', () => {
+    it('should return all available templates', () => {
+      const result = service.getTemplates();
+      expect(result.length).toBeGreaterThan(0);
+      expect(result[0]).toHaveProperty('id');
+      expect(result[0]).toHaveProperty('name');
+      expect(result[0]).toHaveProperty('defaults');
+    });
+  });
+
+  describe('createHuntFromTemplate', () => {
+    it('should create a hunt pre-filled with template data', async () => {
+      repo.save.mockResolvedValue(mockHunt({ title: 'Chasse urbaine', difficulty: 'easy' }));
+
+      await service.createHuntFromTemplate('partner-uuid', 'urban-explorer');
+
+      expect(repo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          partner_id: 'partner-uuid',
+          title: 'Chasse urbaine',
+          difficulty: 'easy',
+          is_active: false,
+        }),
+      );
+    });
+
+    it('should throw NotFoundException for unknown template', async () => {
+      await expect(
+        service.createHuntFromTemplate('partner-uuid', 'unknown-template'),
+      ).rejects.toThrow('unknown-template not found');
+    });
+  });
+
   describe('createHunt', () => {
     it('should create a hunt with minimal fields', async () => {
       const created = mockHunt({ title: 'Nouvelle chasse', is_active: false, points: 0 });
