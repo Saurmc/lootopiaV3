@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import FileUpload from '@/components/ui/file-upload';
 import type { CreateHuntPayload, HuntDto } from '@/services/hunts.service';
 
 export interface HuntFormValues {
@@ -16,6 +17,7 @@ export interface HuntFormValues {
   duration: string;
   points: string;
   is_active: boolean;
+  plan_url: string; // uploaded plan/map image URL
 }
 
 interface HuntFormProps {
@@ -34,6 +36,7 @@ function toPayload(values: HuntFormValues): CreateHuntPayload {
     duration: values.duration ? parseInt(values.duration, 10) : undefined,
     points: values.points ? parseInt(values.points, 10) : undefined,
     is_active: values.is_active,
+    plan_url: values.plan_url || undefined,
   };
 }
 
@@ -46,6 +49,7 @@ export function huntDtoToFormValues(hunt: HuntDto): HuntFormValues {
     duration: hunt.duration?.toString() ?? '',
     points: hunt.points?.toString() ?? '',
     is_active: hunt.is_active,
+    plan_url: (hunt as HuntDto & { plan_url?: string }).plan_url ?? '',
   };
 }
 
@@ -70,12 +74,14 @@ export default function HuntForm({
       duration: '',
       points: '',
       is_active: false,
+      plan_url: '',
       ...defaultValues,
     },
   });
 
   const difficulty = watch('difficulty');
   const isActive = watch('is_active');
+  const planUrl = watch('plan_url');
 
   const handleFormSubmit = async (values: HuntFormValues) => {
     await onSubmit(toPayload(values));
@@ -183,6 +189,19 @@ export default function HuntForm({
         <Label htmlFor="is_active" className="cursor-pointer">
           Publier la chasse (visible par les joueurs)
         </Label>
+      </div>
+
+      {/* Plan / Image de couverture */}
+      <div className="space-y-1.5">
+        <Label>Plan / Image de couverture (optionnel)</Label>
+        <p className="text-xs text-gray-400">
+          Image utilisée comme fond de carte pour positionner les zones.
+        </p>
+        <FileUpload
+          value={planUrl || undefined}
+          onChange={(url) => setValue('plan_url', url ?? '')}
+          label="Cliquer ou déposer un plan ou une image"
+        />
       </div>
 
       <Button type="submit" disabled={isLoading} className="w-full">
