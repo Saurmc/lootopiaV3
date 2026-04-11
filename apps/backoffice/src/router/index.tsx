@@ -8,6 +8,7 @@ import HuntCreatePage from '../pages/HuntCreatePage';
 import HuntEditPage from '../pages/HuntEditPage';
 import StepsPage from '../pages/StepsPage';
 import StatsPage from '../pages/StatsPage';
+import SettingsPage from '../pages/SettingsPage';
 
 export const router = createBrowserRouter([
   {
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
           { path: 'hunts/:id/edit', element: <HuntEditPage /> },
           { path: 'hunts/:id/steps', element: <StepsPage /> },
           { path: 'stats', element: <StatsPage /> },
+          { path: 'settings', element: <SettingsPage /> },
         ],
       },
     ],
