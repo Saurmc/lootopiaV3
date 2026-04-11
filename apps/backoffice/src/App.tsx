@@ -1,5 +1,6 @@
-function App() {
-  return <div>Lootopia Backoffice TODO</div>;
-}
+import { RouterProvider } from 'react-router-dom';
+import { router } from './router';
 
-export default App;
+export default function App() {
+  return <RouterProvider router={router} />;
+}
