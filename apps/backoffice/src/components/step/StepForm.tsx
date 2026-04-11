@@ -1,8 +1,9 @@
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import FileUpload from '@/components/ui/file-upload';
 import type { CreateStepPayload, StepDto } from '@/services/steps.service';
 
 export interface StepFormValues {
@@ -12,6 +13,7 @@ export interface StepFormValues {
   lat: string;
   lng: string;
   validation_radius: string;
+  ar_image_url: string; // uploaded image URL for ar_content
 }
 
 interface StepFormProps {
@@ -32,10 +34,14 @@ function toPayload(v: StepFormValues): CreateStepPayload {
   const lng = parseFloat(v.lng);
   if (!isNaN(lat)) payload.lat = lat;
   if (!isNaN(lng)) payload.lng = lng;
+  if (v.ar_image_url) {
+    payload.ar_content = { type: '2d-overlay', image: v.ar_image_url };
+  }
   return payload;
 }
 
 export function stepDtoToFormValues(step: StepDto): StepFormValues {
+  const arContent = step.ar_content as { image?: string } | null;
   return {
     order: String(step.order),
     title: step.title,
@@ -43,6 +49,7 @@ export function stepDtoToFormValues(step: StepDto): StepFormValues {
     lat: '',
     lng: '',
     validation_radius: String(step.validation_radius),
+    ar_image_url: arContent?.image ?? '',
   };
 }
 
@@ -55,6 +62,8 @@ export default function StepForm({
   const {
     register,
     handleSubmit,
+    control,
+    setValue,
     formState: { errors },
   } = useForm<StepFormValues>({
     defaultValues: defaultValues ?? {
@@ -64,8 +73,11 @@ export default function StepForm({
       lat: '',
       lng: '',
       validation_radius: '50',
+      ar_image_url: '',
     },
   });
+
+  const arImageUrl = useWatch({ control, name: 'ar_image_url' });
 
   const handleFormSubmit = async (values: StepFormValues) => {
     await onSubmit(toPayload(values));
@@ -153,6 +165,20 @@ export default function StepForm({
       <p className="text-xs text-gray-400">
         Les coordonnées GPS définissent le point de validation sur la carte.
       </p>
+
+      {/* AR Content */}
+      <div className="space-y-1.5">
+        <Label>Contenu AR (optionnel)</Label>
+        <p className="text-xs text-gray-400">
+          Image superposée en réalité augmentée sur la carte (overlay 2D).
+        </p>
+        <FileUpload
+          value={arImageUrl || undefined}
+          onChange={(url) => setValue('ar_image_url', url ?? '')}
+          accept={['image/jpeg', 'image/png', 'image/gif', 'image/webp']}
+          label="Cliquer ou déposer une image AR"
+        />
+      </div>
 
       <div className="flex justify-end pt-2">
         <Button type="submit" disabled={isLoading}>

@@ -34,6 +34,7 @@ export interface CreateHuntPayload {
   duration?: number;
   points?: number;
   is_active?: boolean;
+  plan_url?: string;
 }
 
 export type UpdateHuntPayload = Partial<CreateHuntPayload>;
