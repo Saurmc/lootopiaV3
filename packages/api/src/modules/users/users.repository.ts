@@ -22,6 +22,10 @@ export class UsersRepository {
     return this.repo.findOneBy({ email });
   }
 
+  findByDeviceToken(deviceToken: string): Promise<UserEntity | null> {
+    return this.repo.findOneBy({ device_token: deviceToken });
+  }
+
   save(user: Partial<UserEntity>): Promise<UserEntity> {
     return this.repo.save(user);
   }
