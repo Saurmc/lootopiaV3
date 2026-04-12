@@ -92,15 +92,21 @@ export class HuntsController {
   @Get()
   findAll(
     @Query() query: NearbyQueryDto,
-    @CurrentUser() _user: AuthenticatedUser | null,
+    @CurrentUser() user: AuthenticatedUser | null,
   ) {
+    const isPartner = user?.role === Role.PARTNER || user?.role === Role.ADMIN;
+
     if (query.q) {
-      return this.huntsService.search(query.q);
+      return isPartner
+        ? this.huntsService.searchForPartner(query.q, user!.id)
+        : this.huntsService.search(query.q);
     }
     if (query.lat !== undefined && query.lng !== undefined) {
       return this.huntsService.findNearby(query.lat, query.lng, query.radius);
     }
-    return this.huntsService.findAll();
+    return isPartner
+      ? this.huntsService.findAllForPartner(user!.id)
+      : this.huntsService.findAll();
   }
 
   @UseGuards(JwtOptionalAuthGuard)

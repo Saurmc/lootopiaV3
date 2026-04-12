@@ -24,6 +24,7 @@ export default function StatsPage() {
       queryKey: ['hunt-stats', h.id],
       queryFn: () => statsService.getHuntStats(h.id),
       staleTime: 60_000,
+      retry: false,
     })),
   });
 
