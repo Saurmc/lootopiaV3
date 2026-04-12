@@ -168,6 +168,10 @@ export class HuntsService {
     return this.huntsRepository.findAll();
   }
 
+  findAllForPartner(partnerId: string): Promise<HuntEntity[]> {
+    return this.huntsRepository.findByPartner(partnerId);
+  }
+
   async findById(id: string): Promise<HuntEntity> {
     const hunt = await this.huntsRepository.findById(id);
     if (!hunt) {
@@ -206,6 +210,10 @@ export class HuntsService {
 
   search(q: string): Promise<HuntEntity[]> {
     return this.huntsRepository.search(q);
+  }
+
+  searchForPartner(q: string, partnerId: string): Promise<HuntEntity[]> {
+    return this.huntsRepository.searchByPartner(q, partnerId);
   }
 
   findNearby(

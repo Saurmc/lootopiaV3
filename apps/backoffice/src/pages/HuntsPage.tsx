@@ -40,6 +40,20 @@ export default function HuntsPage() {
     },
   });
 
+  const activeHunts = hunts.filter((h) => h.is_active);
+  const draftHunts  = hunts.filter((h) => !h.is_active);
+
+  const huntRows = (list: HuntDto[]) =>
+    list.map((hunt) => (
+      <HuntRow
+        key={hunt.id}
+        hunt={hunt}
+        onEdit={() => navigate(`/hunts/${hunt.id}/edit`)}
+        onView={() => navigate(`/hunts/${hunt.id}/steps`)}
+        onDelete={() => setDeleteTarget(hunt)}
+      />
+    ));
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -54,60 +68,68 @@ export default function HuntsPage() {
         </Button>
       </div>
 
-      {/* Table Card */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Chasses Actives</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Rechercher..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="py-12 text-center text-sm text-gray-400">Chargement…</div>
-          ) : hunts.length === 0 ? (
-            <div className="py-12 text-center text-sm text-gray-400">
-              Aucune chasse trouvée.{' '}
-              <button className="text-primary hover:underline" onClick={() => navigate('/hunts/new')}>
-                Créez-en une
-              </button>
-              .
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Chasse</TableHead>
-                  <TableHead>Difficulté</TableHead>
-                  <TableHead>Durée</TableHead>
-                  <TableHead>Points</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {hunts.map((hunt) => (
-                  <HuntRow
-                    key={hunt.id}
-                    hunt={hunt}
-                    onEdit={() => navigate(`/hunts/${hunt.id}/edit`)}
-                    onView={() => navigate(`/hunts/${hunt.id}/steps`)}
-                    onDelete={() => setDeleteTarget(hunt)}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* Barre de recherche globale */}
+      <div className="relative w-72">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <Input
+          placeholder="Rechercher une chasse…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {isLoading ? (
+        <div className="py-12 text-center text-sm text-gray-400">Chargement…</div>
+      ) : hunts.length === 0 ? (
+        <div className="py-12 text-center text-sm text-gray-400">
+          Aucune chasse trouvée.{' '}
+          <button className="text-primary hover:underline" onClick={() => navigate('/hunts/new')}>
+            Créez-en une
+          </button>
+          .
+        </div>
+      ) : (
+        <>
+          {/* Chasses actives */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                Chasses actives
+                <span className="text-xs font-normal bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                  {activeHunts.length}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {activeHunts.length === 0 ? (
+                <p className="py-8 text-center text-sm text-gray-400">Aucune chasse active.</p>
+              ) : (
+                <HuntTable rows={huntRows(activeHunts)} />
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Brouillons */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                Brouillons
+                <span className="text-xs font-normal bg-orange-100 text-orange-600 px-2 py-0.5 rounded-full">
+                  {draftHunts.length}
+                </span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {draftHunts.length === 0 ? (
+                <p className="py-8 text-center text-sm text-gray-400">Aucun brouillon.</p>
+              ) : (
+                <HuntTable rows={huntRows(draftHunts)} />
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Delete confirmation */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
@@ -135,6 +157,24 @@ export default function HuntsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function HuntTable({ rows }: { rows: React.ReactNode }) {
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Chasse</TableHead>
+          <TableHead>Difficulté</TableHead>
+          <TableHead>Durée</TableHead>
+          <TableHead>Points</TableHead>
+          <TableHead>Statut</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>{rows}</TableBody>
+    </Table>
   );
 }
 

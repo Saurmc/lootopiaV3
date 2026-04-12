@@ -14,6 +14,13 @@ export class HuntsRepository {
     return this.repo.find({ where: { is_active: true } });
   }
 
+  findByPartner(partnerId: string): Promise<HuntEntity[]> {
+    return this.repo.find({
+      where: { partner_id: partnerId },
+      order: { created_at: 'DESC' },
+    });
+  }
+
   count(): Promise<number> {
     return this.repo.count();
   }
@@ -33,6 +40,19 @@ export class HuntsRepository {
         '(LOWER(hunt.title) LIKE :term OR LOWER(hunt.description) LIKE :term)',
         { term },
       )
+      .getMany();
+  }
+
+  searchByPartner(q: string, partnerId: string): Promise<HuntEntity[]> {
+    const term = `%${q.toLowerCase()}%`;
+    return this.repo
+      .createQueryBuilder('hunt')
+      .where('hunt.partner_id = :partnerId', { partnerId })
+      .andWhere(
+        '(LOWER(hunt.title) LIKE :term OR LOWER(hunt.description) LIKE :term)',
+        { term },
+      )
+      .orderBy('hunt.created_at', 'DESC')
       .getMany();
   }
 

@@ -34,9 +34,9 @@ export default function HuntCreatePage() {
 
   const createMutation = useMutation({
     mutationFn: (payload: CreateHuntPayload) => huntsService.create(payload),
-    onSuccess: (hunt) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['hunts'] });
-      navigate(`/hunts/${hunt.id}/edit`);
+      navigate('/hunts');
     },
   });
 

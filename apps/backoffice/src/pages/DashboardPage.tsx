@@ -18,12 +18,13 @@ export default function DashboardPage() {
     queryFn: () => huntsService.getAll(),
   });
 
-  // Fetch stats for all hunts in parallel
+  // Fetch stats for all hunts in parallel (les brouillons sans participants retournent 404 — on ignore)
   const statsQueries = useQueries({
     queries: hunts.map((h) => ({
       queryKey: ['hunt-stats', h.id],
       queryFn: () => statsService.getHuntStats(h.id),
       staleTime: 60_000,
+      retry: false,
     })),
   });
 
