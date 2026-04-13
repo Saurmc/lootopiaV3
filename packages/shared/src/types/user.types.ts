@@ -6,8 +6,12 @@ export enum Role {
 
 export interface User {
   id: string;
-  email: string;
+  email: string | null;
   role: Role;
+  pseudo: string | null;
+  avatar_url: string | null;
+  is_guest: boolean;
+  consent_gps: boolean;
   createdAt: string;
   updatedAt: string;
 }

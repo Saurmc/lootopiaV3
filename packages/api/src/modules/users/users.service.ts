@@ -1,7 +1,10 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { UsersRepository } from './users.repository';
 import { UserEntity } from './entities/user.entity';
 import { Role } from '../../common/enums/role.enum';
+
+const BCRYPT_ROUNDS = 12;
 
 @Injectable()
 export class UsersService {
@@ -58,6 +61,47 @@ export class UsersService {
       is_guest: true,
       consent_gps: consentGps,
     });
+  }
+
+  /**
+   * Met à jour le pseudo et/ou l'avatar du profil joueur.
+   */
+  async updateProfile(
+    userId: string,
+    data: { pseudo?: string; avatar_url?: string },
+  ): Promise<UserEntity> {
+    const user = await this.usersRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    const updates: Partial<UserEntity> = { id: userId };
+    if (data.pseudo !== undefined) updates.pseudo = data.pseudo;
+    if (data.avatar_url !== undefined) updates.avatar_url = data.avatar_url;
+    return this.usersRepository.save({ ...user, ...updates });
+  }
+
+  /**
+   * Change le mot de passe après vérification du mot de passe actuel.
+   * Non accessible aux comptes invités (pas de password_hash).
+   */
+  async updatePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const user = await this.usersRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    if (!user.password_hash) {
+      throw new UnauthorizedException('Guest accounts cannot change password');
+    }
+    const valid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!valid) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.usersRepository.save({ ...user, password_hash: newHash });
   }
 
   /**

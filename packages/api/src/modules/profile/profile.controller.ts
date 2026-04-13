@@ -1,9 +1,10 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { Auth } from '../../common/guards/auth-roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { ProfileService } from './profile.service';
 import { BadgesService } from '../badges/badges.service';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('me')
 @Auth()
@@ -12,6 +13,25 @@ export class ProfileController {
     private readonly profileService: ProfileService,
     private readonly badgesService: BadgesService,
   ) {}
+
+  /**
+   * GET /me/profile — profil complet du joueur (email, pseudo, avatar, role, is_guest, consent_gps)
+   */
+  @Get('profile')
+  getProfile(@CurrentUser() user: AuthenticatedUser) {
+    return this.profileService.getProfile(user.id);
+  }
+
+  /**
+   * PATCH /me/profile — mise à jour du pseudo et/ou de l'avatar
+   */
+  @Patch('profile')
+  updateProfile(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.profileService.updateProfile(user.id, dto);
+  }
 
   /**
    * GET /me/stats — total de points, chasses jouées/terminées, nombre de badges

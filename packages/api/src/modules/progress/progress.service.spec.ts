@@ -47,9 +47,28 @@ const mockUser = (overrides: Partial<UserEntity> = {}): UserEntity => ({
   email: 'test@test.com',
   password_hash: 'hash',
   role: Role.PLAYER,
+  device_token: null,
+  is_guest: false,
   consent_gps: false,
+  pseudo: null,
+  avatar_url: null,
   created_at: new Date(),
   updated_at: new Date(),
+  ...overrides,
+});
+
+const mockStep = (overrides: Partial<StepEntity> = {}): StepEntity => ({
+  id: 'step-uuid',
+  hunt_id: 'hunt-uuid',
+  hunt: undefined as any,
+  order: 0,
+  title: 'Étape 1',
+  description: null,
+  location: { type: 'Point', coordinates: [2.3522, 48.8566] },
+  validation_radius: 50,
+  validation_type: 'gps',
+  ar_content: null,
+  created_at: new Date(),
   ...overrides,
 });
 
@@ -160,7 +179,7 @@ describe('ProgressService', () => {
   });
 
   describe('getProgressWithSteps', () => {
-    const mockStep = (order: number) => ({
+    const makeStep = (order: number) => ({
       id: `step-${order}`,
       hunt_id: 'hunt-uuid',
       hunt: undefined as any,
@@ -169,6 +188,7 @@ describe('ProgressService', () => {
       description: null,
       location: null,
       validation_radius: 50,
+      validation_type: 'gps',
       ar_content: null,
       created_at: new Date(),
     });
@@ -179,7 +199,7 @@ describe('ProgressService', () => {
       progress.completed_steps = [1];
       progressRepo.findByUserAndHunt.mockResolvedValue(progress);
       huntsRepo.findByIdWithSteps.mockResolvedValue(
-        mockHunt({ steps: [mockStep(1), mockStep(2), mockStep(3)] }),
+        mockHunt({ steps: [makeStep(1), makeStep(2), makeStep(3)] }),
       );
       usersRepo.findById.mockResolvedValue(mockUser({ consent_gps: false }));
 
@@ -190,13 +210,28 @@ describe('ProgressService', () => {
       expect(result.steps[2].status).toBe('locked');
     });
 
+    it('should expose validation_type and description in step map', async () => {
+      const progress = mockProgress();
+      progress.current_step = 0;
+      progressRepo.findByUserAndHunt.mockResolvedValue(progress);
+      huntsRepo.findByIdWithSteps.mockResolvedValue(
+        mockHunt({ steps: [{ ...makeStep(0), validation_type: 'quiz', description: 'Question ?' }] }),
+      );
+      usersRepo.findById.mockResolvedValue(mockUser());
+
+      const result = await service.getProgressWithSteps('user-uuid', 'hunt-uuid');
+
+      expect(result.steps[0].validation_type).toBe('quiz');
+      expect(result.steps[0].description).toBe('Question ?');
+    });
+
     it('should hide coordinates on locked steps regardless of GPS consent', async () => {
       const progress = mockProgress();
       progress.current_step = 1;
       progress.completed_steps = [];
       progressRepo.findByUserAndHunt.mockResolvedValue(progress);
       huntsRepo.findByIdWithSteps.mockResolvedValue(
-        mockHunt({ steps: [mockStep(1), mockStep(2)] }),
+        mockHunt({ steps: [makeStep(1), makeStep(2)] }),
       );
       usersRepo.findById.mockResolvedValue(mockUser({ consent_gps: true }));
 
@@ -214,27 +249,11 @@ describe('ProgressService', () => {
     });
   });
 
-  describe('validateStep', () => {
-    const mockStep = (overrides: Partial<StepEntity> = {}): StepEntity => ({
-      id: 'step-uuid',
-      hunt_id: 'hunt-uuid',
-      hunt: undefined as any,
-      order: 0,
-      title: 'Étape 1',
-      description: null,
-      location: { type: 'Point', coordinates: [2.3522, 48.8566] },
-      validation_radius: 50,
-      ar_content: null,
-      created_at: new Date(),
-      ...overrides,
-    });
-
-    it('should validate step and update progress', async () => {
+  describe('validateStep — GPS', () => {
+    it('should validate GPS step and update progress', async () => {
       const progress = mockProgress();
-      progress.current_step = 0;
-      progress.completed_steps = [];
       progressRepo.findByUserAndHunt.mockResolvedValue(progress);
-      stepsRepo.findById.mockResolvedValue(mockStep());
+      stepsRepo.findById.mockResolvedValue(mockStep({ validation_type: 'gps' }));
       geoService.isWithinRadius.mockResolvedValue(true);
       huntsRepo.findByIdWithSteps.mockResolvedValue(mockHunt({ steps: [mockStep()] as any }));
       progressRepo.findAllByUser.mockResolvedValue([]);
@@ -257,16 +276,130 @@ describe('ProgressService', () => {
       expect(result.completed_steps).toContain(0);
     });
 
+    it('should throw BadRequestException when GPS coords missing for GPS step', async () => {
+      progressRepo.findByUserAndHunt.mockResolvedValue(mockProgress());
+      stepsRepo.findById.mockResolvedValue(mockStep({ validation_type: 'gps' }));
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', {}),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('should throw BadRequestException when player is out of radius', async () => {
       progressRepo.findByUserAndHunt.mockResolvedValue(mockProgress());
-      stepsRepo.findById.mockResolvedValue(mockStep());
+      stepsRepo.findById.mockResolvedValue(mockStep({ validation_type: 'gps' }));
       geoService.isWithinRadius.mockResolvedValue(false);
 
       await expect(
         service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { lat: 0, lng: 0 }),
       ).rejects.toThrow(BadRequestException);
     });
+  });
 
+  describe('validateStep — QR Code', () => {
+    it('should validate qrcode step with correct code', async () => {
+      const progress = mockProgress();
+      progressRepo.findByUserAndHunt.mockResolvedValue(progress);
+      stepsRepo.findById.mockResolvedValue(mockStep({
+        validation_type: 'qrcode',
+        location: null,
+        ar_content: { expected_code: 'SECRET123' },
+      }));
+      huntsRepo.findByIdWithSteps.mockResolvedValue(mockHunt({ steps: [mockStep()] as any }));
+      progressRepo.findAllByUser.mockResolvedValue([]);
+      progressRepo.save.mockResolvedValue({ ...progress, completed_steps: [0], current_step: 1, total_points: 0, completed_at: new Date() });
+
+      await service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { qr_code: 'SECRET123' });
+
+      expect(progressRepo.save).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException with wrong QR code', async () => {
+      progressRepo.findByUserAndHunt.mockResolvedValue(mockProgress());
+      stepsRepo.findById.mockResolvedValue(mockStep({
+        validation_type: 'qrcode',
+        location: null,
+        ar_content: { expected_code: 'SECRET123' },
+      }));
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { qr_code: 'WRONG' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException when qr_code missing', async () => {
+      progressRepo.findByUserAndHunt.mockResolvedValue(mockProgress());
+      stepsRepo.findById.mockResolvedValue(mockStep({
+        validation_type: 'qrcode',
+        location: null,
+        ar_content: { expected_code: 'SECRET123' },
+      }));
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', {}),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('validateStep — Quiz', () => {
+    it('should validate quiz step with correct answer (case insensitive)', async () => {
+      const progress = mockProgress();
+      progressRepo.findByUserAndHunt.mockResolvedValue(progress);
+      stepsRepo.findById.mockResolvedValue(mockStep({
+        validation_type: 'quiz',
+        location: null,
+        ar_content: { answer: 'Paris' },
+      }));
+      huntsRepo.findByIdWithSteps.mockResolvedValue(mockHunt({ steps: [mockStep()] as any }));
+      progressRepo.findAllByUser.mockResolvedValue([]);
+      progressRepo.save.mockResolvedValue({ ...progress, completed_steps: [0], current_step: 1, total_points: 0, completed_at: new Date() });
+
+      await service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { answer: 'paris' });
+
+      expect(progressRepo.save).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException with wrong answer', async () => {
+      progressRepo.findByUserAndHunt.mockResolvedValue(mockProgress());
+      stepsRepo.findById.mockResolvedValue(mockStep({
+        validation_type: 'quiz',
+        location: null,
+        ar_content: { answer: 'Paris' },
+      }));
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { answer: 'Lyon' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('validateStep — Photo', () => {
+    it('should validate photo step when file_url provided', async () => {
+      const progress = mockProgress();
+      progressRepo.findByUserAndHunt.mockResolvedValue(progress);
+      stepsRepo.findById.mockResolvedValue(mockStep({ validation_type: 'photo', location: null }));
+      huntsRepo.findByIdWithSteps.mockResolvedValue(mockHunt({ steps: [mockStep()] as any }));
+      progressRepo.findAllByUser.mockResolvedValue([]);
+      progressRepo.save.mockResolvedValue({ ...progress, completed_steps: [0], current_step: 1, total_points: 0, completed_at: new Date() });
+
+      await service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', {
+        file_url: '/uploads/photo.jpg',
+      });
+
+      expect(progressRepo.save).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException when file_url missing', async () => {
+      progressRepo.findByUserAndHunt.mockResolvedValue(mockProgress());
+      stepsRepo.findById.mockResolvedValue(mockStep({ validation_type: 'photo', location: null }));
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', {}),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('validateStep — common guards', () => {
     it('should throw ConflictException when step already validated', async () => {
       const progress = mockProgress();
       progress.completed_steps = [0];

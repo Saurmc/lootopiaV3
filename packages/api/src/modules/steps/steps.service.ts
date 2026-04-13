@@ -50,6 +50,7 @@ export class StepsService {
       description: dto.description ?? null,
       location: this.buildLocation(dto.lat, dto.lng),
       validation_radius: dto.validation_radius ?? 50,
+      validation_type: dto.validation_type ?? 'gps',
       ar_content: dto.ar_content ?? null,
     });
   }
@@ -72,6 +73,7 @@ export class StepsService {
     if (dto.title !== undefined) updates.title = dto.title;
     if (dto.description !== undefined) updates.description = dto.description;
     if (dto.validation_radius !== undefined) updates.validation_radius = dto.validation_radius;
+    if (dto.validation_type !== undefined) updates.validation_type = dto.validation_type;
     if (dto.ar_content !== undefined) updates.ar_content = dto.ar_content;
     if (dto.lat !== undefined && dto.lng !== undefined) {
       updates.location = this.buildLocation(dto.lat, dto.lng);

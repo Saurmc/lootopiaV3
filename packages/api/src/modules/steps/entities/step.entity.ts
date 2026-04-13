@@ -42,6 +42,10 @@ export class StepEntity {
   @Column({ type: 'int', default: 50 })
   validation_radius: number;
 
+  // Type de validation : gps | qrcode | quiz | photo
+  @Column({ type: 'varchar', default: 'gps' })
+  validation_type: string;
+
   @Column({ type: 'jsonb', nullable: true })
   ar_content: Record<string, unknown> | null;
 
