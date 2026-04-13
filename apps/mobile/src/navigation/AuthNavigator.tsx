@@ -1,16 +1,42 @@
 import React, { useState } from 'react';
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
+import { useAuthStore } from '../store/auth.store';
+import { extractApiError } from '../utils/error.utils';
 
 type AuthTab = 'login' | 'register';
 
 /**
- * AuthNavigator — affiche deux onglets (Se connecter / Créer un compte).
- * Le basculement auth → app est piloté par le store Zustand, pas par la navigation.
+ * AuthNavigator — affiche deux onglets (Se connecter / Créer un compte)
+ * et un bouton "Continuer en invité" en bas de page.
  */
 export default function AuthNavigator() {
+  const { loginAsGuest } = useAuthStore();
   const [activeTab, setActiveTab] = useState<AuthTab>('login');
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
+
+  const handleGuestLogin = async () => {
+    setGuestLoading(true);
+    setGuestError(null);
+    try {
+      await loginAsGuest();
+      // RootNavigator bascule automatiquement vers AppNavigator
+    } catch (err: unknown) {
+      const { message } = extractApiError(err);
+      setGuestError(message);
+    } finally {
+      setGuestLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -46,6 +72,35 @@ export default function AuthNavigator() {
       {/* Contenu */}
       <View style={styles.content}>
         {activeTab === 'login' ? <LoginScreen /> : <RegisterScreen />}
+      </View>
+
+      {/* Séparateur */}
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>ou</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      {/* Bouton invité */}
+      <View style={styles.guestContainer}>
+        {guestError !== null && (
+          <Text style={styles.guestError}>{guestError}</Text>
+        )}
+        <TouchableOpacity
+          style={styles.guestBtn}
+          onPress={handleGuestLogin}
+          disabled={guestLoading}
+          activeOpacity={0.7}
+        >
+          {guestLoading ? (
+            <ActivityIndicator size="small" color="#6B7280" />
+          ) : (
+            <Text style={styles.guestBtnLabel}>Continuer en invité</Text>
+          )}
+        </TouchableOpacity>
+        <Text style={styles.guestHint}>
+          La progression invité n'est pas garantie si vous changez d'appareil.
+        </Text>
       </View>
     </SafeAreaView>
   );
@@ -104,5 +159,49 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 24,
+    marginVertical: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  dividerText: {
+    marginHorizontal: 12,
+    fontSize: 13,
+    color: '#9CA3AF',
+  },
+  guestContainer: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    gap: 8,
+  },
+  guestError: {
+    color: '#B91C1C',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  guestBtn: {
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  guestBtnLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  guestHint: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    textAlign: 'center',
   },
 });
