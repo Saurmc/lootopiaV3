@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsInt,
   IsObject,
+  IsIn,
   MaxLength,
   MinLength,
   Min,
@@ -46,6 +47,10 @@ export class CreateStepDto {
   @IsOptional()
   @Type(() => Number)
   validation_radius?: number;
+
+  @IsIn(['gps', 'qrcode', 'quiz', 'photo'])
+  @IsOptional()
+  validation_type?: string;
 
   @IsObject()
   @IsOptional()

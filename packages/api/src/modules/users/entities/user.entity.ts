@@ -34,6 +34,14 @@ export class UserEntity {
   @Column({ type: 'boolean', default: false })
   consent_gps: boolean;
 
+  // Pseudo affiché dans l'app (nullable : facultatif pour les invités)
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  pseudo: string | null;
+
+  // URL de la photo de profil (stockée via /files/upload)
+  @Column({ type: 'varchar', nullable: true })
+  avatar_url: string | null;
+
   @CreateDateColumn()
   created_at: Date;
 

@@ -3,9 +3,10 @@ import { ProfileController } from './profile.controller';
 import { ProfileService } from './profile.service';
 import { ProgressModule } from '../progress/progress.module';
 import { BadgesModule } from '../badges/badges.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
-  imports: [ProgressModule, BadgesModule],
+  imports: [ProgressModule, BadgesModule, UsersModule],
   controllers: [ProfileController],
   providers: [ProfileService],
 })

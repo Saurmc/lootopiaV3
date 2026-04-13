@@ -8,6 +8,7 @@ import { BadgesService } from '../badges/badges.service';
 import { ProgressEntity } from './entities/progress.entity';
 import { ProgressMapDto, StepMapDto, StepStatus } from './dto/progress-map.dto';
 import { ValidateStepDto } from './dto/validate-step.dto';
+import { StepEntity } from '../steps/entities/step.entity';
 
 @Injectable()
 export class ProgressService {
@@ -72,20 +73,7 @@ export class ProgressService {
       throw new BadRequestException('This is not the current step');
     }
 
-    if (!step.location) {
-      throw new BadRequestException('Step has no location configured');
-    }
-
-    const within = await this.geoService.isWithinRadius(
-      dto.lat,
-      dto.lng,
-      step.location,
-      step.validation_radius,
-    );
-
-    if (!within) {
-      throw new BadRequestException('Player is not within validation radius');
-    }
+    await this.validateByType(step, dto);
 
     const hunt = await this.huntsRepository.findByIdWithSteps(huntId);
     const totalSteps = hunt?.steps?.length ?? 0;
@@ -111,6 +99,82 @@ export class ProgressService {
     }
 
     return saved;
+  }
+
+  /**
+   * Route la validation vers la stratégie correspondant au validation_type de l'étape.
+   * Lève BadRequestException si les données fournies ne correspondent pas au type.
+   */
+  private async validateByType(step: StepEntity, dto: ValidateStepDto): Promise<void> {
+    const type = step.validation_type ?? 'gps';
+
+    switch (type) {
+      case 'gps':
+        await this.validateGps(step, dto);
+        break;
+      case 'qrcode':
+        this.validateQrCode(step, dto);
+        break;
+      case 'quiz':
+        this.validateQuiz(step, dto);
+        break;
+      case 'photo':
+        this.validatePhoto(dto);
+        break;
+      default:
+        throw new BadRequestException(`Unknown validation type: ${type}`);
+    }
+  }
+
+  private async validateGps(step: StepEntity, dto: ValidateStepDto): Promise<void> {
+    if (dto.lat === undefined || dto.lng === undefined) {
+      throw new BadRequestException('GPS coordinates required for this step');
+    }
+    if (!step.location) {
+      throw new BadRequestException('Step has no location configured');
+    }
+    const within = await this.geoService.isWithinRadius(
+      dto.lat,
+      dto.lng,
+      step.location,
+      step.validation_radius,
+    );
+    if (!within) {
+      throw new BadRequestException('Player is not within validation radius');
+    }
+  }
+
+  private validateQrCode(step: StepEntity, dto: ValidateStepDto): void {
+    const expectedCode = (step.ar_content as Record<string, unknown> | null)?.expected_code as string | undefined;
+    if (!expectedCode) {
+      throw new BadRequestException('Step has no QR code configured');
+    }
+    if (!dto.qr_code) {
+      throw new BadRequestException('QR code required for this step');
+    }
+    if (dto.qr_code !== expectedCode) {
+      throw new BadRequestException('Invalid QR code');
+    }
+  }
+
+  private validateQuiz(step: StepEntity, dto: ValidateStepDto): void {
+    const expectedAnswer = (step.ar_content as Record<string, unknown> | null)?.answer as string | undefined;
+    if (!expectedAnswer) {
+      throw new BadRequestException('Step has no answer configured');
+    }
+    if (!dto.answer) {
+      throw new BadRequestException('Answer required for this step');
+    }
+    if (dto.answer.toLowerCase().trim() !== expectedAnswer.toLowerCase().trim()) {
+      throw new BadRequestException('Wrong answer');
+    }
+  }
+
+  private validatePhoto(dto: ValidateStepDto): void {
+    if (!dto.file_url) {
+      throw new BadRequestException('Photo URL required for this step');
+    }
+    // La photo est acceptée automatiquement (validation manuelle hors scope)
   }
 
   async getProgressWithSteps(userId: string, huntId: string): Promise<ProgressMapDto> {
@@ -149,8 +213,10 @@ export class ProgressService {
         id: step.id,
         order: step.order,
         title: step.title,
+        description: step.description,
         status,
         validation_radius: step.validation_radius,
+        validation_type: step.validation_type ?? 'gps',
         coordinates,
       };
     });

@@ -1,22 +1,29 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { RgpdService } from './rgpd.service';
 import { UsersRepository } from '../users/users.repository';
+import { UsersService } from '../users/users.service';
 import { UserEntity } from '../users/entities/user.entity';
 import { Role } from '../../common/enums/role.enum';
 
-const mockUser = (): UserEntity => ({
+const mockUser = (overrides: Partial<UserEntity> = {}): UserEntity => ({
   id: 'user-uuid',
   email: 'test@example.com',
   password_hash: 'hash',
   role: Role.PLAYER,
+  device_token: null,
+  is_guest: false,
   consent_gps: false,
+  pseudo: null,
+  avatar_url: null,
   created_at: new Date(),
   updated_at: new Date(),
+  ...overrides,
 });
 
 describe('RgpdService', () => {
   let service: RgpdService;
   let usersRepository: jest.Mocked<UsersRepository>;
+  let usersService: jest.Mocked<UsersService>;
 
   beforeEach(() => {
     usersRepository = {
@@ -27,7 +34,11 @@ describe('RgpdService', () => {
       updateConsentGps: jest.fn(),
     } as unknown as jest.Mocked<UsersRepository>;
 
-    service = new RgpdService(usersRepository);
+    usersService = {
+      updatePassword: jest.fn(),
+    } as unknown as jest.Mocked<UsersService>;
+
+    service = new RgpdService(usersRepository, usersService);
   });
 
   describe('deleteAccount', () => {
@@ -63,8 +74,7 @@ describe('RgpdService', () => {
     });
 
     it('should update GPS consent to false (revocation)', async () => {
-      const user = mockUser();
-      user.consent_gps = true;
+      const user = mockUser({ consent_gps: true });
       usersRepository.findById.mockResolvedValue(user);
       usersRepository.updateConsentGps.mockResolvedValue(undefined);
 
@@ -87,8 +97,7 @@ describe('RgpdService', () => {
 
   describe('getGpsConsent', () => {
     it('should return consent_gps status', async () => {
-      const user = mockUser();
-      user.consent_gps = true;
+      const user = mockUser({ consent_gps: true });
       usersRepository.findById.mockResolvedValue(user);
 
       const result = await service.getGpsConsent('user-uuid');
@@ -110,6 +119,38 @@ describe('RgpdService', () => {
       await expect(service.getGpsConsent('unknown-id')).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('updatePassword', () => {
+    it('should delegate to usersService when passwords match', async () => {
+      usersService.updatePassword.mockResolvedValue(undefined);
+
+      await service.updatePassword('user-uuid', 'OldPass1!', 'NewPass1!', 'NewPass1!');
+
+      expect(usersService.updatePassword).toHaveBeenCalledWith(
+        'user-uuid',
+        'OldPass1!',
+        'NewPass1!',
+      );
+    });
+
+    it('should throw BadRequestException when new passwords do not match', async () => {
+      await expect(
+        service.updatePassword('user-uuid', 'OldPass1!', 'NewPass1!', 'DifferentPass!'),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(usersService.updatePassword).not.toHaveBeenCalled();
+    });
+
+    it('should propagate UnauthorizedException from usersService (wrong current password)', async () => {
+      usersService.updatePassword.mockRejectedValue(
+        new UnauthorizedException('Current password is incorrect'),
+      );
+
+      await expect(
+        service.updatePassword('user-uuid', 'WrongPass!', 'NewPass1!', 'NewPass1!'),
+      ).rejects.toThrow(UnauthorizedException);
     });
   });
 });
