@@ -1,6 +1,8 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StyleSheet, Text, View } from 'react-native';
+import { useAuthStore } from '../store/auth.store';
+import GpsConsentModal from '../components/common/GpsConsentModal';
 
 // --- Placeholders pour les US à venir ---
 function MapPlaceholder() {
@@ -38,50 +40,86 @@ export type AppTabParamList = {
 
 const Tab = createBottomTabNavigator<AppTabParamList>();
 
+/** Bannière ambre persistante pour les joueurs invités. */
+function GuestBanner() {
+  return (
+    <View style={styles.guestBanner}>
+      <Text style={styles.guestBannerText}>
+        Mode invité — Créez un compte pour sauvegarder votre progression
+      </Text>
+    </View>
+  );
+}
+
 /**
  * AppNavigator — bottom tabs pour le joueur authentifié.
- * Les screens réels sont implémentés dans US50 (Map), US52 (Hunts), US59 (Profile).
+ * Affiche une bannière invité et la modal de consentement GPS si nécessaire.
  */
 export default function AppNavigator() {
+  const { isGuest, pendingGpsConsent, setConsentGps } = useAuthStore();
+
   return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: '#3B82F6',
-        tabBarInactiveTintColor: '#6B7280',
-        tabBarStyle: {
-          borderTopWidth: 1,
-          borderTopColor: '#E5E7EB',
-          backgroundColor: '#fff',
-          height: 60,
-          paddingBottom: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-        },
-      }}
-    >
-      <Tab.Screen
-        name="Map"
-        component={MapPlaceholder}
-        options={{ tabBarLabel: 'Carte', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🗺</Text> }}
+    <View style={styles.root}>
+      {isGuest && <GuestBanner />}
+
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: '#3B82F6',
+          tabBarInactiveTintColor: '#6B7280',
+          tabBarStyle: {
+            borderTopWidth: 1,
+            borderTopColor: '#E5E7EB',
+            backgroundColor: '#fff',
+            height: 60,
+            paddingBottom: 8,
+          },
+          tabBarLabelStyle: {
+            fontSize: 12,
+            fontWeight: '500',
+          },
+        }}
+      >
+        <Tab.Screen
+          name="Map"
+          component={MapPlaceholder}
+          options={{
+            tabBarLabel: 'Carte',
+            tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🗺</Text>,
+          }}
+        />
+        <Tab.Screen
+          name="Hunts"
+          component={ListPlaceholder}
+          options={{
+            tabBarLabel: 'Chasses',
+            tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🔍</Text>,
+          }}
+        />
+        <Tab.Screen
+          name="Profile"
+          component={ProfilePlaceholder}
+          options={{
+            tabBarLabel: 'Profil',
+            tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>👤</Text>,
+          }}
+        />
+      </Tab.Navigator>
+
+      <GpsConsentModal
+        visible={pendingGpsConsent}
+        onAccept={() => setConsentGps(true)}
+        onDecline={() => setConsentGps(false)}
       />
-      <Tab.Screen
-        name="Hunts"
-        component={ListPlaceholder}
-        options={{ tabBarLabel: 'Chasses', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🔍</Text> }}
-      />
-      <Tab.Screen
-        name="Profile"
-        component={ProfilePlaceholder}
-        options={{ tabBarLabel: 'Profil', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>👤</Text> }}
-      />
-    </Tab.Navigator>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+  },
   placeholder: {
     flex: 1,
     justifyContent: 'center',
@@ -95,5 +133,18 @@ const styles = StyleSheet.create({
   placeholderText: {
     fontSize: 16,
     color: '#9CA3AF',
+  },
+  guestBanner: {
+    backgroundColor: '#FEF3C7',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#FDE68A',
+  },
+  guestBannerText: {
+    fontSize: 12,
+    color: '#92400E',
+    textAlign: 'center',
+    fontWeight: '500',
   },
 });

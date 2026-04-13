@@ -14,4 +14,9 @@ export const authService = {
     const response = await api.post<AuthResponse>('/auth/register', { email, password });
     return response.data;
   },
+
+  loginAsGuest: async (deviceToken: string): Promise<AuthResponse> => {
+    const response = await api.post<AuthResponse>('/auth/guest', { device_token: deviceToken });
+    return response.data;
+  },
 };
