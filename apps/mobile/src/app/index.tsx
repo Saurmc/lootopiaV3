@@ -1,10 +1,24 @@
-import { Text, View } from 'react-native';
+import React from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import RootNavigator from '../navigation/RootNavigator';
 
-// TODO: point d'entrée navigation racine
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      staleTime: 30_000,
+    },
+  },
+});
+
+/**
+ * AppEntry — point d'entrée de l'application Lootopia.
+ * Fournit le QueryClient (TanStack Query) et la navigation.
+ */
 export default function AppEntry() {
   return (
-    <View>
-      <Text>Lootopia Mobile TODO</Text>
-    </View>
+    <QueryClientProvider client={queryClient}>
+      <RootNavigator />
+    </QueryClientProvider>
   );
 }
