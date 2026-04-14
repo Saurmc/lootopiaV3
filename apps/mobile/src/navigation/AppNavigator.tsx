@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../store/auth.store';
 import GpsConsentModal from '../components/common/GpsConsentModal';
 import ConvertAccountScreen from '../screens/guest/ConvertAccountScreen';
 import MapScreen from '../screens/map/MapScreen';
 import HuntsListScreen from '../screens/hunts/HuntsListScreen';
+import HuntDetailScreen from '../screens/hunts/HuntDetailScreen';
 
 /**
  * GuestProfileScreen — affiché dans l'onglet Profil pour les invités.
@@ -52,7 +54,13 @@ export type AppTabParamList = {
   Profile: undefined;
 };
 
+export type AppStackParamList = {
+  Tabs: undefined;
+  HuntDetail: { huntId: string };
+};
+
 const Tab = createBottomTabNavigator<AppTabParamList>();
+const Stack = createNativeStackNavigator<AppStackParamList>();
 
 /** Bannière ambre persistante pour les joueurs invités. */
 function GuestBanner() {
@@ -66,10 +74,10 @@ function GuestBanner() {
 }
 
 /**
- * AppNavigator — bottom tabs pour le joueur authentifié.
- * Affiche une bannière invité et la modal de consentement GPS si nécessaire.
+ * TabsRoot — tabs + bannière invité + modal GPS.
+ * Séparé pour éviter de re-rendre le NativeStack entier quand l'état change.
  */
-export default function AppNavigator() {
+function TabsRoot() {
   const { isGuest, pendingGpsConsent, setConsentGps } = useAuthStore();
 
   return (
@@ -126,6 +134,29 @@ export default function AppNavigator() {
         onDecline={() => setConsentGps(false)}
       />
     </View>
+  );
+}
+
+/**
+ * AppNavigator — NativeStack racine englobant les onglets + HuntDetailScreen.
+ * Permet la navigation vers HuntDetail depuis n'importe quel onglet.
+ */
+export default function AppNavigator() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Tabs" component={TabsRoot} />
+      <Stack.Screen
+        name="HuntDetail"
+        component={HuntDetailScreen}
+        options={{
+          headerShown: true,
+          title: 'Détail de la chasse',
+          headerBackTitle: 'Retour',
+          headerTintColor: '#1D4ED8',
+          headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
+        }}
+      />
+    </Stack.Navigator>
   );
 }
 

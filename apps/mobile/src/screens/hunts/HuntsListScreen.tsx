@@ -10,8 +10,13 @@ import {
   View,
 } from 'react-native';
 import * as Location from 'expo-location';
+import { useNavigation } from '@react-navigation/native';
+import type { CompositeNavigationProp } from '@react-navigation/native';
+import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../../store/auth.store';
 import { useHuntsList } from '../../hooks/useHunts';
+import type { AppTabParamList, AppStackParamList } from '../../navigation/AppNavigator';
 import { haversineDistance, formatDistance } from '../../services/hunt.service';
 import type { HuntListItem } from '../../services/hunt.service';
 import HuntBottomSheet from '../map/HuntBottomSheet';
@@ -100,8 +105,14 @@ function HuntCard({ hunt, userLat, userLng, onPress }: HuntCardProps) {
  * HuntsListScreen — liste des chasses avec recherche textuelle et filtres.
  * Triée par distance (GPS) ou par titre (fallback).
  */
+type HuntsNavProp = CompositeNavigationProp<
+  BottomTabNavigationProp<AppTabParamList, 'Hunts'>,
+  NativeStackNavigationProp<AppStackParamList>
+>;
+
 export default function HuntsListScreen() {
   const { consentGps } = useAuthStore();
+  const navigation = useNavigation<HuntsNavProp>();
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('');
@@ -217,9 +228,9 @@ export default function HuntsListScreen() {
         userLat={userPos?.lat ?? null}
         userLng={userPos?.lng ?? null}
         onClose={() => setSelectedHunt(null)}
-        onJoin={() => {
+        onJoin={(hunt) => {
           setSelectedHunt(null);
-          // US53 : navigation vers HuntDetailScreen
+          navigation.navigate('HuntDetail', { huntId: hunt.id });
         }}
       />
     </SafeAreaView>

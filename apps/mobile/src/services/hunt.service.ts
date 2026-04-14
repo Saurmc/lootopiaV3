@@ -31,6 +31,47 @@ export interface HuntHistoryItem {
   completed_at: string | null;
 }
 
+export type StepStatus = 'completed' | 'current' | 'locked';
+
+export interface StepDetail {
+  id: string;
+  order: number;
+  title: string;
+  description: string | null;
+  status: StepStatus;
+  validation_type: string;
+  validation_radius: number;
+  coordinates: { lat: number; lng: number } | null;
+}
+
+export interface HuntProgress {
+  progress_id: string;
+  hunt_id: string;
+  current_step: number;
+  completed_steps: number[];
+  total_points: number;
+  started_at: string;
+  completed_at: string | null;
+  steps: StepDetail[];
+}
+
+export interface HuntDetail {
+  id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  difficulty: string | null;
+  duration: number | null;
+  points: number;
+  step_count: number;
+  steps: Array<{
+    id: string;
+    order: number;
+    title: string;
+    description: string | null;
+  }>;
+}
+
 /**
  * Parse les coordonnées PostGIS retournées par TypeORM.
  * TypeORM peut renvoyer un objet GeoJSON { type, coordinates: [lng, lat] }
@@ -152,6 +193,33 @@ export const huntService = {
         lng: coords?.lng ?? null,
       };
     });
+  },
+
+  /** GET /hunts/:id — détail d'une chasse avec ses étapes (sans statut). */
+  fetchHuntDetail: async (huntId: string): Promise<HuntDetail> => {
+    const res = await api.get<HuntDetail>(`/hunts/${huntId}`);
+    return res.data;
+  },
+
+  /**
+   * GET /hunts/:id/progress — progression du joueur sur une chasse.
+   * Retourne null si le joueur n'a pas encore rejoint (404).
+   */
+  fetchHuntProgress: async (huntId: string): Promise<HuntProgress | null> => {
+    try {
+      const res = await api.get<HuntProgress>(`/hunts/${huntId}/progress`);
+      return res.data;
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 404) return null;
+      throw err;
+    }
+  },
+
+  /** POST /hunts/:id/join — rejoint la chasse et crée l'entrée de progression. */
+  joinHunt: async (huntId: string): Promise<HuntProgress> => {
+    const res = await api.post<HuntProgress>(`/hunts/${huntId}/join`);
+    return res.data;
   },
 
   /**

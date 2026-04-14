@@ -26,6 +26,28 @@ export function useHuntsList(q: string) {
   });
 }
 
+/** Récupère le détail d'une chasse (titre, étapes, difficulté…). */
+export function useHuntDetail(huntId: string) {
+  return useQuery({
+    queryKey: ['hunt', huntId],
+    queryFn: () => huntService.fetchHuntDetail(huntId),
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Récupère la progression du joueur sur une chasse.
+ * Retourne null si le joueur n'a pas encore rejoint.
+ */
+export function useHuntProgress(huntId: string) {
+  return useQuery({
+    queryKey: ['hunt', huntId, 'progress'],
+    queryFn: () => huntService.fetchHuntProgress(huntId),
+    staleTime: 10_000,
+    retry: false,
+  });
+}
+
 /**
  * Récupère l'ensemble de l'historique du joueur (pour marquer les chasses terminées).
  * Désactivé pour les invités (pas de progression persistante).
