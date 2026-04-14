@@ -10,6 +10,7 @@ import HuntsListScreen from '../screens/hunts/HuntsListScreen';
 import HuntDetailScreen from '../screens/hunts/HuntDetailScreen';
 import StepValidationScreen from '../screens/hunts/StepValidationScreen';
 import HuntCompletionScreen from '../screens/hunts/HuntCompletionScreen';
+import ProfileScreen from '../screens/profile/ProfileScreen';
 
 /**
  * GuestProfileScreen — affiché dans l'onglet Profil pour les invités.
@@ -41,14 +42,6 @@ function GuestProfileScreen() {
   );
 }
 
-function ProfilePlaceholder() {
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderIcon}>👤</Text>
-      <Text style={styles.placeholderText}>Profil (US59)</Text>
-    </View>
-  );
-}
 
 export type AppTabParamList = {
   Map: undefined;
@@ -138,7 +131,7 @@ function TabsRoot() {
         />
         <Tab.Screen
           name="Profile"
-          component={isGuest ? GuestProfileScreen : ProfilePlaceholder}
+          component={isGuest ? GuestProfileScreen : ProfileScreen}
           options={{
             tabBarLabel: 'Profil',
             tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>👤</Text>,
@@ -201,20 +194,6 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: '#F9FAFB',
-  },
-  placeholder: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-    gap: 12,
-  },
-  placeholderIcon: {
-    fontSize: 48,
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: '#9CA3AF',
   },
   guestBanner: {
     backgroundColor: '#FEF3C7',
