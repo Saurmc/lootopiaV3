@@ -223,6 +223,19 @@ export const huntService = {
   },
 
   /**
+   * POST /hunts/:id/steps/:stepId/validate — valide l'étape courante.
+   * Pour GPS : envoie { lat, lng }, le backend vérifie la proximité via PostGIS.
+   * Lance une erreur avec le message backend en cas d'échec (400 = pas assez proche).
+   */
+  validateStep: async (
+    huntId: string,
+    stepId: string,
+    payload: { lat: number; lng: number },
+  ): Promise<void> => {
+    await api.post(`/hunts/${huntId}/steps/${stepId}/validate`, payload);
+  },
+
+  /**
    * GET /me/hunts — retourne l'historique du joueur pour identifier les chasses terminées.
    */
   fetchHuntHistory: async (): Promise<HuntHistoryItem[]> => {

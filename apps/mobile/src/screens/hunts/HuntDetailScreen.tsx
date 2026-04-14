@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHuntDetail, useHuntProgress } from '../../hooks/useHunts';
 import { huntService } from '../../services/hunt.service';
@@ -16,6 +17,7 @@ import type { StepDetail } from '../../services/hunt.service';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 
 type RouteProps = RouteProp<AppStackParamList, 'HuntDetail'>;
+type NavProp = NativeStackNavigationProp<AppStackParamList, 'HuntDetail'>;
 
 const DIFFICULTY_LABELS: Record<string, string> = {
   easy: 'Facile',
@@ -45,7 +47,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 interface StepRowProps {
   step: StepDetail;
-  onStartStep?: (stepId: string) => void;
+  onStartStep?: (step: StepDetail) => void;
 }
 
 function StepRow({ step, onStartStep }: StepRowProps) {
@@ -73,7 +75,7 @@ function StepRow({ step, onStartStep }: StepRowProps) {
       {isCurrent && onStartStep && (
         <TouchableOpacity
           style={styles.startBtn}
-          onPress={() => onStartStep(step.id)}
+          onPress={() => onStartStep(step)}
           activeOpacity={0.8}
         >
           <Text style={styles.startBtnLabel}>Commencer</Text>
@@ -109,6 +111,7 @@ function ProgressBar({ completed, total }: { completed: number; total: number })
  */
 export default function HuntDetailScreen() {
   const route = useRoute<RouteProps>();
+  const navigation = useNavigation<NavProp>();
   const { huntId } = route.params;
   const queryClient = useQueryClient();
 
@@ -134,9 +137,16 @@ export default function HuntDetailScreen() {
     }
   };
 
-  // US54+ : navigation vers l'écran de validation de l'étape
-  const handleStartStep = (_stepId: string) => {
-    // navigation.navigate('StepValidation', { huntId, stepId });
+  // US54 : navigation vers l'écran de validation GPS de l'étape
+  const handleStartStep = (step: StepDetail) => {
+    navigation.navigate('StepValidation', {
+      huntId,
+      stepId: step.id,
+      stepTitle: step.title,
+      stepDescription: step.description,
+      validationRadius: step.validation_radius,
+      coordinates: step.coordinates,
+    });
   };
 
   // ── États de chargement / erreur ────────────────────────────────────────────

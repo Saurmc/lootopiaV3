@@ -8,6 +8,7 @@ import ConvertAccountScreen from '../screens/guest/ConvertAccountScreen';
 import MapScreen from '../screens/map/MapScreen';
 import HuntsListScreen from '../screens/hunts/HuntsListScreen';
 import HuntDetailScreen from '../screens/hunts/HuntDetailScreen';
+import StepValidationScreen from '../screens/hunts/StepValidationScreen';
 
 /**
  * GuestProfileScreen — affiché dans l'onglet Profil pour les invités.
@@ -57,6 +58,14 @@ export type AppTabParamList = {
 export type AppStackParamList = {
   Tabs: undefined;
   HuntDetail: { huntId: string };
+  StepValidation: {
+    huntId: string;
+    stepId: string;
+    stepTitle: string;
+    stepDescription: string | null;
+    validationRadius: number;
+    coordinates: { lat: number; lng: number } | null;
+  };
 };
 
 const Tab = createBottomTabNavigator<AppTabParamList>();
@@ -151,6 +160,17 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Détail de la chasse',
+          headerBackTitle: 'Retour',
+          headerTintColor: '#1D4ED8',
+          headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
+        }}
+      />
+      <Stack.Screen
+        name="StepValidation"
+        component={StepValidationScreen}
+        options={{
+          headerShown: true,
+          title: 'Valider l\'étape',
           headerBackTitle: 'Retour',
           headerTintColor: '#1D4ED8',
           headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
