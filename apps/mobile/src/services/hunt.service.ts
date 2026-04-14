@@ -1,5 +1,6 @@
 import { api } from './api';
 
+/** Chasse avec coordonnées GPS garanties (pour les marqueurs carte). */
 export interface HuntMapItem {
   id: string;
   title: string;
@@ -10,6 +11,19 @@ export interface HuntMapItem {
   points: number;
   lat: number;
   lng: number;
+}
+
+/** Chasse pour la liste — coordonnées optionnelles. */
+export interface HuntListItem {
+  id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  difficulty: string | null;
+  duration: number | null;
+  points: number;
+  lat: number | null;
+  lng: number | null;
 }
 
 export interface HuntHistoryItem {
@@ -104,6 +118,40 @@ export const huntService = {
         };
       })
       .filter((h): h is HuntMapItem => h !== null);
+  },
+
+  /**
+   * GET /hunts (+ ?q=) — retourne toutes les chasses actives pour la liste.
+   * Coordonnées optionnelles (null si non renseignées).
+   */
+  fetchHuntsForList: async (q?: string): Promise<HuntListItem[]> => {
+    const res = await api.get<
+      Array<{
+        id: string;
+        title: string;
+        description: string | null;
+        location: string | null;
+        difficulty: string | null;
+        duration: number | null;
+        points: number;
+        coordinates: unknown;
+      }>
+    >('/hunts', { params: q ? { q } : undefined });
+
+    return res.data.map((h) => {
+      const coords = parseCoordinates(h.coordinates);
+      return {
+        id: h.id,
+        title: h.title,
+        description: h.description,
+        location: h.location,
+        difficulty: h.difficulty,
+        duration: h.duration,
+        points: h.points,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+      };
+    });
   },
 
   /**

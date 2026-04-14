@@ -6,15 +6,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import type { HuntMapItem } from '../../services/hunt.service';
+import type { HuntListItem } from '../../services/hunt.service';
 import { formatDistance } from '../../services/hunt.service';
 
 interface Props {
-  hunt: HuntMapItem | null;
+  hunt: HuntListItem | null;
   userLat: number | null;
   userLng: number | null;
   onClose: () => void;
-  onJoin: (hunt: HuntMapItem) => void;
+  onJoin: (hunt: HuntListItem) => void;
 }
 
 const DIFFICULTY_LABELS: Record<string, string> = {
@@ -50,9 +50,8 @@ export default function HuntBottomSheet({ hunt, userLat, userLng, onClose, onJoi
   const diffLabel = DIFFICULTY_LABELS[hunt.difficulty ?? ''] ?? hunt.difficulty ?? '—';
 
   const distance =
-    userLat !== null && userLng !== null
+    userLat !== null && userLng !== null && hunt.lat !== null && hunt.lng !== null
       ? formatDistance(
-          // haversine inline pour éviter un import circulaire
           (() => {
             const R = 6_371_000;
             const toRad = (d: number) => (d * Math.PI) / 180;

@@ -15,6 +15,18 @@ export function useHuntsOnMap() {
 }
 
 /**
+ * Récupère les chasses pour la liste (toutes, ou filtrées par recherche textuelle).
+ * Stale time de 30 s.
+ */
+export function useHuntsList(q: string) {
+  return useQuery({
+    queryKey: ['hunts', 'list', q],
+    queryFn: () => huntService.fetchHuntsForList(q || undefined),
+    staleTime: 30_000,
+  });
+}
+
+/**
  * Récupère l'ensemble de l'historique du joueur (pour marquer les chasses terminées).
  * Désactivé pour les invités (pas de progression persistante).
  */
