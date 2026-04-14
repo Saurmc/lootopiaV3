@@ -4,16 +4,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../store/auth.store';
 import GpsConsentModal from '../components/common/GpsConsentModal';
 import ConvertAccountScreen from '../screens/guest/ConvertAccountScreen';
-
-// --- Placeholders pour les US à venir ---
-function MapPlaceholder() {
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderIcon}>🗺</Text>
-      <Text style={styles.placeholderText}>Carte (US50)</Text>
-    </View>
-  );
-}
+import MapScreen from '../screens/map/MapScreen';
 
 function ListPlaceholder() {
   return (
@@ -113,7 +104,7 @@ export default function AppNavigator() {
       >
         <Tab.Screen
           name="Map"
-          component={MapPlaceholder}
+          component={MapScreen}
           options={{
             tabBarLabel: 'Carte',
             tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🗺</Text>,
