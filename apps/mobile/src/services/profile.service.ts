@@ -1,5 +1,11 @@
 import { api } from './api';
 
+export interface PlayerBadge {
+  id: string;
+  badge_type: string;
+  earned_at: string;
+}
+
 export interface PlayerProfile {
   id: string;
   email: string | null;
@@ -28,6 +34,12 @@ export const profileService = {
   /** GET /me/stats */
   fetchStats: async (): Promise<PlayerStats> => {
     const res = await api.get<PlayerStats>('/me/stats');
+    return res.data;
+  },
+
+  /** GET /me/badges */
+  fetchBadges: async (): Promise<PlayerBadge[]> => {
+    const res = await api.get<PlayerBadge[]>('/me/badges');
     return res.data;
   },
 };
