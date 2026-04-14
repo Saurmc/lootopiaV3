@@ -5,15 +5,7 @@ import { useAuthStore } from '../store/auth.store';
 import GpsConsentModal from '../components/common/GpsConsentModal';
 import ConvertAccountScreen from '../screens/guest/ConvertAccountScreen';
 import MapScreen from '../screens/map/MapScreen';
-
-function ListPlaceholder() {
-  return (
-    <View style={styles.placeholder}>
-      <Text style={styles.placeholderIcon}>📋</Text>
-      <Text style={styles.placeholderText}>Chasses (US52)</Text>
-    </View>
-  );
-}
+import HuntsListScreen from '../screens/hunts/HuntsListScreen';
 
 /**
  * GuestProfileScreen — affiché dans l'onglet Profil pour les invités.
@@ -112,7 +104,7 @@ export default function AppNavigator() {
         />
         <Tab.Screen
           name="Hunts"
-          component={ListPlaceholder}
+          component={HuntsListScreen}
           options={{
             tabBarLabel: 'Chasses',
             tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🔍</Text>,

@@ -19,7 +19,7 @@ import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAuthStore } from '../../store/auth.store';
 import type { AppTabParamList } from '../../navigation/AppNavigator';
 import { useHuntsOnMap, useHuntHistory } from '../../hooks/useHunts';
-import type { HuntMapItem } from '../../services/hunt.service';
+import type { HuntListItem } from '../../services/hunt.service';
 import HuntBottomSheet from './HuntBottomSheet';
 
 const PARIS: [number, number] = [2.3522, 48.8566];
@@ -55,7 +55,7 @@ export default function MapScreen() {
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
-  const [selectedHunt, setSelectedHunt] = useState<HuntMapItem | null>(null);
+  const [selectedHunt, setSelectedHunt] = useState<HuntListItem | null>(null);
 
   const { data: hunts = [] } = useHuntsOnMap();
   const { data: history = [] } = useHuntHistory();
