@@ -19,6 +19,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import type { BarcodeScanningResult } from 'expo-camera';
 import { useQueryClient } from '@tanstack/react-query';
 import { huntService, haversineDistance, formatDistance } from '../../services/hunt.service';
+import type { HuntProgress } from '../../services/hunt.service';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 
 type RouteProps = RouteProp<AppStackParamList, 'StepValidation'>;
@@ -501,10 +502,22 @@ export default function StepValidationScreen() {
 
   // ── Fin de validation (partagée) ─────────────────────────────────────────────
 
-  const onSuccess = async () => {
+  const onValidated = async (progress: HuntProgress) => {
     setState('success');
     await queryClient.invalidateQueries({ queryKey: ['hunt', huntId, 'progress'] });
-    setTimeout(() => navigation.goBack(), 1500);
+    setTimeout(() => {
+      if (progress.completed_at) {
+        navigation.replace('HuntCompletion', {
+          huntId,
+          totalPoints: progress.total_points,
+          stepCount: progress.steps.length,
+          startedAt: progress.started_at,
+          completedAt: progress.completed_at,
+        });
+      } else {
+        navigation.goBack();
+      }
+    }, 1500);
   };
 
   const onError = (err: unknown, isRangeError: boolean) => {
@@ -543,8 +556,8 @@ export default function StepValidationScreen() {
 
     setState('validating');
     try {
-      await huntService.validateStep(huntId, stepId, pos);
-      await onSuccess();
+      const progress = await huntService.validateStep(huntId, stepId, pos);
+      await onValidated(progress);
     } catch (err) {
       const msg = extractErrorMessage(err);
       onError(err, msg.toLowerCase().includes('radius'));
@@ -559,8 +572,8 @@ export default function StepValidationScreen() {
     setState('validating');
     setErrorMsg(null);
     try {
-      await huntService.validateStep(huntId, stepId, { qr_code: result.data });
-      await onSuccess();
+      const progress = await huntService.validateStep(huntId, stepId, { qr_code: result.data });
+      await onValidated(progress);
     } catch (err) {
       onError(err, false);
     }
@@ -578,8 +591,8 @@ export default function StepValidationScreen() {
     setState('validating');
     setErrorMsg(null);
     try {
-      await huntService.validateStep(huntId, stepId, { file_url: uri });
-      await onSuccess();
+      const progress = await huntService.validateStep(huntId, stepId, { file_url: uri });
+      await onValidated(progress);
     } catch (err) {
       const msg = extractErrorMessage(err);
       setState('error_other');
@@ -595,8 +608,8 @@ export default function StepValidationScreen() {
     setState('validating');
     setErrorMsg(null);
     try {
-      await huntService.validateStep(huntId, stepId, { answer: answer.trim() });
-      await onSuccess();
+      const progress = await huntService.validateStep(huntId, stepId, { answer: answer.trim() });
+      await onValidated(progress);
     } catch (err) {
       const msg = extractErrorMessage(err);
       setState('error_other');
