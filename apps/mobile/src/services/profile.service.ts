@@ -24,10 +24,21 @@ export interface PlayerStats {
   badge_count: number;
 }
 
+export interface UpdateProfilePayload {
+  pseudo?: string;
+  avatar_url?: string;
+}
+
 export const profileService = {
   /** GET /me/profile */
   fetchProfile: async (): Promise<PlayerProfile> => {
     const res = await api.get<PlayerProfile>('/me/profile');
+    return res.data;
+  },
+
+  /** PATCH /me/profile */
+  updateProfile: async (payload: UpdateProfilePayload): Promise<PlayerProfile> => {
+    const res = await api.patch<PlayerProfile>('/me/profile', payload);
     return res.data;
   },
 

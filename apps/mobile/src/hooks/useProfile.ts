@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { profileService } from '../services/profile.service';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { profileService, UpdateProfilePayload } from '../services/profile.service';
 import { useAuthStore } from '../store/auth.store';
 
 export function useBadges() {
@@ -29,5 +29,15 @@ export function usePlayerStats() {
     queryFn: profileService.fetchStats,
     staleTime: 30_000,
     enabled: !isGuest,
+  });
+}
+
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateProfilePayload) => profileService.updateProfile(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['me', 'profile'] });
+    },
   });
 }
