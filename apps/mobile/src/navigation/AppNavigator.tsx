@@ -13,6 +13,7 @@ import HuntCompletionScreen from '../screens/hunts/HuntCompletionScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import BadgesScreen from '../screens/profile/BadgesScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
+import SecurityScreen from '../screens/profile/SecurityScreen';
 
 /**
  * GuestProfileScreen — affiché dans l'onglet Profil pour les invités.
@@ -55,6 +56,7 @@ export type AppStackParamList = {
   Tabs: undefined;
   BadgesHistory: undefined;
   Settings: undefined;
+  Security: undefined;
   HuntDetail: { huntId: string };
   StepValidation: {
     huntId: string;
@@ -177,6 +179,17 @@ export default function AppNavigator() {
         options={{
           headerShown: true,
           title: 'Paramètres',
+          headerBackTitle: 'Retour',
+          headerTintColor: '#1D4ED8',
+          headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
+        }}
+      />
+      <Stack.Screen
+        name="Security"
+        component={SecurityScreen}
+        options={{
+          headerShown: true,
+          title: 'Sécurité',
           headerBackTitle: 'Retour',
           headerTintColor: '#1D4ED8',
           headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },

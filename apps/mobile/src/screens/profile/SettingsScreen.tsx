@@ -13,8 +13,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AppStackParamList } from '../../navigation/AppNavigator';
 import { useProfile, useUpdateProfile } from '../../hooks/useProfile';
 import { useAuthStore } from '../../store/auth.store';
+
+type SettingsNavProp = NativeStackNavigationProp<AppStackParamList, 'Settings'>;
 
 // ─── SettingsScreen ───────────────────────────────────────────────────────────
 
@@ -23,6 +28,7 @@ import { useAuthStore } from '../../store/auth.store';
  * Permet de modifier le pseudo, l'URL d'avatar et le consentement GPS.
  */
 export default function SettingsScreen() {
+  const navigation = useNavigation<SettingsNavProp>();
   const { data: profile, isLoading } = useProfile();
   const { mutate: updateProfile, isPending } = useUpdateProfile();
   const { consentGps, setConsentGps } = useAuthStore();
@@ -149,6 +155,20 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* ── Sécurité ── */}
+          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>Sécurité</Text>
+
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => navigation.navigate('Security')}
+            activeOpacity={0.75}
+          >
+            <View style={styles.navRow}>
+              <Text style={styles.navRowText}>Mot de passe et suppression du compte</Text>
+              <Text style={styles.navRowChevron}>›</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Informations compte */}
           {profile && (
             <View style={styles.infoCard}>
@@ -229,6 +249,15 @@ const styles = StyleSheet.create({
   toggleLeft: { flex: 1, gap: 3 },
   toggleLabel: { fontSize: 15, fontWeight: '600', color: '#111827' },
   toggleSub: { fontSize: 12, color: '#6B7280', lineHeight: 17 },
+
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  navRowText: { flex: 1, fontSize: 15, fontWeight: '500', color: '#111827' },
+  navRowChevron: { fontSize: 20, color: '#9CA3AF' },
 
   infoCard: {
     backgroundColor: '#fff',

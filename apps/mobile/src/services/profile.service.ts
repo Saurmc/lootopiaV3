@@ -53,4 +53,14 @@ export const profileService = {
     const res = await api.get<PlayerBadge[]>('/me/badges');
     return res.data;
   },
+
+  /** PATCH /me/password */
+  changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+    await api.patch('/me/password', { current_password: currentPassword, new_password: newPassword });
+  },
+
+  /** DELETE /me */
+  deleteAccount: async (): Promise<void> => {
+    await api.delete('/me');
+  },
 };

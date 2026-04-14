@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Patch } from '@nestjs/common';
 import { Auth } from '../../common/guards/auth-roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
 import { ProfileService } from './profile.service';
 import { BadgesService } from '../badges/badges.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('me')
 @Auth()
@@ -31,6 +32,27 @@ export class ProfileController {
     @Body() dto: UpdateProfileDto,
   ) {
     return this.profileService.updateProfile(user.id, dto);
+  }
+
+  /**
+   * PATCH /me/password — changement de mot de passe (compte complet uniquement)
+   */
+  @Patch('password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.profileService.changePassword(user.id, dto);
+  }
+
+  /**
+   * DELETE /me — suppression définitive du compte
+   */
+  @Delete()
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteAccount(@CurrentUser() user: AuthenticatedUser) {
+    return this.profileService.deleteAccount(user.id);
   }
 
   /**
