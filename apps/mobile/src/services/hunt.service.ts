@@ -1,0 +1,116 @@
+import { api } from './api';
+
+export interface HuntMapItem {
+  id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  difficulty: string | null;
+  duration: number | null;
+  points: number;
+  lat: number;
+  lng: number;
+}
+
+export interface HuntHistoryItem {
+  hunt_id: string;
+  completed_at: string | null;
+}
+
+/**
+ * Parse les coordonnées PostGIS retournées par TypeORM.
+ * TypeORM peut renvoyer un objet GeoJSON { type, coordinates: [lng, lat] }
+ * ou une chaîne JSON de ce même objet.
+ */
+function parseCoordinates(raw: unknown): { lat: number; lng: number } | null {
+  if (!raw) return null;
+
+  let geo: { coordinates?: [number, number] } | null = null;
+
+  if (typeof raw === 'object') {
+    geo = raw as { coordinates?: [number, number] };
+  } else if (typeof raw === 'string') {
+    try {
+      geo = JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  if (!geo || !Array.isArray(geo.coordinates) || geo.coordinates.length < 2) {
+    return null;
+  }
+  const [lng, lat] = geo.coordinates;
+  if (typeof lng !== 'number' || typeof lat !== 'number') return null;
+  return { lat, lng };
+}
+
+/** Distance Haversine entre deux points GPS (en mètres). */
+export function haversineDistance(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6_371_000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/** Formate une distance en mètres en chaîne lisible. */
+export function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+}
+
+export const huntService = {
+  /**
+   * GET /hunts — retourne toutes les chasses actives avec coordonnées parsées.
+   * Les chasses sans coordonnées GPS sont exclues de la carte.
+   */
+  fetchHunts: async (): Promise<HuntMapItem[]> => {
+    const res = await api.get<
+      Array<{
+        id: string;
+        title: string;
+        description: string | null;
+        location: string | null;
+        difficulty: string | null;
+        duration: number | null;
+        points: number;
+        coordinates: unknown;
+      }>
+    >('/hunts');
+
+    return res.data
+      .map((h) => {
+        const coords = parseCoordinates(h.coordinates);
+        if (!coords) return null;
+        return {
+          id: h.id,
+          title: h.title,
+          description: h.description,
+          location: h.location,
+          difficulty: h.difficulty,
+          duration: h.duration,
+          points: h.points,
+          lat: coords.lat,
+          lng: coords.lng,
+        };
+      })
+      .filter((h): h is HuntMapItem => h !== null);
+  },
+
+  /**
+   * GET /me/hunts — retourne l'historique du joueur pour identifier les chasses terminées.
+   */
+  fetchHuntHistory: async (): Promise<HuntHistoryItem[]> => {
+    const res = await api.get<HuntHistoryItem[]>('/me/hunts');
+    return res.data;
+  },
+};

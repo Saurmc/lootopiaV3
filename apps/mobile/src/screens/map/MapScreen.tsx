@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
 import {
   Camera,
   MapView,
+  PointAnnotation,
   UserLocation,
   type CameraRef,
 } from '@maplibre/maplibre-react-native';
@@ -17,12 +18,13 @@ import { useNavigation } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { useAuthStore } from '../../store/auth.store';
 import type { AppTabParamList } from '../../navigation/AppNavigator';
+import { useHuntsOnMap, useHuntHistory } from '../../hooks/useHunts';
+import type { HuntMapItem } from '../../services/hunt.service';
+import HuntBottomSheet from './HuntBottomSheet';
 
-// Position par défaut : Paris
 const PARIS: [number, number] = [2.3522, 48.8566];
 const DEFAULT_ZOOM = 13;
 
-// Style raster OpenStreetMap (aucune clé API requise)
 const OSM_STYLE = {
   version: 8,
   sources: {
@@ -33,34 +35,38 @@ const OSM_STYLE = {
       attribution: '© OpenStreetMap contributors',
     },
   },
-  layers: [
-    {
-      id: 'osm',
-      type: 'raster',
-      source: 'osm',
-    },
-  ],
+  layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
+};
+
+const DIFFICULTY_COLORS: Record<string, string> = {
+  easy: '#22C55E',
+  medium: '#F97316',
+  hard: '#EF4444',
 };
 
 type MapNavProp = BottomTabNavigationProp<AppTabParamList, 'Map'>;
 
-/**
- * MapScreen — carte interactive centrée sur la position GPS de l'utilisateur.
- * Si le consentement GPS est absent, affiche Paris par défaut.
- */
 export default function MapScreen() {
   const { consentGps } = useAuthStore();
   const navigation = useNavigation<MapNavProp>();
   const cameraRef = useRef<CameraRef>(null);
 
   const [center, setCenter] = useState<[number, number]>(PARIS);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
+  const [selectedHunt, setSelectedHunt] = useState<HuntMapItem | null>(null);
 
-  // Au montage : si consentement GPS, on demande la permission OS et on récupère la position
+  const { data: hunts = [] } = useHuntsOnMap();
+  const { data: history = [] } = useHuntHistory();
+
+  const completedIds = useMemo(
+    () => new Set(history.filter((h) => h.completed_at !== null).map((h) => h.hunt_id)),
+    [history],
+  );
+
   useEffect(() => {
     if (!consentGps) return;
-
     let cancelled = false;
     (async () => {
       setLocating(true);
@@ -74,10 +80,12 @@ export default function MapScreen() {
           accuracy: Location.Accuracy.Balanced,
         });
         if (!cancelled) {
-          const coords: [number, number] = [loc.coords.longitude, loc.coords.latitude];
-          setCenter(coords);
+          const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+          setUserCoords(coords);
+          const pos: [number, number] = [coords.lng, coords.lat];
+          setCenter(pos);
           cameraRef.current?.setCamera({
-            centerCoordinate: coords,
+            centerCoordinate: pos,
             zoomLevel: DEFAULT_ZOOM,
             animationDuration: 600,
           });
@@ -86,10 +94,7 @@ export default function MapScreen() {
         if (!cancelled) setLocating(false);
       }
     })();
-
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [consentGps]);
 
   const handleRecenter = useCallback(async () => {
@@ -99,10 +104,12 @@ export default function MapScreen() {
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      const coords: [number, number] = [loc.coords.longitude, loc.coords.latitude];
-      setCenter(coords);
+      const coords = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+      setUserCoords(coords);
+      const pos: [number, number] = [coords.lng, coords.lat];
+      setCenter(pos);
       cameraRef.current?.setCamera({
-        centerCoordinate: coords,
+        centerCoordinate: pos,
         zoomLevel: DEFAULT_ZOOM,
         animationDuration: 500,
       });
@@ -119,6 +126,7 @@ export default function MapScreen() {
         logoEnabled={false}
         attributionEnabled={false}
         compassEnabled
+        onPress={() => setSelectedHunt(null)}
       >
         <Camera
           ref={cameraRef}
@@ -127,12 +135,31 @@ export default function MapScreen() {
           animationMode="flyTo"
           animationDuration={0}
         />
-        {consentGps && !permissionDenied && (
-          <UserLocation visible renderMode="normal" />
-        )}
+
+        {consentGps && !permissionDenied && <UserLocation visible renderMode="normal" />}
+
+        {hunts.map((hunt) => {
+          const isCompleted = completedIds.has(hunt.id);
+          const color = isCompleted
+            ? '#9CA3AF'
+            : (DIFFICULTY_COLORS[hunt.difficulty ?? ''] ?? '#6B7280');
+
+          return (
+            <PointAnnotation
+              key={hunt.id}
+              id={hunt.id}
+              coordinate={[hunt.lng, hunt.lat]}
+              onSelected={() => setSelectedHunt(hunt)}
+            >
+              <View style={[styles.marker, { backgroundColor: color }]}>
+                <Text style={styles.markerText}>{isCompleted ? '✓' : '🏴'}</Text>
+              </View>
+            </PointAnnotation>
+          );
+        })}
       </MapView>
 
-      {/* Indicateur de localisation en cours */}
+      {/* Spinner localisation */}
       {locating && (
         <View style={styles.locatingBadge}>
           <ActivityIndicator size="small" color="#3B82F6" />
@@ -140,7 +167,7 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Message si permission OS refusée */}
+      {/* Avertissement permission OS refusée */}
       {permissionDenied && (
         <View style={styles.permissionBanner}>
           <Text style={styles.permissionText}>
@@ -169,17 +196,41 @@ export default function MapScreen() {
       >
         <Text style={styles.listBtnLabel}>☰ Liste</Text>
       </TouchableOpacity>
+
+      {/* Bottom sheet chasse sélectionnée */}
+      <HuntBottomSheet
+        hunt={selectedHunt}
+        userLat={userCoords?.lat ?? null}
+        userLng={userCoords?.lng ?? null}
+        onClose={() => setSelectedHunt(null)}
+        onJoin={(hunt) => {
+          setSelectedHunt(null);
+          // US53 : navigation vers HuntDetailScreen
+          // navigation.navigate('HuntDetail', { huntId: hunt.id });
+        }}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  map: { flex: 1 },
+  marker: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  map: {
-    flex: 1,
-  },
+  markerText: { fontSize: 14 },
   locatingBadge: {
     position: 'absolute',
     top: 16,
@@ -197,10 +248,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  locatingText: {
-    fontSize: 13,
-    color: '#374151',
-  },
+  locatingText: { fontSize: 13, color: '#374151' },
   permissionBanner: {
     position: 'absolute',
     top: 16,
@@ -212,11 +260,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#FDE68A',
   },
-  permissionText: {
-    fontSize: 12,
-    color: '#92400E',
-    textAlign: 'center',
-  },
+  permissionText: { fontSize: 12, color: '#92400E', textAlign: 'center' },
   recenterBtn: {
     position: 'absolute',
     bottom: 24,
@@ -233,10 +277,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  recenterIcon: {
-    fontSize: 22,
-    color: '#3B82F6',
-  },
+  recenterIcon: { fontSize: 22, color: '#3B82F6' },
   listBtn: {
     position: 'absolute',
     bottom: 24,
@@ -251,9 +292,5 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 4,
   },
-  listBtnLabel: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  listBtnLabel: { color: '#fff', fontSize: 14, fontWeight: '600' },
 });
