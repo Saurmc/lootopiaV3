@@ -12,6 +12,8 @@ import type { RouteProp } from '@react-navigation/native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import type { BarcodeScanningResult } from 'expo-camera';
 import { useQueryClient } from '@tanstack/react-query';
 import { huntService, haversineDistance, formatDistance } from '../../services/hunt.service';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
@@ -21,131 +23,50 @@ type NavProp = NativeStackNavigationProp<AppStackParamList, 'StepValidation'>;
 
 type ValidationState = 'idle' | 'locating' | 'validating' | 'success' | 'error_range' | 'error_other';
 
-/**
- * StepValidationScreen — validation GPS d'une étape.
- * 1. Obtient la position GPS courante (expo-location)
- * 2. Affiche la distance à la cible et l'état (trop loin / assez proche)
- * 3. POST /hunts/:id/steps/:stepId/validate { lat, lng }
- * 4. Succès → invalide le cache de progression → retour à HuntDetail
- */
-export default function StepValidationScreen() {
-  const route = useRoute<RouteProps>();
-  const navigation = useNavigation<NavProp>();
-  const queryClient = useQueryClient();
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-  const {
-    huntId,
-    stepId,
-    stepTitle,
-    stepDescription,
-    validationRadius,
-    coordinates,
-  } = route.params;
+function extractErrorMessage(err: unknown): string {
+  const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+  return typeof msg === 'string' ? msg : '';
+}
 
-  const [state, setState] = useState<ValidationState>('idle');
-  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+// ─── Section GPS ──────────────────────────────────────────────────────────────
 
-  // Animation tick pour l'icône GPS
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+interface GpsSectionProps {
+  coordinates: { lat: number; lng: number } | null;
+  validationRadius: number;
+  userPos: { lat: number; lng: number } | null;
+  state: ValidationState;
+  errorMsg: string | null;
+  onValidate: () => void;
+  pulseAnim: Animated.Value;
+}
 
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.2, duration: 700, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, []);
-
-  // Récupère la dernière position connue au montage (indication de distance rapide)
-  useEffect(() => {
-    Location.getLastKnownPositionAsync().then((loc) => {
-      if (loc) setUserPos({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-    });
-  }, []);
-
-  // ── Distance et état de proximité ────────────────────────────────────────────
-
+function GpsSection({
+  coordinates,
+  validationRadius,
+  userPos,
+  state,
+  errorMsg,
+  onValidate,
+  pulseAnim,
+}: GpsSectionProps) {
   const distance =
     userPos && coordinates
       ? haversineDistance(userPos.lat, userPos.lng, coordinates.lat, coordinates.lng)
       : null;
 
   const isClose = distance !== null && distance <= validationRadius;
-
-  // ── Validation ────────────────────────────────────────────────────────────────
-
-  const handleValidate = async () => {
-    setState('locating');
-    setErrorMsg(null);
-
-    let pos: { lat: number; lng: number };
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        setState('error_other');
-        setErrorMsg('Permission GPS refusée. Autorisez l\'accès à votre position dans les réglages.');
-        return;
-      }
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-      pos = { lat: loc.coords.latitude, lng: loc.coords.longitude };
-      setUserPos(pos);
-    } catch {
-      setState('error_other');
-      setErrorMsg('Impossible d\'obtenir votre position GPS. Réessayez.');
-      return;
-    }
-
-    setState('validating');
-    try {
-      await huntService.validateStep(huntId, stepId, pos);
-      setState('success');
-      // Invalide la progression pour que HuntDetailScreen se recharge
-      await queryClient.invalidateQueries({ queryKey: ['hunt', huntId, 'progress'] });
-      // Retour automatique après 1,5 s
-      setTimeout(() => {
-        navigation.goBack();
-      }, 1500);
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      if (typeof msg === 'string' && msg.toLowerCase().includes('radius')) {
-        setState('error_range');
-        setErrorMsg('Vous n\'êtes pas assez proche de la destination. Rapprochez-vous et réessayez.');
-      } else {
-        setState('error_other');
-        setErrorMsg(msg ?? 'Une erreur est survenue. Réessayez.');
-      }
-    }
-  };
-
   const isLoading = state === 'locating' || state === 'validating';
 
-  // ── Rendu ─────────────────────────────────────────────────────────────────────
-
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Info étape */}
-      <View style={styles.stepCard}>
-        <Text style={styles.stepLabel}>Étape en cours</Text>
-        <Text style={styles.stepTitle}>{stepTitle}</Text>
-        {stepDescription ? (
-          <Text style={styles.stepDesc}>{stepDescription}</Text>
-        ) : null}
-      </View>
-
-      {/* Rayon de validation */}
+    <>
+      {/* Rayon */}
       <View style={styles.radiusChip}>
-        <Text style={styles.radiusChipText}>
-          📏 Rayon de validation : {validationRadius} m
-        </Text>
+        <Text style={styles.radiusChipText}>📏 Rayon de validation : {validationRadius} m</Text>
       </View>
 
-      {/* Indicateur de distance */}
+      {/* Indicateur distance */}
       {coordinates ? (
         <View style={[
           styles.distanceCard,
@@ -184,46 +105,26 @@ export default function StepValidationScreen() {
         </View>
       )}
 
-      {/* État de chargement */}
-      {state === 'locating' && (
+      {/* Spinner */}
+      {(state === 'locating' || state === 'validating') && (
         <View style={styles.statusRow}>
           <ActivityIndicator size="small" color="#3B82F6" />
-          <Text style={styles.statusText}>Obtention de votre position GPS…</Text>
-        </View>
-      )}
-      {state === 'validating' && (
-        <View style={styles.statusRow}>
-          <ActivityIndicator size="small" color="#3B82F6" />
-          <Text style={styles.statusText}>Validation en cours…</Text>
-        </View>
-      )}
-
-      {/* Succès */}
-      {state === 'success' && (
-        <View style={styles.successBanner}>
-          <Text style={styles.successIcon}>🎉</Text>
-          <Text style={styles.successText}>Étape validée ! Bravo !</Text>
+          <Text style={styles.statusText}>
+            {state === 'locating' ? 'Obtention de votre position GPS…' : 'Validation en cours…'}
+          </Text>
         </View>
       )}
 
       {/* Erreur */}
       {(state === 'error_range' || state === 'error_other') && errorMsg && (
-        <View style={[
-          styles.errorBanner,
-          state === 'error_range' ? styles.errorBannerRange : styles.errorBannerOther,
-        ]}>
-          <Text style={styles.errorIcon}>
-            {state === 'error_range' ? '📍' : '⚠️'}
-          </Text>
-          <Text style={styles.errorText}>{errorMsg}</Text>
-        </View>
+        <ErrorBanner type={state === 'error_range' ? 'range' : 'other'} message={errorMsg} />
       )}
 
-      {/* Bouton principal */}
+      {/* Bouton */}
       {state !== 'success' && (
         <TouchableOpacity
           style={[styles.validateBtn, isLoading && styles.validateBtnDisabled]}
-          onPress={handleValidate}
+          onPress={onValidate}
           disabled={isLoading}
           activeOpacity={0.8}
         >
@@ -238,11 +139,291 @@ export default function StepValidationScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Hint */}
       {state === 'idle' && (
         <Text style={styles.hint}>
           Rendez-vous à l'emplacement de l'étape, puis appuyez sur le bouton pour valider votre présence.
         </Text>
+      )}
+    </>
+  );
+}
+
+// ─── Section QR Code ──────────────────────────────────────────────────────────
+
+interface QrSectionProps {
+  state: ValidationState;
+  errorMsg: string | null;
+  onScanned: (result: BarcodeScanningResult) => void;
+  onRetry: () => void;
+  scanned: boolean;
+}
+
+function QrSection({ state, errorMsg, onScanned, onRetry, scanned }: QrSectionProps) {
+  const [permission, requestPermission] = useCameraPermissions();
+
+  if (!permission) {
+    return (
+      <View style={styles.cameraPlaceholder}>
+        <ActivityIndicator color="#3B82F6" />
+      </View>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={styles.permissionBox}>
+        <Text style={styles.permissionIcon}>📷</Text>
+        <Text style={styles.permissionTitle}>Accès caméra requis</Text>
+        <Text style={styles.permissionText}>
+          Pour scanner le QR code de cette étape, autorisez l'accès à votre caméra.
+        </Text>
+        <TouchableOpacity style={styles.validateBtn} onPress={requestPermission} activeOpacity={0.8}>
+          <Text style={styles.validateBtnLabel}>Autoriser la caméra</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <>
+      {/* Viewfinder */}
+      <View style={styles.cameraContainer}>
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
+          facing="back"
+          onBarcodeScanned={scanned ? undefined : onScanned}
+          barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
+        />
+        {/* Cadre de scan */}
+        <View style={styles.scannerOverlay}>
+          <View style={styles.scannerFrame}>
+            <View style={[styles.corner, styles.cornerTL]} />
+            <View style={[styles.corner, styles.cornerTR]} />
+            <View style={[styles.corner, styles.cornerBL]} />
+            <View style={[styles.corner, styles.cornerBR]} />
+          </View>
+        </View>
+        {/* Label */}
+        <View style={styles.cameraLabel}>
+          <Text style={styles.cameraLabelText}>
+            {state === 'validating' ? 'Validation…' : 'Pointez vers le QR code'}
+          </Text>
+        </View>
+      </View>
+
+      {/* Spinner validation */}
+      {state === 'validating' && (
+        <View style={styles.statusRow}>
+          <ActivityIndicator size="small" color="#3B82F6" />
+          <Text style={styles.statusText}>Vérification du QR code…</Text>
+        </View>
+      )}
+
+      {/* Erreur */}
+      {(state === 'error_range' || state === 'error_other') && errorMsg && (
+        <>
+          <ErrorBanner type="other" message={errorMsg} />
+          <TouchableOpacity style={styles.retryBtn} onPress={onRetry} activeOpacity={0.8}>
+            <Text style={styles.retryBtnLabel}>🔄 Réessayer</Text>
+          </TouchableOpacity>
+        </>
+      )}
+
+      {state === 'idle' && (
+        <Text style={styles.hint}>
+          Scannez le QR code présent à l'emplacement de l'étape pour valider votre présence.
+        </Text>
+      )}
+    </>
+  );
+}
+
+// ─── ErrorBanner ─────────────────────────────────────────────────────────────
+
+function ErrorBanner({ type, message }: { type: 'range' | 'other'; message: string }) {
+  return (
+    <View style={[styles.errorBanner, type === 'range' ? styles.errorBannerRange : styles.errorBannerOther]}>
+      <Text style={styles.errorBannerIcon}>{type === 'range' ? '📍' : '⚠️'}</Text>
+      <Text style={styles.errorBannerText}>{message}</Text>
+    </View>
+  );
+}
+
+// ─── StepValidationScreen ────────────────────────────────────────────────────
+
+/**
+ * StepValidationScreen — valide l'étape courante d'une chasse.
+ * Supporte deux modes selon `validationType` :
+ * - "gps"    : obtient la position → POST { lat, lng }
+ * - "qrcode" : scanner caméra     → POST { qr_code }
+ */
+export default function StepValidationScreen() {
+  const route = useRoute<RouteProps>();
+  const navigation = useNavigation<NavProp>();
+  const queryClient = useQueryClient();
+
+  const {
+    huntId,
+    stepId,
+    stepTitle,
+    stepDescription,
+    validationType,
+    validationRadius,
+    coordinates,
+  } = route.params;
+
+  const [state, setState] = useState<ValidationState>('idle');
+  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [scanned, setScanned] = useState(false);
+
+  // Pulse animation pour l'icône GPS
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.2, duration: 700, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
+
+  // Dernière position connue pour l'estimation de distance (mode GPS)
+  useEffect(() => {
+    if (validationType !== 'gps') return;
+    Location.getLastKnownPositionAsync().then((loc) => {
+      if (loc) setUserPos({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    });
+  }, [validationType]);
+
+  // ── Fin de validation (partagée) ─────────────────────────────────────────────
+
+  const onSuccess = async () => {
+    setState('success');
+    await queryClient.invalidateQueries({ queryKey: ['hunt', huntId, 'progress'] });
+    setTimeout(() => navigation.goBack(), 1500);
+  };
+
+  const onError = (err: unknown, isRangeError: boolean) => {
+    const msg = extractErrorMessage(err);
+    if (isRangeError) {
+      setState('error_range');
+      setErrorMsg('Vous n\'êtes pas assez proche de la destination. Rapprochez-vous et réessayez.');
+    } else {
+      setState('error_other');
+      setErrorMsg(msg || 'Une erreur est survenue. Réessayez.');
+    }
+  };
+
+  // ── Validation GPS ────────────────────────────────────────────────────────────
+
+  const handleGpsValidate = async () => {
+    setState('locating');
+    setErrorMsg(null);
+
+    let pos: { lat: number; lng: number };
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setState('error_other');
+        setErrorMsg('Permission GPS refusée. Autorisez l\'accès à votre position dans les réglages.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      pos = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+      setUserPos(pos);
+    } catch {
+      setState('error_other');
+      setErrorMsg('Impossible d\'obtenir votre position GPS. Réessayez.');
+      return;
+    }
+
+    setState('validating');
+    try {
+      await huntService.validateStep(huntId, stepId, pos);
+      await onSuccess();
+    } catch (err) {
+      const msg = extractErrorMessage(err);
+      onError(err, msg.toLowerCase().includes('radius'));
+    }
+  };
+
+  // ── Validation QR ─────────────────────────────────────────────────────────────
+
+  const handleQrScanned = async (result: BarcodeScanningResult) => {
+    if (scanned || state === 'validating' || state === 'success') return;
+    setScanned(true);
+    setState('validating');
+    setErrorMsg(null);
+    try {
+      await huntService.validateStep(huntId, stepId, { qr_code: result.data });
+      await onSuccess();
+    } catch (err) {
+      onError(err, false);
+    }
+  };
+
+  const handleQrRetry = () => {
+    setScanned(false);
+    setState('idle');
+    setErrorMsg(null);
+  };
+
+  // ── Rendu ─────────────────────────────────────────────────────────────────────
+
+  return (
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      // Désactive le scroll pendant le scan pour ne pas perdre le viewfinder
+      scrollEnabled={validationType !== 'qrcode' || state !== 'idle'}
+    >
+      {/* En-tête étape */}
+      <View style={styles.stepCard}>
+        <Text style={styles.stepLabel}>Étape en cours</Text>
+        <Text style={styles.stepTitle}>{stepTitle}</Text>
+        {stepDescription ? <Text style={styles.stepDesc}>{stepDescription}</Text> : null}
+      </View>
+
+      {/* Badge type de validation */}
+      <View style={styles.typeChip}>
+        <Text style={styles.typeChipText}>
+          {validationType === 'qrcode' ? '📱 Validation par QR code' : '📡 Validation par GPS'}
+        </Text>
+      </View>
+
+      {/* Succès */}
+      {state === 'success' && (
+        <View style={styles.successBanner}>
+          <Text style={styles.successIcon}>🎉</Text>
+          <Text style={styles.successText}>Étape validée ! Bravo !</Text>
+        </View>
+      )}
+
+      {/* Section spécifique au type */}
+      {state !== 'success' && (
+        validationType === 'qrcode' ? (
+          <QrSection
+            state={state}
+            errorMsg={errorMsg}
+            onScanned={handleQrScanned}
+            onRetry={handleQrRetry}
+            scanned={scanned}
+          />
+        ) : (
+          <GpsSection
+            coordinates={coordinates}
+            validationRadius={validationRadius}
+            userPos={userPos}
+            state={state}
+            errorMsg={errorMsg}
+            onValidate={handleGpsValidate}
+            pulseAnim={pulseAnim}
+          />
+        )
       )}
     </ScrollView>
   );
@@ -250,16 +431,14 @@ export default function StepValidationScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
+const CORNER_SIZE = 22;
+const CORNER_WIDTH = 3;
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  content: {
-    padding: 20,
-    gap: 16,
-    paddingBottom: 40,
-  },
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  content: { padding: 20, gap: 16, paddingBottom: 40 },
+
+  // Étape
   stepCard: {
     backgroundColor: '#fff',
     borderRadius: 14,
@@ -275,17 +454,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  stepTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  stepDesc: {
-    fontSize: 14,
-    color: '#6B7280',
-    lineHeight: 20,
-  },
-  radiusChip: {
+  stepTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  stepDesc: { fontSize: 14, color: '#6B7280', lineHeight: 20 },
+
+  // Badge type
+  typeChip: {
     alignSelf: 'flex-start',
     backgroundColor: '#EFF6FF',
     borderRadius: 20,
@@ -294,11 +467,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#BFDBFE',
   },
-  radiusChipText: {
-    fontSize: 13,
-    color: '#1D4ED8',
-    fontWeight: '500',
+  typeChipText: { fontSize: 13, color: '#1D4ED8', fontWeight: '500' },
+
+  // GPS
+  radiusChip: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
   },
+  radiusChipText: { fontSize: 13, color: '#374151', fontWeight: '500' },
   distanceCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -309,50 +488,91 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     gap: 14,
   },
-  distanceCardClose: {
-    borderColor: '#22C55E',
-    backgroundColor: '#F0FDF4',
+  distanceCardClose: { borderColor: '#22C55E', backgroundColor: '#F0FDF4' },
+  distanceCardFar: { borderColor: '#F97316', backgroundColor: '#FFF7ED' },
+  distanceCardUnknown: { borderColor: '#E5E7EB' },
+  distanceIcon: { fontSize: 32 },
+  distanceInfo: { flex: 1, gap: 3 },
+  distanceValue: { fontSize: 20, fontWeight: '800', color: '#111827' },
+  distanceValueClose: { color: '#15803D' },
+  distanceValueFar: { color: '#C2410C' },
+  distanceSubtext: { fontSize: 13, color: '#6B7280', lineHeight: 18 },
+
+  // QR
+  cameraContainer: {
+    width: '100%',
+    height: 300,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#000',
   },
-  distanceCardFar: {
-    borderColor: '#F97316',
-    backgroundColor: '#FFF7ED',
+  cameraPlaceholder: {
+    width: '100%',
+    height: 300,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E5E7EB',
+    borderRadius: 16,
   },
-  distanceCardUnknown: {
+  permissionBox: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 20,
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: 1,
     borderColor: '#E5E7EB',
   },
-  distanceIcon: {
-    fontSize: 32,
+  permissionIcon: { fontSize: 40 },
+  permissionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
+  permissionText: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
+  scannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
-  distanceInfo: {
-    flex: 1,
-    gap: 3,
+  scannerFrame: {
+    width: 200,
+    height: 200,
+    position: 'relative',
   },
-  distanceValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#111827',
+  corner: {
+    position: 'absolute',
+    width: CORNER_SIZE,
+    height: CORNER_SIZE,
+    borderColor: '#fff',
   },
-  distanceValueClose: {
-    color: '#15803D',
+  cornerTL: { top: 0, left: 0, borderTopWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH },
+  cornerTR: { top: 0, right: 0, borderTopWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH },
+  cornerBL: { bottom: 0, left: 0, borderBottomWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH },
+  cornerBR: { bottom: 0, right: 0, borderBottomWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH },
+  cameraLabel: {
+    position: 'absolute',
+    bottom: 16,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
-  distanceValueFar: {
-    color: '#C2410C',
-  },
-  distanceSubtext: {
+  cameraLabelText: {
+    color: '#fff',
     fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 18,
+    fontWeight: '600',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
+
+  // Statuts partagés
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     justifyContent: 'center',
   },
-  statusText: {
-    fontSize: 14,
-    color: '#3B82F6',
-  },
+  statusText: { fontSize: 14, color: '#3B82F6' },
   successBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -365,11 +585,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   successIcon: { fontSize: 28 },
-  successText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#15803D',
-  },
+  successText: { fontSize: 16, fontWeight: '700', color: '#15803D' },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -378,21 +594,12 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
   },
-  errorBannerRange: {
-    backgroundColor: '#FFF7ED',
-    borderColor: '#FED7AA',
-  },
-  errorBannerOther: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
-  },
-  errorIcon: { fontSize: 20 },
-  errorText: {
-    flex: 1,
-    fontSize: 13,
-    color: '#374151',
-    lineHeight: 19,
-  },
+  errorBannerRange: { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' },
+  errorBannerOther: { backgroundColor: '#FEF2F2', borderColor: '#FECACA' },
+  errorBannerIcon: { fontSize: 20 },
+  errorBannerText: { flex: 1, fontSize: 13, color: '#374151', lineHeight: 19 },
+
+  // Boutons
   validateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -407,15 +614,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  validateBtnDisabled: {
-    opacity: 0.6,
-  },
+  validateBtnDisabled: { opacity: 0.6 },
   validateBtnIcon: { fontSize: 18 },
-  validateBtnLabel: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
+  validateBtnLabel: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  retryBtn: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
+  retryBtnLabel: { fontSize: 14, color: '#374151', fontWeight: '600' },
   hint: {
     fontSize: 13,
     color: '#9CA3AF',
