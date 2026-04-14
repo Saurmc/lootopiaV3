@@ -15,9 +15,11 @@ import {
 } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
+import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../../store/auth.store';
-import type { AppTabParamList } from '../../navigation/AppNavigator';
+import type { AppTabParamList, AppStackParamList } from '../../navigation/AppNavigator';
 import { useHuntsOnMap, useHuntHistory } from '../../hooks/useHunts';
 import type { HuntListItem } from '../../services/hunt.service';
 import HuntBottomSheet from './HuntBottomSheet';
@@ -44,7 +46,10 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   hard: '#EF4444',
 };
 
-type MapNavProp = BottomTabNavigationProp<AppTabParamList, 'Map'>;
+type MapNavProp = CompositeNavigationProp<
+  BottomTabNavigationProp<AppTabParamList, 'Map'>,
+  NativeStackNavigationProp<AppStackParamList>
+>;
 
 export default function MapScreen() {
   const { consentGps } = useAuthStore();
@@ -205,8 +210,7 @@ export default function MapScreen() {
         onClose={() => setSelectedHunt(null)}
         onJoin={(hunt) => {
           setSelectedHunt(null);
-          // US53 : navigation vers HuntDetailScreen
-          // navigation.navigate('HuntDetail', { huntId: hunt.id });
+          navigation.navigate('HuntDetail', { huntId: hunt.id });
         }}
       />
     </View>
