@@ -158,8 +158,12 @@ export default function ProfileScreen() {
 
           <View style={styles.divider} />
 
-          {/* US61 — placeholder */}
-          <TouchableOpacity style={styles.actionRow} activeOpacity={0.7}>
+          {/* US61 */}
+          <TouchableOpacity
+            style={styles.actionRow}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('Settings')}
+          >
             <Text style={styles.actionIcon}>⚙️</Text>
             <Text style={styles.actionLabel}>Paramètres</Text>
             <Text style={styles.actionChevron}>›</Text>
