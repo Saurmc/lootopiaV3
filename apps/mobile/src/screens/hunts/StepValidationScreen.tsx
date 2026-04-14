@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Image,
   Keyboard,
   ScrollView,
   StyleSheet,
@@ -240,6 +241,132 @@ function QrSection({ state, errorMsg, onScanned, onRetry, scanned }: QrSectionPr
   );
 }
 
+// ─── Section Photo ────────────────────────────────────────────────────────────
+
+interface PhotoSectionProps {
+  state: ValidationState;
+  errorMsg: string | null;
+  onSubmit: (uri: string) => void;
+}
+
+function PhotoSection({ state, errorMsg, onSubmit }: PhotoSectionProps) {
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+  const [capturedUri, setCapturedUri] = useState<string | null>(null);
+  const [taking, setTaking] = useState(false);
+
+  const handleTakePicture = async () => {
+    if (!cameraRef.current || taking) return;
+    setTaking(true);
+    try {
+      const pic = await cameraRef.current.takePictureAsync({ quality: 0.8 });
+      setCapturedUri(pic.uri);
+    } catch {
+      // ignore rare native errors
+    } finally {
+      setTaking(false);
+    }
+  };
+
+  if (!permission) {
+    return (
+      <View style={styles.cameraPlaceholder}>
+        <ActivityIndicator color="#3B82F6" />
+      </View>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={styles.permissionBox}>
+        <Text style={styles.permissionIcon}>📷</Text>
+        <Text style={styles.permissionTitle}>Accès caméra requis</Text>
+        <Text style={styles.permissionText}>
+          Pour prendre la photo de cette étape, autorisez l'accès à votre caméra.
+        </Text>
+        <TouchableOpacity style={styles.validateBtn} onPress={requestPermission} activeOpacity={0.8}>
+          <Text style={styles.validateBtnLabel}>Autoriser la caméra</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  /* ── Aperçu de la photo prise ── */
+  if (capturedUri) {
+    const isValidating = state === 'validating';
+    return (
+      <>
+        <Image source={{ uri: capturedUri }} style={styles.photoPreview} resizeMode="cover" />
+
+        {errorMsg && <ErrorBanner type="other" message={errorMsg} />}
+
+        <TouchableOpacity
+          style={[styles.validateBtn, isValidating && styles.validateBtnDisabled]}
+          onPress={() => onSubmit(capturedUri)}
+          disabled={isValidating}
+          activeOpacity={0.8}
+        >
+          {isValidating ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <>
+              <Text style={styles.validateBtnIcon}>✔️</Text>
+              <Text style={styles.validateBtnLabel}>Utiliser cette photo</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.retryBtn, isValidating && styles.validateBtnDisabled]}
+          onPress={() => setCapturedUri(null)}
+          disabled={isValidating}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.retryBtnLabel}>🔄 Reprendre la photo</Text>
+        </TouchableOpacity>
+      </>
+    );
+  }
+
+  /* ── Viewfinder ── */
+  return (
+    <>
+      <View style={styles.cameraContainer}>
+        <CameraView ref={cameraRef} style={StyleSheet.absoluteFillObject} facing="back" />
+        {/* Viseur centré */}
+        <View style={styles.scannerOverlay}>
+          <View style={[styles.scannerFrame, { width: 240, height: 180 }]}>
+            <View style={[styles.corner, styles.cornerTL]} />
+            <View style={[styles.corner, styles.cornerTR]} />
+            <View style={[styles.corner, styles.cornerBL]} />
+            <View style={[styles.corner, styles.cornerBR]} />
+          </View>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.validateBtn, taking && styles.validateBtnDisabled]}
+        onPress={handleTakePicture}
+        disabled={taking}
+        activeOpacity={0.8}
+      >
+        {taking ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : (
+          <>
+            <Text style={styles.validateBtnIcon}>📷</Text>
+            <Text style={styles.validateBtnLabel}>Prendre la photo</Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      <Text style={styles.hint}>
+        Cadrez l'emplacement de l'étape, puis prenez la photo pour valider votre présence.
+      </Text>
+    </>
+  );
+}
+
 // ─── Section Quiz ─────────────────────────────────────────────────────────────
 
 interface QuizSectionProps {
@@ -445,6 +572,21 @@ export default function StepValidationScreen() {
     setErrorMsg(null);
   };
 
+  // ── Validation Photo ──────────────────────────────────────────────────────────
+
+  const handlePhotoSubmit = async (uri: string) => {
+    setState('validating');
+    setErrorMsg(null);
+    try {
+      await huntService.validateStep(huntId, stepId, { file_url: uri });
+      await onSuccess();
+    } catch (err) {
+      const msg = extractErrorMessage(err);
+      setState('error_other');
+      setErrorMsg(msg || 'Impossible de valider la photo. Réessayez.');
+    }
+  };
+
   // ── Validation Quiz ───────────────────────────────────────────────────────────
 
   const handleQuizSubmit = async () => {
@@ -489,6 +631,8 @@ export default function StepValidationScreen() {
             ? '📱 Validation par QR code'
             : validationType === 'quiz'
             ? '❓ Validation par quiz'
+            : validationType === 'photo'
+            ? '📷 Validation par photo'
             : '📡 Validation par GPS'}
         </Text>
       </View>
@@ -518,6 +662,12 @@ export default function StepValidationScreen() {
             answer={answer}
             onChangeAnswer={setAnswer}
             onSubmit={handleQuizSubmit}
+          />
+        ) : validationType === 'photo' ? (
+          <PhotoSection
+            state={state}
+            errorMsg={errorMsg}
+            onSubmit={handlePhotoSubmit}
           />
         ) : (
           <GpsSection
@@ -738,6 +888,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 19,
     paddingHorizontal: 10,
+  },
+
+  // Photo
+  photoPreview: {
+    width: '100%',
+    height: 280,
+    borderRadius: 14,
+    backgroundColor: '#000',
   },
 
   // Quiz

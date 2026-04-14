@@ -231,7 +231,7 @@ export const huntService = {
   validateStep: async (
     huntId: string,
     stepId: string,
-    payload: { lat: number; lng: number } | { qr_code: string } | { answer: string },
+    payload: { lat: number; lng: number } | { qr_code: string } | { answer: string } | { file_url: string },
   ): Promise<void> => {
     await api.post(`/hunts/${huntId}/steps/${stepId}/validate`, payload);
   },
