@@ -137,13 +137,14 @@ export default function HuntDetailScreen() {
     }
   };
 
-  // US54 : navigation vers l'écran de validation GPS de l'étape
+  // US54/US55 : navigation vers l'écran de validation de l'étape (GPS ou QR)
   const handleStartStep = (step: StepDetail) => {
     navigation.navigate('StepValidation', {
       huntId,
       stepId: step.id,
       stepTitle: step.title,
       stepDescription: step.description,
+      validationType: step.validation_type,
       validationRadius: step.validation_radius,
       coordinates: step.coordinates,
     });

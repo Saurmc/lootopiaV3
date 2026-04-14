@@ -224,13 +224,14 @@ export const huntService = {
 
   /**
    * POST /hunts/:id/steps/:stepId/validate — valide l'étape courante.
-   * Pour GPS : envoie { lat, lng }, le backend vérifie la proximité via PostGIS.
-   * Lance une erreur avec le message backend en cas d'échec (400 = pas assez proche).
+   * - GPS    : payload { lat, lng }     → vérification PostGIS
+   * - QR code: payload { qr_code }      → comparaison avec ar_content.expected_code
+   * Lance une erreur 400 si validation échoue (pas assez proche, QR invalide…).
    */
   validateStep: async (
     huntId: string,
     stepId: string,
-    payload: { lat: number; lng: number },
+    payload: { lat: number; lng: number } | { qr_code: string },
   ): Promise<void> => {
     await api.post(`/hunts/${huntId}/steps/${stepId}/validate`, payload);
   },

@@ -63,6 +63,7 @@ export type AppStackParamList = {
     stepId: string;
     stepTitle: string;
     stepDescription: string | null;
+    validationType: string;
     validationRadius: number;
     coordinates: { lat: number; lng: number } | null;
   };
