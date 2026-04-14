@@ -19,4 +19,9 @@ export const authService = {
     const response = await api.post<AuthResponse>('/auth/guest', { device_token: deviceToken });
     return response.data;
   },
+
+  convertAccount: async (email: string, password: string): Promise<AuthResponse> => {
+    const response = await api.patch<AuthResponse>('/auth/convert', { email, password });
+    return response.data;
+  },
 };
