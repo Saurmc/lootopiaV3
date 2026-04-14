@@ -34,6 +34,7 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string) => Promise<void>;
   loginAsGuest: () => Promise<void>;
+  convertAccount: (email: string, password: string) => Promise<void>;
   setConsentGps: (consent: boolean) => Promise<void>;
   logout: () => Promise<void>;
   /** @internal */
@@ -114,6 +115,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { access_token } = await authService.loginAsGuest(deviceToken);
     await get()._setToken(access_token, true);
     set({ pendingGpsConsent: true });
+  },
+
+  convertAccount: async (email: string, password: string) => {
+    const { access_token } = await authService.convertAccount(email, password);
+    // Le même user_id est conservé côté backend, on reçoit un nouveau JWT non-invité
+    await get()._setToken(access_token, false);
   },
 
   setConsentGps: async (consent: boolean) => {

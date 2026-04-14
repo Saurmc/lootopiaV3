@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useAuthStore } from '../store/auth.store';
 import GpsConsentModal from '../components/common/GpsConsentModal';
+import ConvertAccountScreen from '../screens/guest/ConvertAccountScreen';
 
 // --- Placeholders pour les US à venir ---
 function MapPlaceholder() {
@@ -19,6 +20,36 @@ function ListPlaceholder() {
     <View style={styles.placeholder}>
       <Text style={styles.placeholderIcon}>📋</Text>
       <Text style={styles.placeholderText}>Chasses (US52)</Text>
+    </View>
+  );
+}
+
+/**
+ * GuestProfileScreen — affiché dans l'onglet Profil pour les invités.
+ * Propose de convertir le compte ou de voir le profil (US59).
+ */
+function GuestProfileScreen() {
+  const [convertVisible, setConvertVisible] = useState(false);
+
+  return (
+    <View style={styles.guestProfile}>
+      <Text style={styles.guestProfileIcon}>👤</Text>
+      <Text style={styles.guestProfileTitle}>Mode invité</Text>
+      <Text style={styles.guestProfileSubtitle}>
+        Créez un compte pour sauvegarder votre progression et accéder à toutes les fonctionnalités.
+      </Text>
+      <TouchableOpacity
+        style={styles.convertBtn}
+        onPress={() => setConvertVisible(true)}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.convertBtnLabel}>Créer un compte</Text>
+      </TouchableOpacity>
+
+      <ConvertAccountScreen
+        visible={convertVisible}
+        onClose={() => setConvertVisible(false)}
+      />
     </View>
   );
 }
@@ -98,7 +129,7 @@ export default function AppNavigator() {
         />
         <Tab.Screen
           name="Profile"
-          component={ProfilePlaceholder}
+          component={isGuest ? GuestProfileScreen : ProfilePlaceholder}
           options={{
             tabBarLabel: 'Profil',
             tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>👤</Text>,
@@ -146,5 +177,39 @@ const styles = StyleSheet.create({
     color: '#92400E',
     textAlign: 'center',
     fontWeight: '500',
+  },
+  guestProfile: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    backgroundColor: '#F9FAFB',
+    gap: 12,
+  },
+  guestProfileIcon: {
+    fontSize: 56,
+  },
+  guestProfileTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  guestProfileSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  convertBtn: {
+    marginTop: 8,
+    backgroundColor: '#3B82F6',
+    borderRadius: 10,
+    paddingVertical: 13,
+    paddingHorizontal: 32,
+  },
+  convertBtnLabel: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
