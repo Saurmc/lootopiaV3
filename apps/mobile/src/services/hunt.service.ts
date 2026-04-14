@@ -232,8 +232,9 @@ export const huntService = {
     huntId: string,
     stepId: string,
     payload: { lat: number; lng: number } | { qr_code: string } | { answer: string } | { file_url: string },
-  ): Promise<void> => {
-    await api.post(`/hunts/${huntId}/steps/${stepId}/validate`, payload);
+  ): Promise<HuntProgress> => {
+    const res = await api.post<HuntProgress>(`/hunts/${huntId}/steps/${stepId}/validate`, payload);
+    return res.data;
   },
 
   /**

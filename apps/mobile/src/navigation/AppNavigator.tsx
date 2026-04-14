@@ -9,6 +9,7 @@ import MapScreen from '../screens/map/MapScreen';
 import HuntsListScreen from '../screens/hunts/HuntsListScreen';
 import HuntDetailScreen from '../screens/hunts/HuntDetailScreen';
 import StepValidationScreen from '../screens/hunts/StepValidationScreen';
+import HuntCompletionScreen from '../screens/hunts/HuntCompletionScreen';
 
 /**
  * GuestProfileScreen — affiché dans l'onglet Profil pour les invités.
@@ -66,6 +67,13 @@ export type AppStackParamList = {
     validationType: string;
     validationRadius: number;
     coordinates: { lat: number; lng: number } | null;
+  };
+  HuntCompletion: {
+    huntId: string;
+    totalPoints: number;
+    stepCount: number;
+    startedAt: string;
+    completedAt: string;
   };
 };
 
@@ -175,6 +183,14 @@ export default function AppNavigator() {
           headerBackTitle: 'Retour',
           headerTintColor: '#1D4ED8',
           headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
+        }}
+      />
+      <Stack.Screen
+        name="HuntCompletion"
+        component={HuntCompletionScreen}
+        options={{
+          headerShown: false,
+          gestureEnabled: false,
         }}
       />
     </Stack.Navigator>
