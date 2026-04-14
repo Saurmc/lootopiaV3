@@ -2,9 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Keyboard,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -238,6 +240,76 @@ function QrSection({ state, errorMsg, onScanned, onRetry, scanned }: QrSectionPr
   );
 }
 
+// ─── Section Quiz ─────────────────────────────────────────────────────────────
+
+interface QuizSectionProps {
+  state: ValidationState;
+  errorMsg: string | null;
+  answer: string;
+  onChangeAnswer: (v: string) => void;
+  onSubmit: () => void;
+}
+
+function QuizSection({ state, errorMsg, answer, onChangeAnswer, onSubmit }: QuizSectionProps) {
+  const isLoading = state === 'validating';
+  const hasError = state === 'error_other' && errorMsg !== null;
+
+  return (
+    <>
+      {/* Zone de réponse */}
+      <View style={styles.quizInputWrapper}>
+        <Text style={styles.quizInputLabel}>Votre réponse</Text>
+        <TextInput
+          style={[styles.quizInput, hasError && styles.quizInputError]}
+          placeholder="Saisissez votre réponse…"
+          placeholderTextColor="#9CA3AF"
+          value={answer}
+          onChangeText={onChangeAnswer}
+          returnKeyType="done"
+          onSubmitEditing={onSubmit}
+          editable={!isLoading}
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </View>
+
+      {/* Spinner */}
+      {isLoading && (
+        <View style={styles.statusRow}>
+          <ActivityIndicator size="small" color="#3B82F6" />
+          <Text style={styles.statusText}>Vérification de la réponse…</Text>
+        </View>
+      )}
+
+      {/* Erreur */}
+      {hasError && errorMsg && (
+        <ErrorBanner type="other" message={errorMsg} />
+      )}
+
+      {/* Bouton */}
+      <TouchableOpacity
+        style={[styles.validateBtn, (isLoading || !answer.trim()) && styles.validateBtnDisabled]}
+        onPress={onSubmit}
+        disabled={isLoading || !answer.trim()}
+        activeOpacity={0.8}
+      >
+        {isLoading ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : (
+          <>
+            <Text style={styles.validateBtnIcon}>✔️</Text>
+            <Text style={styles.validateBtnLabel}>Valider ma réponse</Text>
+          </>
+        )}
+      </TouchableOpacity>
+
+      <Text style={styles.hint}>
+        La réponse n'est pas sensible à la casse ni aux espaces superflus.
+      </Text>
+    </>
+  );
+}
+
 // ─── ErrorBanner ─────────────────────────────────────────────────────────────
 
 function ErrorBanner({ type, message }: { type: 'range' | 'other'; message: string }) {
@@ -276,6 +348,7 @@ export default function StepValidationScreen() {
   const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [scanned, setScanned] = useState(false);
+  const [answer, setAnswer] = useState('');
 
   // Pulse animation pour l'icône GPS
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -372,6 +445,27 @@ export default function StepValidationScreen() {
     setErrorMsg(null);
   };
 
+  // ── Validation Quiz ───────────────────────────────────────────────────────────
+
+  const handleQuizSubmit = async () => {
+    if (!answer.trim()) return;
+    Keyboard.dismiss();
+    setState('validating');
+    setErrorMsg(null);
+    try {
+      await huntService.validateStep(huntId, stepId, { answer: answer.trim() });
+      await onSuccess();
+    } catch (err) {
+      const msg = extractErrorMessage(err);
+      setState('error_other');
+      setErrorMsg(
+        msg.toLowerCase().includes('wrong') || msg.toLowerCase().includes('answer')
+          ? 'Mauvaise réponse. Réessayez !'
+          : (msg || 'Une erreur est survenue. Réessayez.'),
+      );
+    }
+  };
+
   // ── Rendu ─────────────────────────────────────────────────────────────────────
 
   return (
@@ -391,7 +485,11 @@ export default function StepValidationScreen() {
       {/* Badge type de validation */}
       <View style={styles.typeChip}>
         <Text style={styles.typeChipText}>
-          {validationType === 'qrcode' ? '📱 Validation par QR code' : '📡 Validation par GPS'}
+          {validationType === 'qrcode'
+            ? '📱 Validation par QR code'
+            : validationType === 'quiz'
+            ? '❓ Validation par quiz'
+            : '📡 Validation par GPS'}
         </Text>
       </View>
 
@@ -412,6 +510,14 @@ export default function StepValidationScreen() {
             onScanned={handleQrScanned}
             onRetry={handleQrRetry}
             scanned={scanned}
+          />
+        ) : validationType === 'quiz' ? (
+          <QuizSection
+            state={state}
+            errorMsg={errorMsg}
+            answer={answer}
+            onChangeAnswer={setAnswer}
+            onSubmit={handleQuizSubmit}
           />
         ) : (
           <GpsSection
@@ -632,5 +738,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 19,
     paddingHorizontal: 10,
+  },
+
+  // Quiz
+  quizInputWrapper: {
+    gap: 6,
+  },
+  quizInputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  quizInput: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#111827',
+  },
+  quizInputError: {
+    borderColor: '#EF4444',
   },
 });
