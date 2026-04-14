@@ -4,6 +4,7 @@ import { BadgesService } from '../badges/badges.service';
 import { UsersService } from '../users/users.service';
 import { UserEntity } from '../users/entities/user.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 export interface HuntHistoryItem {
   hunt_id: string;
@@ -81,6 +82,14 @@ export class ProfileService {
       consent_gps: updated.consent_gps,
       created_at: updated.created_at,
     };
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto): Promise<void> {
+    await this.usersService.updatePassword(userId, dto.current_password, dto.new_password);
+  }
+
+  async deleteAccount(userId: string): Promise<void> {
+    await this.usersService.deleteAccount(userId);
   }
 
   async getStats(userId: string): Promise<PlayerStats> {

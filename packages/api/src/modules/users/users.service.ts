@@ -105,6 +105,17 @@ export class UsersService {
   }
 
   /**
+   * Supprime définitivement le compte et toutes ses données associées.
+   */
+  async deleteAccount(userId: string): Promise<void> {
+    const user = await this.usersRepository.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    await this.usersRepository.deleteById(userId);
+  }
+
+  /**
    * Convertit un compte invité en compte complet (email + password).
    * Conserve le même user_id → toutes les progressions/badges sont préservés.
    */
