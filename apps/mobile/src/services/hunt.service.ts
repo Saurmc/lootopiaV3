@@ -28,6 +28,8 @@ export interface HuntListItem {
 
 export interface HuntHistoryItem {
   hunt_id: string;
+  total_points: number;
+  started_at: string;
   completed_at: string | null;
 }
 

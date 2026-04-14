@@ -9,7 +9,16 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { AppTabParamList, AppStackParamList } from '../../navigation/AppNavigator';
 import { useProfile, usePlayerStats } from '../../hooks/useProfile';
+
+type ProfileNavProp = CompositeNavigationProp<
+  BottomTabNavigationProp<AppTabParamList, 'Profile'>,
+  NativeStackNavigationProp<AppStackParamList>
+>;
 
 // ─── Système de niveaux ───────────────────────────────────────────────────────
 
@@ -55,6 +64,7 @@ function StatCard({ icon, value, label }: { icon: string; value: number | string
  * Affiche pseudo, avatar, niveau, barre de progression vers le suivant et stats.
  */
 export default function ProfileScreen() {
+  const navigation = useNavigation<ProfileNavProp>();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: stats, isLoading: statsLoading } = usePlayerStats();
 
@@ -135,8 +145,12 @@ export default function ProfileScreen() {
 
         {/* ── Actions ── */}
         <View style={styles.actionsSection}>
-          {/* US60 — placeholder */}
-          <TouchableOpacity style={styles.actionRow} activeOpacity={0.7}>
+          {/* US60 */}
+          <TouchableOpacity
+            style={styles.actionRow}
+            activeOpacity={0.7}
+            onPress={() => navigation.navigate('BadgesHistory')}
+          >
             <Text style={styles.actionIcon}>🏅</Text>
             <Text style={styles.actionLabel}>Mes badges et historique</Text>
             <Text style={styles.actionChevron}>›</Text>

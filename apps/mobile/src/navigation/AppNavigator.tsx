@@ -11,6 +11,7 @@ import HuntDetailScreen from '../screens/hunts/HuntDetailScreen';
 import StepValidationScreen from '../screens/hunts/StepValidationScreen';
 import HuntCompletionScreen from '../screens/hunts/HuntCompletionScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import BadgesScreen from '../screens/profile/BadgesScreen';
 
 /**
  * GuestProfileScreen — affiché dans l'onglet Profil pour les invités.
@@ -51,6 +52,7 @@ export type AppTabParamList = {
 
 export type AppStackParamList = {
   Tabs: undefined;
+  BadgesHistory: undefined;
   HuntDetail: { huntId: string };
   StepValidation: {
     huntId: string;
@@ -156,6 +158,17 @@ export default function AppNavigator() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={TabsRoot} />
+      <Stack.Screen
+        name="BadgesHistory"
+        component={BadgesScreen}
+        options={{
+          headerShown: true,
+          title: 'Badges et historique',
+          headerBackTitle: 'Retour',
+          headerTintColor: '#1D4ED8',
+          headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
+        }}
+      />
       <Stack.Screen
         name="HuntDetail"
         component={HuntDetailScreen}
