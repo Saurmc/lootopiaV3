@@ -1,0 +1,103 @@
+# .claudeignore — LootopiaV3
+# Fichiers exclus du contexte Claude Code pour économiser les tokens
+
+# Dépendances (JAMAIS nécessaires pour un audit)
+node_modules/
+**/node_modules/
+.pnp/
+.pnp.js
+
+# Build outputs (code généré, pas le source)
+dist/
+build/
+out/
+.next/
+.expo/
+**/.next/
+**/dist/
+**/build/
+**/out/
+
+# Cache
+.turbo/
+.cache/
+**/.cache/
+.eslintcache
+*.tsbuildinfo
+
+# Fichiers de lock (trop volumineux, on lit package.json à la place)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variables d'environnement réelles (sensible + inutile)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# NOTE : .env.example est CONSERVÉ (utile pour comprendre la config)
+
+# Assets binaires (images, fonts, médias — pas de valeur pour l'audit)
+**/*.png
+**/*.jpg
+**/*.jpeg
+**/*.gif
+**/*.svg
+**/*.ico
+**/*.webp
+**/*.woff
+**/*.woff2
+**/*.ttf
+**/*.eot
+**/*.otf
+**/*.mp4
+**/*.mp3
+**/*.pdf
+
+# Exception : garde les SVG de config si besoin (commente la ligne *.svg si nécessaire)
+
+# Fichiers de test générés / snapshots
+**/__snapshots__/
+**/*.snap
+**/coverage/
+.nyc_output/
+
+# IDE et OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Docker volumes et données persistées
+postgres/data/
+**/data/
+
+# Storybook
+storybook-static/
+.storybook/
+
+# Fichiers générés automatiquement
+**/*.generated.ts
+**/*.generated.js
+**/generated/
+
+# Prisma (garde le schema, ignore le client généré)
+**/prisma/migrations/
+**/node_modules/.prisma/
+
+# Mobile spécifique
+apps/mobile/android/
+apps/mobile/ios/
+apps/mobile/.expo/
+apps/mobile/node_modules/

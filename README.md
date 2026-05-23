@@ -68,11 +68,30 @@ Attendu :
 - Backoffice et Admin exposent une URL locale Vite dans le terminal
 - Mobile lance Expo (QR code/URL Metro)
 
-5) Contrôles rapides
+5) Alimenter la base de données (seed)
+
+```bash
+npm run seed -w packages/api
+```
+
+Crée 1 admin, 2 partenaires, 6 joueurs, 6 chasses, étapes, zones, progressions et badges.
+
+Comptes de test :
+
+| Rôle | Email | Mot de passe |
+|---|---|---|
+| Admin | `admin@lootopia.fr` | `Admin1234` |
+| Partenaire | `musee@lootopia.fr` | `Partner123` |
+| Partenaire | `parc@lootopia.fr` | `Partner123` |
+| Joueur | `alice@example.com` | `Player123` |
+
+6) Contrôles rapides
 
 - API : ouvrir `http://localhost:3000` (doit répondre)
 - pgAdmin : `http://localhost:5050`
 - MinIO console : `http://localhost:9001`
+- Admin : `http://localhost:5174` — connectez-vous avec `admin@lootopia.fr`
+- Backoffice : `http://localhost:5173` — connectez-vous avec `musee@lootopia.fr`
 
 6) Arrêter l'environnement
 
@@ -134,6 +153,16 @@ Accès services :
 
 Map mobile : MapLibre est utilisé (pas de clé Mapbox requise).
 
-## Statut du repo
+## Flux invitation partenaire (US03)
 
-Ce repository contient uniquement un squelette de projet (structure, configuration, dépendances et TODO), sans logique métier implémentée.
+Pour créer un compte partenaire, l'inscription directe est désactivée. Le flux est :
+
+1. L'admin se connecte sur `http://localhost:5174`
+2. Aller dans **Invitations partenaires** → saisir l'email du futur partenaire → envoyer
+3. En développement, le lien d'activation s'affiche dans les **logs de la console backend** :
+   ```
+   [INVITATION] Destinataire: contact@musee.fr
+   Lien d'activation (valable 72h) : http://localhost:5173/register?token=...
+   ```
+4. Ouvrir ce lien → remplir le formulaire (prénom, nom, mot de passe)
+5. Se connecter sur `http://localhost:5173` avec l'email et le mot de passe choisis

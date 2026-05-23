@@ -38,24 +38,45 @@
 
 | # | Méthode | URL | Rôles | Description |
 |---|---|---|---|---|
-| 2 | `POST` | `/auth/register` | — | Inscription (partenaire ou joueur). |
-| 3 | `POST` | `/auth/login` | — | Connexion. |
+| 2 | `POST` | `/auth/register` | — | Inscription joueur (rôle `PLAYER` fixe). |
+| 3 | `POST` | `/auth/register/partner` | — | Finalise l'inscription partenaire via token d'invitation (US03). |
+| 4 | `POST` | `/auth/login` | — | Connexion. |
+| 5 | `POST` | `/auth/guest` | — | Connexion/création compte invité (idempotent par `device_token`). |
+| 6 | `PATCH` | `/auth/convert` | Authentifié | Convertit un compte invité en compte complet. |
 
 ### `POST /auth/register`
 **Body** (`RegisterDto`)
 ```json
 {
-  "email": "partner@example.com",
-  "password": "MinEight1",
-  "role": "PARTNER"
+  "email": "player@example.com",
+  "password": "MinEight1"
 }
 ```
 - `email` : `@IsEmail()`
 - `password` : `@IsString() @MinLength(8)`
-- `role` : `@IsEnum(Role) @IsOptional()` — défaut `PLAYER`
+- Le rôle est **toujours `PLAYER`** — l'inscription partenaire passe par le flux invitation.
 
 **Réponse 201** : `{ "access_token": "<jwt>" }`
 Erreurs : `400` validation, `409` si email déjà utilisé.
+
+### `POST /auth/register/partner`
+Finalise l'inscription d'un partenaire après réception du lien d'invitation par email.
+
+**Body** (`RegisterPartnerDto`)
+```json
+{
+  "token": "<invitation_token_64_chars_hex>",
+  "password": "MinEight1",
+  "firstName": "Jean",
+  "lastName": "Dupont"
+}
+```
+**Réponse 201** : `{ "access_token": "<jwt>" }` (JWT avec rôle `PARTNER`)
+Erreurs :
+- `404` token inconnu
+- `409` token déjà utilisé
+- `400` token expiré (TTL 72h)
+- `409` email déjà associé à un compte
 
 ### `POST /auth/login`
 **Body** (`LoginDto`)
@@ -410,6 +431,8 @@ Liste complète (terminées et en cours).
 | # | Méthode | URL | Rôles | Description |
 |---|---|---|---|---|
 | 32 | `GET` | `/admin/stats` | ADMIN | KPI globaux de la plateforme. |
+| 33 | `POST` | `/admin/invitations` | ADMIN | Envoie une invitation partenaire (token 72h). |
+| 34 | `GET` | `/admin/invitations` | ADMIN | Liste toutes les invitations avec leur statut. |
 
 ### `GET /admin/stats`
 ```json
@@ -422,13 +445,51 @@ Liste complète (terminées et en cours).
 }
 ```
 
+### `POST /admin/invitations`
+**Body** (`CreateInvitationDto`)
+```json
+{
+  "email": "musee@example.fr",
+  "partnerName": "Musée du Louvre"
+}
+```
+- `email` : `@IsEmail()` — adresse du futur partenaire
+- `partnerName` : `@IsString() @MaxLength(100) @IsOptional()`
+
+**Réponse 201** : `{ "id": "...", "email": "...", "expiresAt": "<iso8601>" }`
+
+En développement, le lien d'activation est **loggué dans la console** du backend au format :
+```
+[INVITATION] Destinataire: musee@example.fr
+Lien d'activation (valable 72h) : http://localhost:5173/register?token=<hex64>
+```
+
+Erreurs : `409` si une invitation active (non expirée, non utilisée) existe déjà pour cet email.
+
+### `GET /admin/invitations`
+**Réponse 200** : `InvitationEntity[]` triée `created_at DESC`.
+```json
+[
+  {
+    "id": "...",
+    "email": "musee@example.fr",
+    "partner_name": "Musée du Louvre",
+    "expires_at": "...",
+    "used_at": null,
+    "created_by_id": "...",
+    "created_at": "..."
+  }
+]
+```
+Calcul du statut côté client : `used_at !== null` → **utilisée** ; `expires_at < now` → **expirée** ; sinon → **en attente**.
+
 ---
 
 ## Stats
 
 | # | Méthode | URL | Rôles | Description |
 |---|---|---|---|---|
-| 33 | `GET` | `/stats/hunts` | PARTNER, ADMIN | KPI par chasse. PARTNER → ses chasses, ADMIN → toutes. |
+| 35 | `GET` | `/stats/hunts` | PARTNER, ADMIN | KPI par chasse. PARTNER → ses chasses, ADMIN → toutes. |
 
 ### `GET /stats/hunts`
 ```json
