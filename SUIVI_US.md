@@ -99,7 +99,7 @@ Dernière mise à jour : 2026-05-23
 ## À faire — Backoffice (ordonné par priorité)
 
 ### 🔴 Bloquant
-- [ ] **US03** — Ajouter formulaire d'inscription partenaire dans `LoginPage.tsx` (ou page dédiée). Appel `POST /auth/register` avec `{ email, password, role: 'partner' }`. Backend prêt.
+- [x] **US03** — ✅ Flux invitation complet implémenté (2026-05-25). `RegisterPage.tsx` backoffice + `InvitationsPage` admin + endpoints backend.
 
 ### 🟠 Important
 - [ ] **US22** — Compléter l'éditeur de zones : ajouter le support polygone dans `ZoneForm.tsx`. Ajouter un éditeur visuel superposé au plan (`plan_url`) pour dessiner les zones en pixels. Référence "US44" dans le code = morte, à supprimer.

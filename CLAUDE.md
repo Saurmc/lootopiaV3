@@ -93,9 +93,12 @@
 
 ### `apps/admin` (React + Vite) — **Interface administrateurs internes** (équipe Out of Cache)
 > Console de supervision de la plateforme entière : KPIs globaux (tous joueurs, toutes chasses), modération des partenaires, gestion des utilisateurs et badges. Session courte (2h), auth stricte. Séparée intentionnellement du backoffice (spec F03, Décision 3 DTDC).
-- **Pages** : LoginPage, DashboardPage, UsersPage, PartnersPage, HuntsPage, BadgesPage
-- **Components** : layout (Header, Sidebar, Layout), hunt (HuntManager, StepEditor), stats (StatsViewer)
-- **Services** : auth.service, hunts.service (pas de stats, users, badges services dédiés)
+- **Pages** : LoginPage ✅, DashboardPage (stub), UsersPage (stub), PartnersPage (stub), HuntsPage (stub), BadgesPage (stub), **InvitationsPage ✅**
+- **Components** : layout (Header ✅, Sidebar ✅, Layout ✅), hunt (HuntManager stub, StepEditor stub), stats (StatsViewer stub)
+- **Services** : api.ts ✅, auth.service ✅, invitations.service ✅, hunts.service (stub — pas de stats, users, badges services dédiés)
+- **Store** : auth.store ✅ (Zustand)
+- **Router** : router/index.tsx ✅ (PrivateRoute, login, dashboard, invitations)
+- **vite.config.ts** : resolve.alias React dédupliqué (correction instance dupliquée monorepo)
 - **⚠️ Pas de tests configurés**
 
 ---
@@ -246,7 +249,7 @@ Types présents : `user.types.ts`, `hunt.types.ts`, `step.types.ts`, `progress.t
 | 6 | **Vitest dans backoffice** | ⚠️ Déviation de spec | Vitest utilisé au lieu de Jest (imposé dans CLAUDE_CONTEXT). | `apps/backoffice/package.json` |
 | 7 | **Admin sans tests** | ❌ Confirmé | Aucune config de test dans `apps/admin/`. | `apps/admin/` |
 | 8 | **US15 multilangue** | ❌ Absent | Aucune lib i18n dans aucun package.json. | Tous les packages |
-| 9 | **US03 inscription partenaire** | ❌ Absente | `LoginPage.tsx` backoffice = formulaire login seul (email + password). Aucun formulaire d'inscription, aucun onglet register. US03 non implémentée. | `apps/backoffice/src/pages/LoginPage.tsx` |
+| 9 | **US03 inscription partenaire** | ✅ Résolu | Flux invitation complet (2026-05-25) : `POST /admin/invitations` → token 72h → lien email → `RegisterPage.tsx` backoffice → `POST /auth/register/partner`. | modules `invitations`, `mail`, `auth/dto/register-partner.dto.ts`, `apps/backoffice/src/pages/RegisterPage.tsx` |
 | 10 | **StepScreen.tsx stub complet** | ❌ Cassé | `screens/hunt/StepScreen.tsx` = stub `// TODO, return null`. Zéro logique QR (US55), quiz (US56), photo (US57). De plus ce fichier est dans `screens/hunt/` (dead code, non monté). | `apps/mobile/src/screens/hunt/StepScreen.tsx` |
-| 11 | **Admin services incomplets** | ❌ Confirmé au scan | Pas de services users, badges, partners dans `apps/admin/src/services/`. Pages correspondantes probablement vides. | `apps/admin/src/services/` |
+| 11 | **Admin services incomplets** | ⚠️ Partiellement résolu | `api.ts`, `auth.service`, `invitations.service` implémentés (2026-05-25). Pages UsersPage, BadgesPage, PartnersPage, HuntsPage, DashboardPage restent des stubs `return null`. | `apps/admin/src/pages/` |
 | 12 | **No `zones` dans CLAUDE_CONTEXT** | ⚠️ Documentation | Module zones implémenté côté API mais absent des règles CLAUDE_CONTEXT. | `packages/api/src/modules/zones/` |
