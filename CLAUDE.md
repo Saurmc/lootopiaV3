@@ -253,3 +253,57 @@ Types présents : `user.types.ts`, `hunt.types.ts`, `step.types.ts`, `progress.t
 | 10 | **StepScreen.tsx stub complet** | ❌ Cassé | `screens/hunt/StepScreen.tsx` = stub `// TODO, return null`. Zéro logique QR (US55), quiz (US56), photo (US57). De plus ce fichier est dans `screens/hunt/` (dead code, non monté). | `apps/mobile/src/screens/hunt/StepScreen.tsx` |
 | 11 | **Admin services incomplets** | ⚠️ Partiellement résolu | `api.ts`, `auth.service`, `invitations.service` implémentés (2026-05-25). Pages UsersPage, BadgesPage, PartnersPage, HuntsPage, DashboardPage restent des stubs `return null`. | `apps/admin/src/pages/` |
 | 12 | **No `zones` dans CLAUDE_CONTEXT** | ⚠️ Documentation | Module zones implémenté côté API mais absent des règles CLAUDE_CONTEXT. | `packages/api/src/modules/zones/` |
+
+---
+
+## Workflow Git — Règles obligatoires
+
+> Ces règles s'appliquent à chaque session Claude Code. Elles sont non-négociables.
+
+### Avant toute implémentation
+
+1. **Vérifier la branche courante** : `git branch --show-current`
+2. **Si sur `develop` ou `main`** : créer une branche feature **avant** d'écrire la moindre ligne de code
+   ```bash
+   git checkout develop
+   git pull origin develop
+   git checkout -b feature/USxx-description-courte
+   ```
+3. **Ne jamais committer directement sur `develop` ou `main`**
+
+### Nommage des branches
+
+| Type | Format | Exemple |
+|---|---|---|
+| Nouvelle US | `feature/USxx-description-kebab` | `feature/US55-qr-code-validation` |
+| Correction de bug | `fix/description-kebab` | `fix/duplicate-react-admin` |
+| Documentation | `docs/description-kebab` | `docs/contributing-guide` |
+
+### Format des commits
+
+```
+type(scope): USxx — short description in English
+
+# Types : feat, fix, docs, refactor, test, chore
+# Scope : api, mobile, backoffice, admin, shared
+```
+
+Exemples valides :
+- `feat(api+backoffice): US03 — partner invitation flow`
+- `fix(admin): resolve duplicate React instance in Vite config`
+- `docs: add git workflow to CLAUDE.md and CONTRIBUTING.md`
+
+### Règle de récupération (commit accidentel sur develop)
+
+Si un commit est fait par erreur sur `develop` **sans push** :
+```bash
+git branch feature/USxx-description   # capture le commit
+git reset --hard HEAD~1                # retire le commit de develop
+git checkout feature/USxx-description  # retour sur la bonne branche
+```
+
+### Pull Request
+
+- Une branche = une US (ou un fix atomique)
+- PR toujours vers `develop`, jamais vers `main`
+- `main` = production stable, merge uniquement depuis `develop` après validation
