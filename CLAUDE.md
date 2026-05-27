@@ -150,6 +150,14 @@ Reuse existing: `JwtAuthGuard`, `JwtOptionalAuthGuard`, `RolesGuard`, `@Auth()`,
 
 Flag explicitly before modifying `app.module.ts` or shared types.
 
+### SUIVI_US.md — mandatory update after every US
+
+After implementing or partially implementing any US, update its row in `SUIVI_US.md`:
+- Status icon (✅ / ⚠️ / 🔌 / ❌)
+- "Ce qui manque / problème" column — reflect the new state
+- "À faire" section — check the box if done, or update remaining items
+- Update "Dernière mise à jour" date at the top of the file
+
 ---
 
 ## Git Workflow
