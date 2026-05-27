@@ -303,6 +303,8 @@ export default function StepsPage() {
             defaultValues={zoneDialog !== 'create' && zoneDialog ? zoneDtoToFormValues(zoneDialog) : undefined}
             isLoading={createZone.isPending || updateZone.isPending}
             submitLabel={zoneDialog === 'create' ? 'Créer la zone' : 'Enregistrer'}
+            planUrl={hunt?.plan_url ?? undefined}
+            existingZones={zones}
             onSubmit={(payload) => {
               if (zoneDialog === 'create') return createZone.mutateAsync(payload);
               return updateZone.mutateAsync({ zoneId: (zoneDialog as ZoneDto).id, payload });

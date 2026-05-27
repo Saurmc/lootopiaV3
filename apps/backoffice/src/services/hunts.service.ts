@@ -13,6 +13,7 @@ export interface HuntDto {
   created_at: string;
   step_count?: number;
   image_url?: string | null;
+  plan_url?: string | null;
 }
 
 export interface HuntTemplate {
