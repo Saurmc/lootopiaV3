@@ -1,8 +1,11 @@
 export type ValidationType = 'gps' | 'qrcode' | 'quiz' | 'photo';
 
 export interface ARContent {
-  type: string;
-  payload: Record<string, unknown>;
+  type: '2d-overlay' | '3d-model';
+  image?: string;
+  model_url?: string;
+  position?: { x: number; y: number; z: number };
+  scale?: number;
 }
 
 export interface Step {

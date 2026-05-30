@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import FileUpload from '@/components/ui/file-upload';
 import type { CreateStepPayload, StepDto } from '@/services/steps.service';
+import type { ARContent } from '@lootopia/shared';
 
 export interface StepFormValues {
   order: string;
@@ -13,7 +14,12 @@ export interface StepFormValues {
   lat: string;
   lng: string;
   validation_radius: string;
-  ar_image_url: string; // uploaded image URL for ar_content
+  ar_image_url: string;
+  ar_type: '2d-overlay' | '3d-model';
+  ar_pos_x: string;
+  ar_pos_y: string;
+  ar_pos_z: string;
+  ar_scale: string;
 }
 
 interface StepFormProps {
@@ -23,7 +29,7 @@ interface StepFormProps {
   submitLabel?: string;
 }
 
-function toPayload(v: StepFormValues): CreateStepPayload {
+export function toPayload(v: StepFormValues): CreateStepPayload {
   const payload: CreateStepPayload = {
     order: parseInt(v.order, 10) || 0,
     title: v.title.trim(),
@@ -35,13 +41,27 @@ function toPayload(v: StepFormValues): CreateStepPayload {
   if (!isNaN(lat)) payload.lat = lat;
   if (!isNaN(lng)) payload.lng = lng;
   if (v.ar_image_url) {
-    payload.ar_content = { type: '2d-overlay', image: v.ar_image_url };
+    const arContent: ARContent = {
+      type: v.ar_type,
+      position: {
+        x: parseFloat(v.ar_pos_x) || 0,
+        y: parseFloat(v.ar_pos_y) || 0,
+        z: parseFloat(v.ar_pos_z) || 0,
+      },
+      scale: parseFloat(v.ar_scale) || 1,
+    };
+    if (v.ar_type === '2d-overlay') {
+      arContent.image = v.ar_image_url;
+    } else {
+      arContent.model_url = v.ar_image_url;
+    }
+    payload.ar_content = arContent;
   }
   return payload;
 }
 
 export function stepDtoToFormValues(step: StepDto): StepFormValues {
-  const arContent = step.ar_content as { image?: string } | null;
+  const ar = step.ar_content as ARContent | null;
   return {
     order: String(step.order),
     title: step.title,
@@ -49,7 +69,12 @@ export function stepDtoToFormValues(step: StepDto): StepFormValues {
     lat: '',
     lng: '',
     validation_radius: String(step.validation_radius),
-    ar_image_url: arContent?.image ?? '',
+    ar_image_url: ar?.image ?? ar?.model_url ?? '',
+    ar_type: ar?.type ?? '2d-overlay',
+    ar_pos_x: String(ar?.position?.x ?? 0),
+    ar_pos_y: String(ar?.position?.y ?? 0),
+    ar_pos_z: String(ar?.position?.z ?? 0),
+    ar_scale: String(ar?.scale ?? 1),
   };
 }
 
@@ -74,10 +99,20 @@ export default function StepForm({
       lng: '',
       validation_radius: '50',
       ar_image_url: '',
+      ar_type: '2d-overlay',
+      ar_pos_x: '0',
+      ar_pos_y: '0',
+      ar_pos_z: '0',
+      ar_scale: '1',
     },
   });
 
   const arImageUrl = useWatch({ control, name: 'ar_image_url' });
+  const arType = useWatch({ control, name: 'ar_type' });
+  const arPosX = useWatch({ control, name: 'ar_pos_x' });
+  const arPosY = useWatch({ control, name: 'ar_pos_y' });
+  const arPosZ = useWatch({ control, name: 'ar_pos_z' });
+  const arScale = useWatch({ control, name: 'ar_scale' });
 
   const handleFormSubmit = async (values: StepFormValues) => {
     await onSubmit(toPayload(values));
@@ -170,7 +205,7 @@ export default function StepForm({
       <div className="space-y-1.5">
         <Label>Contenu AR (optionnel)</Label>
         <p className="text-xs text-gray-400">
-          Image superposée en réalité augmentée sur la carte (overlay 2D).
+          Image ou modèle superposé en réalité augmentée.
         </p>
         <FileUpload
           value={arImageUrl || undefined}
@@ -178,6 +213,80 @@ export default function StepForm({
           accept={['image/jpeg', 'image/png', 'image/gif', 'image/webp']}
           label="Cliquer ou déposer une image AR"
         />
+
+        {arImageUrl && (
+          <div className="space-y-3 rounded-md border border-gray-200 p-3">
+            {/* Type selector */}
+            <div className="space-y-1.5">
+              <Label htmlFor="ar_type">Type</Label>
+              <select
+                id="ar_type"
+                className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
+                {...register('ar_type')}
+              >
+                <option value="2d-overlay">2D Overlay</option>
+                <option value="3d-model">3D Model</option>
+              </select>
+            </div>
+
+            {/* Position */}
+            <div className="space-y-1.5">
+              <Label>Position (x / y / z)</Label>
+              <div className="grid grid-cols-3 gap-2">
+                <Input
+                  id="ar_pos_x"
+                  type="number"
+                  step="0.1"
+                  placeholder="x"
+                  {...register('ar_pos_x')}
+                />
+                <Input
+                  id="ar_pos_y"
+                  type="number"
+                  step="0.1"
+                  placeholder="y"
+                  {...register('ar_pos_y')}
+                />
+                <Input
+                  id="ar_pos_z"
+                  type="number"
+                  step="0.1"
+                  placeholder="z"
+                  {...register('ar_pos_z')}
+                />
+              </div>
+            </div>
+
+            {/* Scale */}
+            <div className="space-y-1.5">
+              <Label htmlFor="ar_scale">Échelle</Label>
+              <Input
+                id="ar_scale"
+                type="number"
+                min="0.1"
+                step="0.1"
+                {...register('ar_scale')}
+              />
+            </div>
+
+            {/* Preview (2d-overlay only) */}
+            {arType === '2d-overlay' && (
+              <div className="space-y-1.5">
+                <Label>Aperçu</Label>
+                <div className="relative inline-block">
+                  <img
+                    src={arImageUrl}
+                    alt="AR preview"
+                    className="h-24 w-24 rounded object-cover"
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 rounded-b bg-black/60 px-1 py-0.5 text-[10px] text-white">
+                    pos ({arPosX},{arPosY},{arPosZ}) ×{arScale}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="flex justify-end pt-2">

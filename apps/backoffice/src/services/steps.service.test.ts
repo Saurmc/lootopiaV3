@@ -46,6 +46,21 @@ describe('stepsService', () => {
       expect(api.post).toHaveBeenCalledWith(`/hunts/${HUNT_ID}/steps`, payload);
       expect(result).toEqual(mockStep);
     });
+
+    it('transmet ar_content sans transformation', async () => {
+      const arContent = {
+        type: '2d-overlay' as const,
+        image: 'https://cdn.example.com/img.png',
+        position: { x: 1, y: 0, z: 0 },
+        scale: 0.8,
+      };
+      const stepWithAr = { ...mockStep, ar_content: arContent };
+      vi.mocked(api.post).mockResolvedValueOnce({ data: stepWithAr });
+      const payload = { order: 0, title: 'Avec AR', validation_radius: 50, ar_content: arContent };
+      const result = await stepsService.create(HUNT_ID, payload);
+      expect(api.post).toHaveBeenCalledWith(`/hunts/${HUNT_ID}/steps`, payload);
+      expect(result.ar_content).toEqual(arContent);
+    });
   });
 
   describe('update', () => {
