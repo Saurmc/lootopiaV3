@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import FileUpload from '@/components/ui/file-upload';
 import type { CreateStepPayload, StepDto } from '@/services/steps.service';
 import type { ARContent } from '@lootopia/shared';
+import { filesService } from '@/services/files.service';
 
 export interface StepFormValues {
   order: string;
@@ -275,7 +276,7 @@ export default function StepForm({
                 <Label>Aperçu</Label>
                 <div className="relative h-24 w-24 overflow-hidden rounded">
                   <img
-                    src={arImageUrl}
+                    src={filesService.getFileUrl(arImageUrl)}
                     alt="AR preview"
                     className="h-full w-full object-cover"
                   />
