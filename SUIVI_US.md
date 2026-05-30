@@ -1,6 +1,6 @@
 # Lootopia V3 — Suivi des User Stories
 
-Dernière mise à jour : 2026-05-30
+Dernière mise à jour : 2026-05-31
 
 ## Légende
 
@@ -32,7 +32,7 @@ Dernière mise à jour : 2026-05-30
 | US20 | Templates de chasse                      | ✅     | `GET /hunts/templates` + `POST /hunts/from-template/:id` connectés.                                                                                                                                                                                                               | —          |
 | US21 | Ajouter un plan ou une image             | ✅     | Upload via `POST /files/upload` (multer local). `HuntForm` champ `plan_url`. Stockage local `/uploads` au lieu de MinIO (déviation technique, fonctionnel).                                                                                                                       | —          |
 | US22 | Définir des zones sur le plan            | ⚠️     | `ZoneCanvas.tsx` absent sur `develop` (sur `feature/US22-zone-visual-editor`). Référence morte "US44" toujours présente dans `ZoneForm.tsx`. Formulaire textuel fonctionnel pour `rect` et `circle` uniquement.                                                                   | 🟠 Moyenne |
-| US23 | Gérer les étapes d'une chasse            | ⚠️     | CRUD complet (`StepsPage` + `StepForm` + endpoints). `StepEditor.tsx` = stub `TODO`. `StepForm` ne propose pas de `validation_type` — toutes les étapes créées depuis le backoffice sont en GPS par défaut.                                                                       | 🟠 Moyenne |
+| US23 | Gérer les étapes d'une chasse            | ✅     | `StepForm` expose `validation_type` (gps/qrcode/quiz/photo) + champs conditionnels (`expected_code`, `correct_answer`). `validation_data` JSONB ajouté en base. Fix lat/lng pré-rempli en édition. Badge coloré dans `StepsPage`. `StepEditor.tsx` stub supprimé. Tests API (14) + Vitest (5) verts. | 🟠 Moyenne |
 | US24 | Configurer les éléments RA d'une étape   | ⚠️     | `StepForm` upload image AR → `ar_content: { type: '2d-overlay', image: url }`. Pas de sélecteur `validation_type` (qrcode/quiz/photo non configurables). Pas de vrai configurateur RA (positionnement 3D, preview).                                                               | 🟠 Moyenne |
 | US25 | Statistiques de base d'une chasse        | ✅     | `StatsPage` : `participant_count`, `completed_count`, `completion_rate`, `average_points`. `GET /hunts/:id/stats` connecté.                                                                                                                                                       | —          |
 | US26 | Liste des participants                   | ✅     | Tableau expandable dans `StatsPage`. `GET /hunts/:id/participants` chargé au clic. Champs : email, étapes, points, dates.                                                                                                                                                         | —          |
@@ -113,7 +113,7 @@ Dernière mise à jour : 2026-05-30
 
 ### 🟠 Important
 
-- [ ] **US23** — Ajouter `validation_type` selector dans `StepForm.tsx` (gps/qrcode/quiz/photo) + champs dynamiques (code QR, réponse quiz). `StepEditor.tsx` stub à implémenter.
+- [x] **US23** — `validation_type` selector + champs dynamiques + `validation_data` JSONB + badge `StepsPage` + suppression `StepEditor.tsx`.
 - [ ] **US24** — Enrichir la configuration RA dans `StepForm.tsx` : sélecteur type overlay, position 3D, taille.
 - [ ] **US55/56/57** — Compléter la configuration backoffice (validation_type) + corriger l'upload photo côté mobile (upload vers `/files/upload` avant envoi de `file_url`).
 

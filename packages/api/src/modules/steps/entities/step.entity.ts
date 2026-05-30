@@ -47,6 +47,9 @@ export class StepEntity {
   validation_type: string;
 
   @Column({ type: 'jsonb', nullable: true })
+  validation_data: Record<string, unknown> | null;
+
+  @Column({ type: 'jsonb', nullable: true })
   ar_content: Record<string, unknown> | null;
 
   @CreateDateColumn()
