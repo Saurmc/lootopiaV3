@@ -1,5 +1,5 @@
 # Lootopia V3 — Suivi des User Stories
-Dernière mise à jour : 2026-05-23
+Dernière mise à jour : 2026-05-28
 
 ## Légende
 | Icône | Signification |
@@ -17,7 +17,7 @@ Dernière mise à jour : 2026-05-23
 | US | Titre | Statut | Ce qui manque / problème | Priorité |
 |---|---|---|---|---|
 | US01 | Connexion partenaire | ✅ | — | — |
-| US03 | Inscription partenaire (flux invitation) | ✅ | Flux par invitation implémenté (2026-05-23). Table `invitations` en base. `POST /admin/invitations` (admin) → envoie lien 72h → partenaire ouvre `/register?token=xxx` (backoffice) → `POST /auth/register/partner` crée le compte avec rôle `PARTNER`. `GET /admin/invitations` liste toutes les invitations avec statut. `RegisterDto` nettoyé (plus de `role` libre). Emails loggués en console en dev. Interface admin `InvitationsPage` avec formulaire d'envoi + tableau de suivi. | — |
+| US03 | Inscription partenaire (flux invitation) | ✅ | Flux par invitation complet. Table `invitations` en base. `POST /admin/invitations` (admin) → envoie lien 72h → partenaire ouvre `/register?token=xxx` (backoffice) → `POST /auth/register/partner` crée le compte avec rôle `PARTNER`. `GET /admin/invitations` liste toutes les invitations avec statut. `RegisterDto` nettoyé. **Emails réels via nodemailer + Mailtrap** (2026-05-28) — HTML invitation + HTML bienvenue. Fallback console si `SMTP_HOST` absent. Vars : `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` dans `.env`. Interface admin `InvitationsPage` avec formulaire d'envoi + tableau de suivi. | — |
 | US16 | Dashboard partenaire | ✅ | KPIs + graphique Recharts. Appels `GET /hunts` + `GET /hunts/:id/stats` branchés. | — |
 | US17 | Créer une chasse | ✅ | `HuntCreatePage` + `HuntForm` complets. `POST /hunts` connecté. | — |
 | US18 | Modifier une chasse | ✅ | `HuntEditPage` + `GET /hunts/:id` + `PATCH /hunts/:id` connectés. | — |

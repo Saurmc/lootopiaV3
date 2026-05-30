@@ -159,10 +159,23 @@ Pour créer un compte partenaire, l'inscription directe est désactivée. Le flu
 
 1. L'admin se connecte sur `http://localhost:5174`
 2. Aller dans **Invitations partenaires** → saisir l'email du futur partenaire → envoyer
-3. En développement, le lien d'activation s'affiche dans les **logs de la console backend** :
-   ```
-   [INVITATION] Destinataire: contact@musee.fr
-   Lien d'activation (valable 72h) : http://localhost:5173/register?token=...
-   ```
+3. Le partenaire reçoit un email avec un lien valable 72h (via Mailtrap en dev — voir ci-dessous)
 4. Ouvrir ce lien → remplir le formulaire (prénom, nom, mot de passe)
 5. Se connecter sur `http://localhost:5173` avec l'email et le mot de passe choisis
+
+### Configuration email (Mailtrap)
+
+Les emails sont envoyés via [Mailtrap](https://mailtrap.io) (sandbox gratuit, les mails n'arrivent pas en vraie boîte).
+
+1. Créer un compte sur mailtrap.io
+2. **Email Testing** → **Inboxes** → ton inbox → onglet **SMTP Settings**
+3. Renseigner dans `packages/api/.env` :
+   ```
+   SMTP_HOST=sandbox.smtp.mailtrap.io
+   SMTP_PORT=2525
+   SMTP_USER=<username Mailtrap>
+   SMTP_PASS=<password Mailtrap>
+   ```
+4. Redémarrer le backend
+
+> Sans `SMTP_HOST`, le lien d'activation est loggué en console (mode dégradé).

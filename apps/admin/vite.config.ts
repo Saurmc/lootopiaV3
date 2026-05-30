@@ -7,6 +7,10 @@ const reactDomPath = path.resolve(__dirname, 'node_modules/react-dom');
 
 export default defineConfig({
   plugins: [react()],
+  server: {
+    port: 5174,
+    strictPort: true,
+  },
   resolve: {
     alias: {
       react: reactPath,
