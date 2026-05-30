@@ -273,17 +273,51 @@ export default function StepForm({
             {/* Preview (2d-overlay only) */}
             {arType === '2d-overlay' && (
               <div className="space-y-1.5">
-                <Label>Aperçu</Label>
-                <div className="relative h-24 w-24 overflow-hidden rounded">
-                  <img
-                    src={filesService.getFileUrl(arImageUrl)}
-                    alt="AR preview"
-                    className="h-full w-full object-cover"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5 text-[10px] leading-tight text-white">
-                    pos ({arPosX},{arPosY},{arPosZ}) ×{arScale}
+                <Label>Aperçu simulé</Label>
+                {/* AR viewport — grille représentant l'espace AR */}
+                <div
+                  className="relative h-44 w-full overflow-hidden rounded-md border border-gray-200 bg-gray-50"
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(rgba(0,0,0,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.06) 1px, transparent 1px)',
+                    backgroundSize: '24px 24px',
+                  }}
+                >
+                  {/* Croix centrale = origine AR */}
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <div className="h-px w-6 bg-gray-300" />
+                  </div>
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                    <div className="h-6 w-px bg-gray-300" />
+                  </div>
+
+                  {/* Image positionnée et mise à l'échelle */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <img
+                      src={filesService.getFileUrl(arImageUrl)}
+                      alt="AR preview"
+                      className="max-h-28 max-w-[60%] object-contain"
+                      style={{
+                        transform: `translate(${(parseFloat(arPosX) || 0) * 24}px, ${-(parseFloat(arPosY) || 0) * 24}px) scale(${Math.max(0.1, parseFloat(arScale) || 1)})`,
+                        transition: 'transform 120ms ease',
+                      }}
+                    />
+                  </div>
+
+                  {/* Badges valeurs */}
+                  <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 bg-black/55 px-2 py-1">
+                    <span className="text-[10px] text-white/80">pos</span>
+                    <span className="rounded bg-white/20 px-1 text-[10px] font-mono text-white">
+                      x={arPosX || '0'} y={arPosY || '0'} z={arPosZ || '0'}
+                    </span>
+                    <span className="ml-auto rounded bg-white/20 px-1 text-[10px] font-mono text-white">
+                      ×{arScale || '1'}
+                    </span>
                   </div>
                 </div>
+                <p className="text-xs text-gray-400">
+                  x/y déplacent l'image (1 unité = 24 px). z non représenté (profondeur AR).
+                </p>
               </div>
             )}
           </div>
