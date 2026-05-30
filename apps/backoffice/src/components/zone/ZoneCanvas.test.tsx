@@ -158,6 +158,66 @@ describe('ZoneCanvas', () => {
     expect(shape.points).toHaveLength(3);
   });
 
+  it('affiche la forme validée en vert après commit rect', () => {
+    const onShapeCommit = vi.fn();
+    render(
+      <ZoneCanvas
+        planUrl="http://example.com/plan.jpg"
+        zones={[]}
+        shapeType="rect"
+        onShapeCommit={onShapeCommit}
+      />,
+    );
+
+    const img = screen.getByRole('img');
+    setupImage(img as HTMLImageElement);
+
+    const svg = document.querySelector('svg')!;
+    fireEvent.mouseDown(svg, { offsetX: 50, offsetY: 50 });
+    fireEvent.mouseUp(svg, { offsetX: 150, offsetY: 120 });
+
+    // La forme committée est rendue avec stroke="#10b981" (vert)
+    const greenRect = svg.querySelector('rect[stroke="#10b981"]');
+    expect(greenRect).toBeTruthy();
+  });
+
+  it('ferme le polygone automatiquement en cliquant près du premier point', () => {
+    const onShapeCommit = vi.fn();
+    render(
+      <ZoneCanvas
+        planUrl="http://example.com/plan.jpg"
+        zones={[]}
+        shapeType="polygon"
+        onShapeCommit={onShapeCommit}
+      />,
+    );
+
+    const img = screen.getByRole('img');
+    setupImage(img as HTMLImageElement);
+
+    const svg = document.querySelector('svg')!;
+
+    // 3 points
+    fireEvent.click(svg, { detail: 1, offsetX: 100, offsetY: 100 });
+    vi.advanceTimersByTime(300);
+    fireEvent.click(svg, { detail: 1, offsetX: 200, offsetY: 100 });
+    vi.advanceTimersByTime(300);
+    fireEvent.click(svg, { detail: 1, offsetX: 150, offsetY: 180 });
+    vi.advanceTimersByTime(300);
+
+    // Clic très proche du premier point → auto-close dans le timeout.
+    // act() est requis car le flush React arrive depuis un timer (hors event system).
+    fireEvent.click(svg, { detail: 1, offsetX: 101, offsetY: 101 });
+    act(() => { vi.advanceTimersByTime(300); });
+
+    expect(onShapeCommit).toHaveBeenCalledOnce();
+    expect(onShapeCommit).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'polygon' }),
+    );
+    const shape = onShapeCommit.mock.calls[0][0];
+    expect(shape.points).toHaveLength(3);
+  });
+
   it('ne déclenche pas onShapeCommit si moins de 3 points polygon', () => {
     const onShapeCommit = vi.fn();
     render(

@@ -49,7 +49,7 @@ export function huntDtoToFormValues(hunt: HuntDto): HuntFormValues {
     duration: hunt.duration?.toString() ?? '',
     points: hunt.points?.toString() ?? '',
     is_active: hunt.is_active,
-    plan_url: (hunt as HuntDto & { plan_url?: string }).plan_url ?? '',
+    plan_url: hunt.plan_url ?? '',
   };
 }
 

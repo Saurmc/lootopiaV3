@@ -22,6 +22,7 @@ export default function ZoneCanvas({ planUrl, zones, shapeType, onShapeCommit }:
   const [drawCurrent, setDrawCurrent] = useState<Point | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [polygonPoints, setPolygonPoints] = useState<Point[]>([]);
+  const [committedShape, setCommittedShape] = useState<ZoneShape | null>(null);
 
   useEffect(() => {
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
@@ -29,6 +30,7 @@ export default function ZoneCanvas({ planUrl, zones, shapeType, onShapeCommit }:
     setDrawStart(null);
     setDrawCurrent(null);
     setIsDragging(false);
+    setCommittedShape(null);
   }, [shapeType]);
 
   const getSvgPoint = useCallback((e: React.MouseEvent): Point => {
@@ -42,9 +44,10 @@ export default function ZoneCanvas({ planUrl, zones, shapeType, onShapeCommit }:
     };
   }, []);
 
-  const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
+const handleMouseDown = (e: React.MouseEvent<SVGSVGElement>) => {
     if (shapeType === 'polygon') return;
     const pt = getSvgPoint(e);
+    setCommittedShape(null);
     setDrawStart(pt);
     setDrawCurrent(pt);
     setIsDragging(true);
@@ -59,17 +62,22 @@ export default function ZoneCanvas({ planUrl, zones, shapeType, onShapeCommit }:
     if (!isDragging || !drawStart || shapeType === 'polygon') return;
     setIsDragging(false);
     const end = getSvgPoint(e);
+    let shape: ZoneShape | null = null;
     if (shapeType === 'rect') {
-      onShapeCommit({
+      shape = {
         type: 'rect',
         x: Math.min(drawStart.x, end.x),
         y: Math.min(drawStart.y, end.y),
         width: Math.abs(end.x - drawStart.x),
         height: Math.abs(end.y - drawStart.y),
-      });
+      };
     } else if (shapeType === 'circle') {
       const radius = Math.sqrt((end.x - drawStart.x) ** 2 + (end.y - drawStart.y) ** 2);
-      onShapeCommit({ type: 'circle', cx: drawStart.x, cy: drawStart.y, radius });
+      shape = { type: 'circle', cx: drawStart.x, cy: drawStart.y, radius };
+    }
+    if (shape) {
+      onShapeCommit(shape);
+      setCommittedShape(shape);
     }
     setDrawStart(null);
     setDrawCurrent(null);
@@ -81,27 +89,60 @@ export default function ZoneCanvas({ planUrl, zones, shapeType, onShapeCommit }:
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
     }
-    if (e.detail === 1) {
-      const pt = getSvgPoint(e);
-      clickTimerRef.current = setTimeout(() => {
-        setPolygonPoints(prev => [...prev, pt]);
-        clickTimerRef.current = null;
-      }, 250);
-    } else if (e.detail >= 2) {
+    // Double-clic : fermer le polygone via updater fonctionnel (évite la closure stale)
+    if (e.detail >= 2) {
       setPolygonPoints(prev => {
         if (prev.length >= 3) {
-          onShapeCommit({
-            type: 'polygon',
-            points: prev.map(p => [p.x, p.y] as [number, number]),
-          });
+          const shape: ZoneShape = { type: 'polygon', points: prev.map(p => [p.x, p.y] as [number, number]) };
+          onShapeCommit(shape);
+          setCommittedShape(shape);
         }
         return [];
       });
+      return;
     }
+    const pt = getSvgPoint(e);
+    // Délai 250ms pour distinguer simple/double-clic.
+    // La détection d'auto-close est aussi dans le timeout pour lire l'état courant via updater fonctionnel.
+    clickTimerRef.current = setTimeout(() => {
+      setPolygonPoints(prev => {
+        if (prev.length >= 3) {
+          const first = prev[0];
+          const dist = Math.sqrt((pt.x - first.x) ** 2 + (pt.y - first.y) ** 2);
+          const img = imgRef.current;
+          const threshold = img && img.clientWidth ? 15 * (img.naturalWidth / img.clientWidth) : 20;
+          if (dist < threshold) {
+            const shape: ZoneShape = { type: 'polygon', points: prev.map(p => [p.x, p.y] as [number, number]) };
+            onShapeCommit(shape);
+            setCommittedShape(shape);
+            return [];
+          }
+        }
+        return [...prev, pt];
+      });
+      clickTimerRef.current = null;
+    }, 250);
   };
 
   const natW = naturalSize.w || 800;
   const natH = naturalSize.h || 600;
+
+  const renderCommittedShape = () => {
+    if (!committedShape) return null;
+    const fill = 'rgba(16,185,129,0.25)';
+    const stroke = '#10b981';
+    const dash = '6,3';
+    if (committedShape.type === 'rect') {
+      return <rect x={committedShape.x} y={committedShape.y} width={committedShape.width} height={committedShape.height} fill={fill} stroke={stroke} strokeWidth="2" strokeDasharray={dash} />;
+    }
+    if (committedShape.type === 'circle') {
+      return <circle cx={committedShape.cx} cy={committedShape.cy} r={committedShape.radius} fill={fill} stroke={stroke} strokeWidth="2" strokeDasharray={dash} />;
+    }
+    if (committedShape.type === 'polygon') {
+      return <polygon points={toSvgPoints(committedShape.points)} fill={fill} stroke={stroke} strokeWidth="2" strokeDasharray={dash} />;
+    }
+    return null;
+  };
 
   return (
     <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
@@ -113,10 +154,7 @@ export default function ZoneCanvas({ planUrl, zones, shapeType, onShapeCommit }:
         draggable={false}
         onLoad={() => {
           if (imgRef.current) {
-            setNaturalSize({
-              w: imgRef.current.naturalWidth,
-              h: imgRef.current.naturalHeight,
-            });
+            setNaturalSize({ w: imgRef.current.naturalWidth, h: imgRef.current.naturalHeight });
           }
         }}
       />
@@ -130,48 +168,24 @@ export default function ZoneCanvas({ planUrl, zones, shapeType, onShapeCommit }:
           onMouseUp={handleMouseUp}
           onClick={handleClick}
         >
+          {/* Zones existantes (indigo) */}
           {zones.map(z => {
             if (z.shape.type === 'rect') {
-              return (
-                <rect
-                  key={z.id}
-                  x={z.shape.x}
-                  y={z.shape.y}
-                  width={z.shape.width}
-                  height={z.shape.height}
-                  fill="rgba(99,102,241,0.2)"
-                  stroke="#6366f1"
-                  strokeWidth="2"
-                />
-              );
+              return <rect key={z.id} x={z.shape.x} y={z.shape.y} width={z.shape.width} height={z.shape.height} fill="rgba(99,102,241,0.2)" stroke="#6366f1" strokeWidth="2" />;
             }
             if (z.shape.type === 'circle') {
-              return (
-                <circle
-                  key={z.id}
-                  cx={z.shape.cx}
-                  cy={z.shape.cy}
-                  r={z.shape.radius}
-                  fill="rgba(99,102,241,0.2)"
-                  stroke="#6366f1"
-                  strokeWidth="2"
-                />
-              );
+              return <circle key={z.id} cx={z.shape.cx} cy={z.shape.cy} r={z.shape.radius} fill="rgba(99,102,241,0.2)" stroke="#6366f1" strokeWidth="2" />;
             }
             if (z.shape.type === 'polygon') {
-              return (
-                <polygon
-                  key={z.id}
-                  points={toSvgPoints(z.shape.points)}
-                  fill="rgba(99,102,241,0.2)"
-                  stroke="#6366f1"
-                  strokeWidth="2"
-                />
-              );
+              return <polygon key={z.id} points={toSvgPoints(z.shape.points)} fill="rgba(99,102,241,0.2)" stroke="#6366f1" strokeWidth="2" />;
             }
             return null;
           })}
 
+          {/* Forme validée (vert pointillé) */}
+          {renderCommittedShape()}
+
+          {/* Preview rect pendant le drag */}
           {isDragging && drawStart && drawCurrent && shapeType === 'rect' && (
             <rect
               x={Math.min(drawStart.x, drawCurrent.x)}
@@ -184,6 +198,7 @@ export default function ZoneCanvas({ planUrl, zones, shapeType, onShapeCommit }:
             />
           )}
 
+          {/* Preview circle pendant le drag */}
           {isDragging && drawStart && drawCurrent && shapeType === 'circle' && (
             <circle
               cx={drawStart.x}
@@ -195,6 +210,7 @@ export default function ZoneCanvas({ planUrl, zones, shapeType, onShapeCommit }:
             />
           )}
 
+          {/* Polygone en cours de tracé */}
           {shapeType === 'polygon' && polygonPoints.length > 0 && (
             <>
               {polygonPoints.length > 1 && (
@@ -206,9 +222,21 @@ export default function ZoneCanvas({ planUrl, zones, shapeType, onShapeCommit }:
                   strokeDasharray="6,3"
                 />
               )}
-              {polygonPoints.map((p, i) => (
-                <circle key={i} cx={p.x} cy={p.y} r={4} fill="#10b981" />
-              ))}
+              {polygonPoints.map((p, i) => {
+                const isFirst = i === 0;
+                const isCloseable = isFirst && polygonPoints.length >= 2;
+                return (
+                  <circle
+                    key={i}
+                    cx={p.x}
+                    cy={p.y}
+                    r={isCloseable ? 8 : 4}
+                    fill={isCloseable ? '#f59e0b' : '#10b981'}
+                    stroke="white"
+                    strokeWidth="1.5"
+                  />
+                );
+              })}
             </>
           )}
         </svg>

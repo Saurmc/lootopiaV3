@@ -1,5 +1,5 @@
 # Lootopia V3 — Suivi des User Stories
-Dernière mise à jour : 2026-05-27
+Dernière mise à jour : 2026-05-30
 
 ## Légende
 | Icône | Signification |
@@ -24,7 +24,7 @@ Dernière mise à jour : 2026-05-27
 | US19 | Supprimer une chasse | ✅ | `HuntsPage` + `DELETE /hunts/:id` + dialog confirmation. | — |
 | US20 | Templates de chasse | ✅ | `GET /hunts/templates` + `POST /hunts/from-template/:id` connectés. | — |
 | US21 | Ajouter un plan ou une image | ✅ | Upload via `POST /files/upload` (multer local). `HuntForm` champ `plan_url`. Stockage local `/uploads` au lieu de MinIO (déviation technique, fonctionnel). | — |
-| US22 | Définir des zones sur le plan | ✅ | Éditeur visuel SVG implémenté (2026-05-27). `ZoneCanvas.tsx` : overlay SVG sur `plan_url`, dessin `rect` (drag), `circle` (centre+drag), `polygon` (clics + double-clic pour fermer). Zones existantes affichées en indigo. `ZoneForm` : props `planUrl` + `existingZones` ajoutées ; champs coordonnées en `readOnly` quand canvas actif. `StepsPage` transmet `hunt.plan_url` et `zones` à `ZoneForm`. Référence morte "US44" supprimée. 10 tests Vitest ajoutés (ZoneCanvas × 5, ZoneForm × 5). | — |
+| US22 | Définir des zones sur le plan | ✅ | Éditeur visuel SVG implémenté et corrigé (2026-05-30). `ZoneCanvas.tsx` : overlay SVG sur `plan_url`, dessin `rect` (drag), `circle` (centre+drag), `polygon` (clics + fermeture par clic sur point de départ orange ou double-clic). Forme validée affichée en vert pointillé après commit. Zones existantes en indigo. `ZoneForm` : props `planUrl` + `existingZones`; champs coordonnées `readOnly` quand canvas actif. `hunts.service.ts` : mapping `image_url` (API) ↔ `plan_url` (backoffice) via `fromRaw()` + `toApiPayload()`; URL relative normalisée en absolue via `filesService.getFileUrl`. CORS backend corrigé (multi-origines). 12 tests Vitest (ZoneCanvas × 7, ZoneForm × 5). | — |
 | US23 | Gérer les étapes d'une chasse | ⚠️ | CRUD complet (`StepsPage` + `StepForm` + endpoints). Mais `StepEditor.tsx` = stub `TODO`. Formulaire textuel fonctionnel, éditeur visuel absent. | 🟠 Moyenne |
 | US24 | Configurer les éléments RA d'une étape | ⚠️ | `StepForm` upload image AR → `ar_content: { type: '2d-overlay', image: url }`. Pas de vrai configurateur RA (positionnement 3D, preview). `StepEditor.tsx` stub. | 🟠 Moyenne |
 | US25 | Statistiques de base d'une chasse | ✅ | `StatsPage` : `participant_count`, `completed_count`, `completion_rate`, `average_points`. `GET /hunts/:id/stats` connecté. | — |
@@ -102,7 +102,7 @@ Dernière mise à jour : 2026-05-27
 - [x] **US03** — ✅ Flux invitation complet implémenté (2026-05-25). `RegisterPage.tsx` backoffice + `InvitationsPage` admin + endpoints backend.
 
 ### 🟠 Important
-- [x] **US22** — ✅ Éditeur visuel SVG complet implémenté (2026-05-27). `ZoneCanvas`, `ZoneForm` mis à jour, `StepsPage` connecté.
+- [x] **US22** — ✅ Éditeur visuel SVG complet et corrigé (2026-05-30). `ZoneCanvas` (forme prévisualisée après commit, auto-close polygone), `ZoneForm` + `hunts.service` (mapping `image_url`↔`plan_url`, URL absolues), CORS multi-origines. 12 tests verts.
 - [ ] **US23** — Implémenter `StepEditor.tsx` (actuellement stub `TODO`). Permet édition inline visuelle des étapes sur le plan.
 - [ ] **US24** — Enrichir la configuration RA dans `StepForm.tsx` : champs position 3D, taille, type overlay. Pour l'instant seule une image 2D est supportée.
 

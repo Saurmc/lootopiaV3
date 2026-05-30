@@ -206,7 +206,9 @@ export default function ZoneForm({
 
       {shapeType === 'polygon' && planUrl && (
         <p className="text-sm text-gray-500 bg-gray-50 rounded-lg p-3">
-          Cliquez sur le plan pour ajouter des points. Double-cliquez pour fermer le polygone.
+          Cliquez pour ajouter des points. Cliquez sur le point de départ{' '}
+          <span className="inline-block w-3 h-3 rounded-full bg-amber-400 align-middle" />{' '}
+          (ou double-cliquez) pour fermer le polygone.
         </p>
       )}
 
