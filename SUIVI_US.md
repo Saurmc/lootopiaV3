@@ -1,6 +1,6 @@
 # Lootopia V3 — Suivi des User Stories
 
-Dernière mise à jour : 2026-05-30
+Dernière mise à jour : 2026-05-31
 
 ## Légende
 
@@ -33,7 +33,7 @@ Dernière mise à jour : 2026-05-30
 | US21 | Ajouter un plan ou une image             | ✅     | Upload via `POST /files/upload` (multer local). `HuntForm` champ `plan_url`. Stockage local `/uploads` au lieu de MinIO (déviation technique, fonctionnel).                                                                                                                       | —          |
 | US22 | Définir des zones sur le plan            | ⚠️     | `ZoneCanvas.tsx` absent sur `develop` (sur `feature/US22-zone-visual-editor`). Référence morte "US44" toujours présente dans `ZoneForm.tsx`. Formulaire textuel fonctionnel pour `rect` et `circle` uniquement.                                                                   | 🟠 Moyenne |
 | US23 | Gérer les étapes d'une chasse            | ⚠️     | CRUD complet (`StepsPage` + `StepForm` + endpoints). `StepEditor.tsx` = stub `TODO`. `StepForm` ne propose pas de `validation_type` — toutes les étapes créées depuis le backoffice sont en GPS par défaut.                                                                       | 🟠 Moyenne |
-| US24 | Configurer les éléments RA d'une étape   | ✅     | Type partagé `ARContent` aligné. `StepForm` : sélecteur type (2d-overlay/3d-model), position x/y/z, scale, preview statique image. `steps.service` typé `ARContent`. Tests Vitest : 3 cas `toPayload` + ar_content passthrough. | 🟠 Moyenne |
+| US24 | Configurer les éléments RA d'une étape   | ✅     | Type partagé `ARContent` aligné (union type, image/model_url, position, scale). `StepForm` : sélecteur type 2d-overlay/3d-model, position x/y/z, scale, preview simulé (viewport grille + transform CSS scale/translate temps réel). `steps.service` typé `ARContent`. CORS multi-origin corrigé. Tests Vitest : 3 cas `toPayload` + ar_content passthrough. | 🟠 Moyenne |
 | US25 | Statistiques de base d'une chasse        | ✅     | `StatsPage` : `participant_count`, `completed_count`, `completion_rate`, `average_points`. `GET /hunts/:id/stats` connecté.                                                                                                                                                       | —          |
 | US26 | Liste des participants                   | ✅     | Tableau expandable dans `StatsPage`. `GET /hunts/:id/participants` chargé au clic. Champs : email, étapes, points, dates.                                                                                                                                                         | —          |
 
