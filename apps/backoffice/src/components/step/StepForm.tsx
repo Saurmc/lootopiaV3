@@ -273,13 +273,13 @@ export default function StepForm({
             {arType === '2d-overlay' && (
               <div className="space-y-1.5">
                 <Label>Aperçu</Label>
-                <div className="relative inline-block">
+                <div className="relative h-24 w-24 overflow-hidden rounded">
                   <img
                     src={arImageUrl}
                     alt="AR preview"
-                    className="h-24 w-24 rounded object-cover"
+                    className="h-full w-full object-cover"
                   />
-                  <div className="absolute bottom-0 left-0 right-0 rounded-b bg-black/60 px-1 py-0.5 text-[10px] text-white">
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-1 py-0.5 text-[10px] leading-tight text-white">
                     pos ({arPosX},{arPosY},{arPosZ}) ×{arScale}
                   </div>
                 </div>

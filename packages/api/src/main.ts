@@ -23,9 +23,11 @@ async function bootstrap() {
   // Filtre d'exceptions global
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // CORS strict
+  // CORS strict — CORS_ORIGIN peut contenir plusieurs origines séparées par des virgules
+  const rawOrigin = process.env.CORS_ORIGIN || 'http://localhost:5173';
+  const allowedOrigins = rawOrigin.split(',').map((o) => o.trim());
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+    origin: allowedOrigins.length === 1 ? allowedOrigins[0] : allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
