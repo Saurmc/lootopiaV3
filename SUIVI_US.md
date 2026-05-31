@@ -1,6 +1,6 @@
 # Lootopia V3 — Suivi des User Stories
 
-Dernière mise à jour : 2026-05-30
+Dernière mise à jour : 2026-05-31
 
 ## Légende
 
@@ -60,7 +60,7 @@ Dernière mise à jour : 2026-05-30
 | US07 | Rechercher une chasse                  | ✅     | `HuntsListScreen` : barre de recherche (debounce → `GET /hunts?q=`), filtres difficulté (facile/moyen/difficile), tri par distance.                                                                                                                                                                                          | —          |
 | US08 | Consulter le détail d'une chasse       | ✅     | `HuntDetailScreen` (`screens/hunts/`) actif. Doublon `screens/hunt/HuntDetailScreen` = stub non monté.                                                                                                                                                                                                                       | —          |
 | US09 | Rejoindre une chasse                   | ✅     | `POST /hunts/:id/join` + `progress.service`.                                                                                                                                                                                                                                                                                 | —          |
-| US10 | Voir la progression sur la carte       | ⚠️     | `MapScreen` distingue les chasses complétées (marqueurs grisés) des actives. Mais la progression étape par étape (étape courante sur la carte) n'est pas implémentée.                                                                                                                                                        | 🟡 Basse   |
+| US10 | Voir la progression sur la carte       | ✅     | Marqueurs d'étapes sur la carte : `current` (vert pulsant), `completed` (gris ✓), `locked` non affiché. Cercle de validation `ShapeSource`+`FillLayer` pour étape courante. Tap → `StepValidation`. `progressService.getHuntProgress()` implémenté. Tests Jest : 6/6.                                                       | —          |
 | US11 | Valider une étape par proximité GPS    | ✅     | `StepValidationScreen` (`type: gps`) + `validate-step.dto` + `geo.service` PostGIS.                                                                                                                                                                                                                                          | —          |
 | US12 | Scanner une étape en RA simple         | ❌     | `ARScreen` (`screens/hunt/`) = stub `return null`. Non monté dans la navigation.                                                                                                                                                                                                                                             | 🟠 Moyenne |
 | US13 | Voir mes points et badges              | ✅     | `ProfileScreen` + `BadgesScreen`.                                                                                                                                                                                                                                                                                            | —          |
