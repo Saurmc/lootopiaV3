@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -29,22 +29,16 @@ interface ARSceneProps {
   onMarkerFound: () => void;
 }
 
-ViroARTrackingTargets.createTargets({
-  markerTarget: {
-    source: { uri: '' },
-    orientation: 'Up',
-    physicalWidth: 0.2,
-  },
-});
-
 function ARScene({ markerImage, modelUrl, onMarkerFound }: ARSceneProps) {
-  ViroARTrackingTargets.createTargets({
-    markerTarget: {
-      source: { uri: markerImage },
-      orientation: 'Up',
-      physicalWidth: 0.2,
-    },
-  });
+  useEffect(() => {
+    ViroARTrackingTargets.createTargets({
+      markerTarget: {
+        source: { uri: markerImage },
+        orientation: 'Up',
+        physicalWidth: 0.2,
+      },
+    });
+  }, [markerImage]);
 
   return (
     <ViroARScene>
