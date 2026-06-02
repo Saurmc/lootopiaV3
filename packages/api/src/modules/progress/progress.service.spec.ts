@@ -490,4 +490,33 @@ describe('ProgressService', () => {
       ).rejects.toThrow(NotFoundException);
     });
   });
+
+  describe('validateAr — ar-3d-spatial', () => {
+    it('accepts 2d-overlay without marker_triggered', () => {
+      const step = mockStep({
+        validation_type: 'ar',
+        location: null,
+        ar_content: { type: '2d-overlay', image: 'http://x' } as any,
+      });
+      expect(() => (service as any)['validateAr'](step, {})).not.toThrow();
+    });
+
+    it('rejects ar-3d-spatial when marker_triggered is absent', () => {
+      const step = mockStep({
+        validation_type: 'ar',
+        location: null,
+        ar_content: { type: 'ar-3d-spatial', marker_image: 'http://m' } as any,
+      });
+      expect(() => (service as any)['validateAr'](step, {})).toThrow(BadRequestException);
+    });
+
+    it('accepts ar-3d-spatial when marker_triggered is true', () => {
+      const step = mockStep({
+        validation_type: 'ar',
+        location: null,
+        ar_content: { type: 'ar-3d-spatial', marker_image: 'http://m' } as any,
+      });
+      expect(() => (service as any)['validateAr'](step, { marker_triggered: true })).not.toThrow();
+    });
+  });
 });

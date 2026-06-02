@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class ValidateStepDto {
   // --- GPS ---
@@ -28,4 +28,9 @@ export class ValidateStepDto {
   @IsString()
   @IsOptional()
   file_url?: string;
+
+  // --- AR 3D Spatial ---
+  @IsBoolean()
+  @IsOptional()
+  marker_triggered?: boolean;
 }

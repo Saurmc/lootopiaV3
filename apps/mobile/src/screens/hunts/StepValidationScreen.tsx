@@ -609,7 +609,12 @@ export default function StepValidationScreen() {
     setState('validating');
     setErrorMsg(null);
     try {
-      const payload = qrCode ? { qr_code: qrCode } : {};
+      let payload: Record<string, unknown> = {};
+      if ((arContent as { type?: string } | null)?.type === 'ar-3d-spatial') {
+        payload = { marker_triggered: true };
+      } else if (qrCode) {
+        payload = { qr_code: qrCode };
+      }
       const progress = await huntService.validateStep(huntId, stepId, payload);
       await onValidated(progress);
     } catch (err) {

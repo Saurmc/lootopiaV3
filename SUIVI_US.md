@@ -1,6 +1,6 @@
 # Lootopia V3 — Suivi des User Stories
 
-Dernière mise à jour : 2026-06-02
+Dernière mise à jour : 2026-06-02 (US63)
 
 ## Légende
 
@@ -82,7 +82,7 @@ Dernière mise à jour : 2026-06-02
 | US60 | Collection badges + historique         | ✅     | `BadgesScreen` — PR #49 mergé.                                                                                                                                                                                                                                                                                               | —          |
 | US61 | Modification profil + consentement GPS | ✅     | `SettingsScreen` — PR #50 mergé.                                                                                                                                                                                                                                                                                             | —          |
 | US62 | Sécurité du compte et suppression      | ✅     | `SecurityScreen` — PR #51 mergé.                                                                                                                                                                                                                                                                                             | —          |
-| US63 | RA spatiale 3D (image marker)          | ❌     | Non implémenté. Objectif : `@reactvision/react-viro` `ViroARImageMarker` — détecter une image physique et ancrer un objet 3D dans l'espace. Bloqué : react-viro 2.53.1 cible RN ~0.81.4 ; projet sur RN 0.83.2 — migration nécessaire ou fork.                                                                               | 🟠 Moyenne |
+| US63 | RA spatiale 3D (image marker)          | ⚠️     | Implémenté sur `feature/US63-ar-3d-spatial` (base US12). `ViroARPhase.tsx`, `ArContent3DSpatial` type, `validateAr` étendu, `marker_triggered` DTO. En attente merge US12 en develop avant PR US63.                                                                                                                           | 🟠 Moyenne |
 
 ---
 
@@ -122,7 +122,7 @@ Dernière mise à jour : 2026-06-02
 
 - [ ] Supprimer le stub `screens/hunt/HuntDetailScreen.tsx` (dead code, jamais monté).
 - [x] **US12** — `ARSection` QR-triggered + 2d-overlay implémenté. Branch `feature/US12-ar-qr-overlay`.
-- [ ] **US63** — RA spatiale 3D : `ViroARImageMarker` via `@reactvision/react-viro`. Requiert compatibilité RN 0.83+.
+- [x] **US63** — RA spatiale 3D : `ViroARPhase.tsx` + `ArContent3DSpatial` + `validateAr` étendu. Branch `feature/US63-ar-3d-spatial` (attend merge US12).
 - [ ] **US15** — Multilangue : ajouter `i18next` ou `expo-localization`.
 - [ ] Supprimer ou implémenter `StatsViewer.tsx` et `StepEditor.tsx`.
 
