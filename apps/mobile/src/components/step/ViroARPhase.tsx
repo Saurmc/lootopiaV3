@@ -14,9 +14,9 @@ import {
   ViroARTrackingTargets,
   ViroAmbientLight,
   ViroAnimations,
+  ViroImage,
   ViroMaterials,
   ViroNode,
-  ViroSphere,
   ViroBox,
   ViroText,
   Viro3DObject,
@@ -26,18 +26,17 @@ import type { ArContent3DSpatial } from '@lootopia/shared';
 // ─── Matériaux & animations (une seule fois au chargement du module) ──────────
 
 try {
-  // Constant = auto-illuminé, visible sans lumière dans la scène
   ViroMaterials.createMaterials({
-    goldOrb: {
+    goldFrame: {
       diffuseColor: '#FFD700',
       lightingModel: 'Constant',
     },
-    goldOrbInner: {
-      diffuseColor: '#FFF8DC',
+    glowDisc: {
+      diffuseColor: 'rgba(255,215,0,0.25)',
       lightingModel: 'Constant',
     },
-    glowDisc: {
-      diffuseColor: 'rgba(255,215,0,0.3)',
+    shadowDisc: {
+      diffuseColor: 'rgba(0,0,0,0.35)',
       lightingModel: 'Constant',
     },
   });
@@ -68,10 +67,9 @@ interface ARSceneProps {
 
 // ─── Scène AR ─────────────────────────────────────────────────────────────────
 
-function ARScene({ modelUrl, onMarkerFound }: ARSceneProps) {
+function ARScene({ modelUrl, markerImage, onMarkerFound }: ARSceneProps) {
   return (
     <ViroARScene>
-      {/* Lumière ambiante — indispensable pour les matériaux Phong, redondant mais safe pour Constant */}
       <ViroAmbientLight color="#FFFFFF" intensity={1000} />
 
       <ViroARImageMarker target="markerTarget" onAnchorFound={onMarkerFound}>
@@ -83,45 +81,50 @@ function ARScene({ modelUrl, onMarkerFound }: ARSceneProps) {
             type="OBJ"
           />
         ) : (
-          // ViroNode remplace <> — Viro ne gère pas les fragments React
           <ViroNode>
-            {/* Disque doré au sol sur le marqueur */}
+            {/* Disque de glow au sol */}
             <ViroBox
               width={0.22}
               height={0.003}
               length={0.22}
-              position={[0, 0, 0]}
+              position={[0, 0.001, 0]}
               materials={['glowDisc']}
             />
-            {/* Groupe flottant : orbe + halo + texte */}
+
+            {/* Tableau flottant avec animation */}
             <ViroNode
-              position={[0, 0.07, 0]}
+              position={[0, 0.16, 0]}
+              rotation={[8, 0, 0]}
               animation={{ name: 'float', run: true, loop: true }}
             >
-              {/* Halo externe */}
-              <ViroSphere
-                radius={0.06}
-                position={[0, 0, 0]}
-                materials={['glowDisc']}
+              {/* Ombre portée derrière le cadre */}
+              <ViroBox
+                width={0.175}
+                height={0.225}
+                length={0.003}
+                position={[0.004, -0.004, -0.008]}
+                materials={['shadowDisc']}
               />
-              {/* Orbe doré rotatif */}
-              <ViroSphere
-                radius={0.045}
-                position={[0, 0, 0]}
-                materials={['goldOrb']}
-                animation={{ name: 'rotateOrb', run: true, loop: true }}
+              {/* Cadre doré (légèrement plus grand que l'image) */}
+              <ViroBox
+                width={0.175}
+                height={0.225}
+                length={0.008}
+                position={[0, 0, -0.005]}
+                materials={['goldFrame']}
               />
-              {/* Noyau lumineux */}
-              <ViroSphere
-                radius={0.02}
+              {/* L'œuvre d'art elle-même */}
+              <ViroImage
+                source={{ uri: markerImage }}
+                width={0.155}
+                height={0.205}
                 position={[0, 0, 0]}
-                materials={['goldOrbInner']}
               />
-              {/* Texte au-dessus */}
+              {/* Texte sous le cadre */}
               <ViroText
                 text="Oeuvre devoilee !"
-                scale={[0.06, 0.06, 0.06]}
-                position={[0, 0.12, 0]}
+                scale={[0.045, 0.045, 0.045]}
+                position={[0, -0.135, 0]}
                 style={styles.arText}
               />
             </ViroNode>
