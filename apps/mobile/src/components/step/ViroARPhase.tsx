@@ -24,28 +24,16 @@ interface ViroARPhaseProps {
 }
 
 interface ARSceneProps {
-  markerImage: string;
   modelUrl?: string;
+  markerImage: string;
   onMarkerFound: () => void;
 }
 
-function ARScene({ markerImage, modelUrl, onMarkerFound }: ARSceneProps) {
-  useEffect(() => {
-    ViroARTrackingTargets.createTargets({
-      markerTarget: {
-        source: { uri: markerImage },
-        orientation: 'Up',
-        physicalWidth: 0.2,
-      },
-    });
-  }, [markerImage]);
-
+// ARScene ne re-enregistre pas la target — elle est déjà prête avant que ce composant monte.
+function ARScene({ modelUrl, markerImage, onMarkerFound }: ARSceneProps) {
   return (
     <ViroARScene>
-      <ViroARImageMarker
-        target="markerTarget"
-        onAnchorFound={onMarkerFound}
-      >
+      <ViroARImageMarker target="markerTarget" onAnchorFound={onMarkerFound}>
         {modelUrl ? (
           <Viro3DObject
             source={{ uri: modelUrl }}
@@ -54,10 +42,12 @@ function ARScene({ markerImage, modelUrl, onMarkerFound }: ARSceneProps) {
             type="OBJ"
           />
         ) : (
+          // Fallback : image 2D ancrée sur le marqueur dans l'espace 3D
           <ViroImage
             source={{ uri: markerImage }}
             position={[0, 0.05, 0]}
             scale={[0.2, 0.2, 0.2]}
+            rotation={[-90, 0, 0]}
           />
         )}
       </ViroARImageMarker>
@@ -68,6 +58,20 @@ function ARScene({ markerImage, modelUrl, onMarkerFound }: ARSceneProps) {
 export default function ViroARPhase({ arContent, onConfirm, isValidating }: ViroARPhaseProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const [markerDetected, setMarkerDetected] = useState(false);
+  // Le navigator ne monte qu'une fois la target enregistrée — sinon ViroARImageMarker
+  // référencerait un target inexistant et l'ancrage spatial ne fonctionnerait pas.
+  const [targetReady, setTargetReady] = useState(false);
+
+  useEffect(() => {
+    ViroARTrackingTargets.createTargets({
+      markerTarget: {
+        source: { uri: arContent.marker_image },
+        orientation: 'Up',
+        physicalWidth: 0.2,
+      },
+    });
+    setTargetReady(true);
+  }, [arContent.marker_image]);
 
   if (!permission) {
     return (
@@ -97,25 +101,32 @@ export default function ViroARPhase({ arContent, onConfirm, isValidating }: Viro
   return (
     <>
       <View style={[styles.cameraContainer, markerDetected && styles.cameraDetected]}>
-        <ViroARSceneNavigator
-          autofocus
-          initialScene={{
-            scene: () => (
-              <ARScene
-                markerImage={arContent.marker_image}
-                modelUrl={arContent.model_url}
-                onMarkerFound={() => setMarkerDetected(true)}
-              />
-            ),
-          }}
-          style={StyleSheet.absoluteFillObject}
-        />
+        {targetReady ? (
+          <ViroARSceneNavigator
+            autofocus
+            initialScene={{
+              scene: () => (
+                <ARScene
+                  modelUrl={arContent.model_url}
+                  markerImage={arContent.marker_image}
+                  onMarkerFound={() => setMarkerDetected(true)}
+                />
+              ),
+            }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        ) : (
+          <View style={styles.loading}>
+            <ActivityIndicator color="#fff" />
+          </View>
+        )}
+
         {markerDetected && (
           <View style={styles.detectedBadge}>
             <Text style={styles.detectedBadgeText}>Marqueur reconnu ✅</Text>
           </View>
         )}
-        {!markerDetected && (
+        {!markerDetected && targetReady && (
           <View style={styles.hint}>
             <Text style={styles.hintText}>Pointez votre caméra sur le marqueur imprimé</Text>
           </View>
@@ -172,6 +183,11 @@ const styles = StyleSheet.create({
   },
   cameraDetected: {
     borderColor: '#22C55E',
+  },
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   detectedBadge: {
     position: 'absolute',
