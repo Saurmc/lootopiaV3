@@ -366,126 +366,284 @@ Le backend n'autorise que `http://localhost:5173`. Si l'admin tourne sur `5174` 
 
 ## 11. Démo — Validation AR avec QR code (US12)
 
-### Ce que fait la fonctionnalité
+> Guide autonome : tout ce qu'il faut pour reproduire la démo de A à Z, y compris en présentation.
 
-Le joueur scanne un QR code physique (collé sur un mur, une vitrine, une œuvre) →
-l'app révèle un **overlay 2D en réalité augmentée** sur la caméra →
-le joueur confirme qu'il le voit → l'étape est validée côté serveur.
+### Ce que montre la fonctionnalité
 
-### Prérequis pour la démo
-
-- Backend lancé (`npm run start:dev -w packages/api`)
-- Docker lancé (MinIO sur port 9000 pour les images AR)
-- App mobile lancée en mode LAN (`npx expo start --lan` depuis `apps/mobile/`)
-- Téléphone et Mac sur le **même réseau Wi-Fi**
-- Fichier `apps/mobile/.env.local` présent avec :
-  ```
-  EXPO_PUBLIC_API_URL=http://<IP_MAC>:3000
-  ```
-  (Remplace `<IP_MAC>` par l'IP de ton Mac sur le réseau local — `ifconfig | grep "inet 192"`)
-
-### Chasse de démo préparée
-
-Une chasse de test avec une étape AR est déjà créée en base :
-- **Chasse** : "Test RA QR"
-- **Étape** : "Trouvez le QR code caché"
-- **QR trigger** : `LOOTOPIA-AR-2026`
-- **Overlay** : `http://<IP_MAC>:9000/lootopia/ar/ar_treasure.png`
-
-> Si la BDD a été reseedée, recrée l'étape avec ce curl (remplace `<TOKEN_PARTNER>` par un token `musee@lootopia.fr`) :
-> ```bash
-> curl -X POST http://localhost:3000/hunts/<HUNT_ID>/steps \
->   -H "Authorization: Bearer <TOKEN_PARTNER>" \
->   -H "Content-Type: application/json" \
->   -d '{
->     "title": "Trouvez le QR code caché",
->     "description": "Scannez le QR code pour révéler le contenu AR.",
->     "order": 0,
->     "validation_type": "ar",
->     "validation_radius": 50,
->     "ar_content": {
->       "type": "qr-overlay",
->       "qr_trigger": "LOOTOPIA-AR-2026",
->       "image": "http://<IP_MAC>:9000/lootopia/ar/ar_treasure.png"
->     }
->   }'
-> ```
-
-### QR code à afficher
-
-Génère le QR code `LOOTOPIA-AR-2026` :
-```bash
-pip3 install qrcode pillow --break-system-packages -q
-python3 -c "
-import qrcode
-qr = qrcode.QRCode(version=1, box_size=12, border=5)
-qr.add_data('LOOTOPIA-AR-2026')
-qr.make(fit=True)
-qr.make_image().save('/tmp/ar_qr.png')
-"
-open /tmp/ar_qr.png   # s'ouvre dans Preview — affiche-le sur ton écran ou imprime-le
-```
-
-### Scénario de démo pas à pas
-
-| Étape | Action | Ce que le jury voit |
-|---|---|---|
-| 1 | Ouvre l'app sur le téléphone | Écran carte avec les chasses disponibles |
-| 2 | Onglet **Chasses** → cherche "Test RA QR" | Liste filtrée |
-| 3 | Clique sur la chasse → bouton **Rejoindre** | Confirmation d'inscription |
-| 4 | Clique sur l'étape **"Trouvez le QR code caché"** → **Démarrer** | Badge **🔮 Validation par RA** + caméra avec cadre de scan |
-| 5 | Pointe la caméra vers le QR code affiché sur ton Mac | Scan automatique |
-| 6 | QR reconnu → overlay "Trésor découvert" apparaît sur la caméra | Image AR superposée au flux caméra |
-| 7 | Appuie sur **"Je le vois — Valider"** | Validation envoyée au serveur → succès → retour carte |
-
-### Points à souligner pendant la démo
-
-- Le QR code est le **déclencheur physique** — sans le bon code, l'overlay n'apparaît pas
-- Le serveur **vérifie le code** (`qr_trigger`) — impossible de tricher avec n'importe quel QR
-- L'overlay est **configurable** : n'importe quelle image uploadée via le backoffice
-- Le type `2d-overlay` existe aussi : affiche directement l'overlay sans scan préalable
+Le joueur scanne un QR code physique (affiché sur un écran, imprimé, collé sur une vitrine) →
+l'app reconnaît le code, **révèle un overlay en réalité augmentée** superposé au flux caméra →
+le joueur confirme qu'il voit le contenu → **l'étape est validée côté serveur** (le serveur vérifie que le bon QR a été scanné).
 
 ---
 
-## 12. Architecture RA — US12 vs US63 (futur)
+### ÉTAPE 0 — Trouver l'IP du Mac sur le réseau local
 
-### US12 (implémenté) — RA 2D avec QR déclencheur
+Le téléphone et le Mac doivent être sur le **même Wi-Fi**. L'IP change selon le réseau.
 
-| Élément | Valeur |
+```bash
+ifconfig | grep "inet 192"
+# Exemple de sortie : inet 192.168.1.14 netmask 0xffffff00 broadcast 192.168.1.255
+# → ton IP est 192.168.1.14
+```
+
+> En présentation sur un réseau inconnu, relance cette commande dès que tu es connecté au Wi-Fi de la salle.
+
+---
+
+### ÉTAPE 1 — Configurer le fichier `.env.local` du mobile
+
+Fichier : `apps/mobile/.env.local` (ignoré par git, à créer si absent)
+
+```bash
+# Remplace 192.168.1.14 par l'IP trouvée à l'étape 0
+echo "EXPO_PUBLIC_API_URL=http://192.168.1.14:3000" > apps/mobile/.env.local
+```
+
+Ce fichier est lu automatiquement par Expo. **Relance `npx expo start` après toute modification.**
+
+---
+
+### ÉTAPE 2 — Démarrer l'environnement
+
+Ouvre **4 terminaux** (ou onglets) :
+
+```bash
+# Terminal 1 — Docker (base de données + MinIO images AR)
+docker-compose up -d
+
+# Terminal 2 — Backend API
+cd packages/api && npm run start:dev
+# Attends : "Nest application successfully started"
+
+# Terminal 3 — App mobile (mode LAN = accessible depuis le téléphone)
+cd apps/mobile && npx expo start --lan
+# Expo affiche un QR code pour Expo Go OU une URL Metro
+
+# Terminal 4 — (optionnel) Backoffice partenaire
+cd apps/backoffice && npm run dev
+# Accessible sur http://localhost:5173
+```
+
+> **Vrai appareil iOS** : installe l'app via Xcode (`npx expo run:ios --device`) ou Expo Go.
+> L'app doit être construite avec la même IP que `.env.local`.
+
+---
+
+### ÉTAPE 3 — Vérifier que la chasse de démo existe
+
+La chasse "Test RA QR" a été créée manuellement (elle n'est **pas** dans le seed).
+**Elle disparaît si la BDD est reseedée** (`npm run seed`).
+
+```bash
+# Vérifie que la chasse existe
+curl -s http://localhost:3000/hunts | python3 -c "
+import sys, json
+hunts = json.load(sys.stdin)
+ar = [h for h in hunts if h.get('title') == 'Test RA QR']
+print('Chasse trouvée :', ar[0]['id'] if ar else 'INTROUVABLE — recrée-la (voir ci-dessous)')
+"
+```
+
+**Si la chasse est introuvable**, recrée-la entièrement :
+
+```bash
+# 1. Obtenir un token partenaire
+TOKEN=$(curl -s -X POST http://localhost:3000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"musee@lootopia.fr","password":"Partner123"}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+
+# 2. Créer la chasse (remplace 192.168.1.14 par ton IP)
+HUNT_ID=$(curl -s -X POST http://localhost:3000/hunts \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Test RA QR","description":"Chasse démo AR","difficulty":"easy","points":100,"is_active":true,"lat":48.8534,"lng":2.3488}' \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+echo "Hunt ID : $HUNT_ID"
+
+# 3. Uploader l'image overlay sur MinIO (si elle n'existe pas déjà)
+python3 << 'PYEOF'
+import boto3
+from botocore.client import Config
+from PIL import Image, ImageDraw, ImageFont
+import math, io
+
+W, H = 600, 600
+img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+draw = ImageDraw.Draw(img)
+for i in range(H):
+    alpha = int(230 * (1 - i / H * 0.3))
+    r, g, b = int(210 - i*0.15), int(160 - i*0.12), int(80 - i*0.05)
+    draw.line([(0,i),(W,i)], fill=(r,g,b,alpha))
+for t in range(8):
+    draw.rectangle([t,t,W-1-t,H-1-t], outline=(255,215-t*5,0,255-t*20))
+cx, cy = W//2, H//2-40
+pts = []
+for i in range(10):
+    a = math.radians(i*36-90)
+    r2 = 120 if i%2==0 else 55
+    pts.append((cx+r2*math.cos(a), cy+r2*math.sin(a)))
+draw.polygon(pts, fill=(255,220,0,230), outline=(200,140,0,255))
+draw.ellipse([cx-20,cy-20,cx+20,cy+20], fill=(200,40,40,255))
+draw.line([cx-30,cy,cx+30,cy], fill=(255,255,255,255), width=5)
+draw.line([cx,cy-30,cx,cy+30], fill=(255,255,255,255), width=5)
+try:
+    fb = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 52)
+    fs = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 28)
+except:
+    fb = fs = ImageFont.load_default()
+draw.text((W//2+2,H-140+2), "LOOTOPIA", font=fb, fill=(0,0,0,180), anchor="mm")
+draw.text((W//2,H-140), "LOOTOPIA", font=fb, fill=(255,220,0,255), anchor="mm")
+draw.text((W//2,H-90), "Tresor decouvert", font=fs, fill=(255,255,255,230), anchor="mm")
+buf = io.BytesIO()
+img.save(buf, "PNG")
+buf.seek(0)
+s3 = boto3.client('s3', endpoint_url='http://localhost:9000',
+    aws_access_key_id='minioadmin', aws_secret_access_key='minioadmin123',
+    config=Config(signature_version='s3v4'), region_name='us-east-1')
+s3.upload_fileobj(buf, 'lootopia', 'ar/ar_treasure.png', ExtraArgs={'ContentType':'image/png'})
+print("Image uploadée sur MinIO")
+PYEOF
+
+# 4. Créer l'étape AR (remplace HUNT_ID et 192.168.1.14)
+curl -s -X POST "http://localhost:3000/hunts/$HUNT_ID/steps" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"title\": \"Trouvez le QR code caché\",
+    \"description\": \"Scannez le QR code dissimulé pour révéler le contenu AR.\",
+    \"order\": 0,
+    \"validation_type\": \"ar\",
+    \"validation_radius\": 50,
+    \"ar_content\": {
+      \"type\": \"qr-overlay\",
+      \"qr_trigger\": \"LOOTOPIA-AR-2026\",
+      \"image\": \"http://192.168.1.14:9000/lootopia/ar/ar_treasure.png\"
+    }
+  }" | python3 -c "import sys,json; d=json.load(sys.stdin); print('Step créé :', d.get('id','ERREUR: '+str(d)))"
+```
+
+> **Note IP** : si ton IP a changé (réseau de présentation différent), mets à jour le champ `image` de l'étape avec un PATCH :
+> ```bash
+> curl -X PATCH "http://localhost:3000/hunts/<HUNT_ID>/steps/<STEP_ID>" \
+>   -H "Authorization: Bearer $TOKEN" \
+>   -H "Content-Type: application/json" \
+>   -d '{"ar_content":{"type":"qr-overlay","qr_trigger":"LOOTOPIA-AR-2026","image":"http://<NOUVELLE_IP>:9000/lootopia/ar/ar_treasure.png"}}'
+> ```
+
+---
+
+### ÉTAPE 4 — Générer et afficher le QR code
+
+```bash
+# Installe les dépendances une fois (si pas déjà fait)
+pip3 install qrcode pillow --break-system-packages -q
+
+# Génère le QR code et ouvre-le dans Preview
+python3 -c "
+import qrcode
+qr = qrcode.QRCode(version=1, box_size=14, border=5)
+qr.add_data('LOOTOPIA-AR-2026')
+qr.make(fit=True)
+qr.make_image(fill_color='black', back_color='white').save('/tmp/ar_qr.png')
+print('QR généré : /tmp/ar_qr.png')
+" && open /tmp/ar_qr.png
+```
+
+**En présentation** : mets Preview en plein écran sur ton Mac — le téléphone le scannera directement depuis l'écran. Ou imprime-le en A5 minimum pour une meilleure lisibilité.
+
+---
+
+### ÉTAPE 5 — Réinitialiser la progression (si déjà jouée)
+
+Si la chasse a déjà été validée, supprime la progression du joueur de test :
+
+```bash
+# Remplace l'email si besoin (compte de démo)
+docker exec lootopia_postgres psql -U lootopia -d lootopia -c "
+DELETE FROM progress
+WHERE hunt_id = (SELECT id FROM hunts WHERE title = 'Test RA QR')
+  AND user_id = (SELECT id FROM users WHERE email = 'alice@example.com');
+"
+```
+
+Puis dans l'app : secoue le téléphone → **Reload** (ou Cmd+R sur simulateur).
+
+---
+
+### ÉTAPE 6 — Scénario de présentation
+
+| # | Ce que tu fais | Ce que le jury voit |
+|---|---|---|
+| 1 | Ouvre l'app mobile sur le téléphone | Carte interactive avec marqueurs de chasses |
+| 2 | Onglet **Chasses** → tape "Test RA" dans la recherche | Liste filtrée en temps réel |
+| 3 | Sélectionne **"Test RA QR"** → **Rejoindre la chasse** | Confirmation + liste des étapes |
+| 4 | Clique sur **"Trouvez le QR code caché"** → **Démarrer** | Badge **🔮 Validation par RA** + caméra activée + cadre de scan animé |
+| 5 | Pointe la caméra vers le QR code affiché sur ton Mac/imprimé | Lecture automatique du QR en moins d'une seconde |
+| 6 | QR reconnu → overlay "Trésor découvert" s'affiche | Image dorée superposée au flux caméra en temps réel |
+| 7 | Appuie sur **"Je le vois — Valider"** | Requête serveur → succès → écran de complétion avec points |
+
+**Points clés à expliquer au jury :**
+- Le QR code est le **déclencheur physique** — sans le bon code, l'overlay ne s'affiche pas
+- Le serveur **vérifie cryptographiquement** le code (`qr_trigger` stocké côté API) — impossible de tricher
+- L'image overlay est **hébergée sur MinIO** (notre S3 local) et configurable par le partenaire via le backoffice
+- Architecture **extensible** : le type `2d-overlay` affiche directement l'overlay sans scan ; `3d-spatial` sera ajouté en US63
+
+---
+
+### Dépannage démo AR
+
+| Symptôme | Cause | Solution |
+|---|---|---|
+| L'app ne contacte pas l'API | Mauvaise IP dans `.env.local` | `ifconfig \| grep "inet 192"` → mettre à jour `.env.local` → relancer Expo |
+| L'overlay AR ne s'affiche pas (image cassée) | MinIO inaccessible ou IP changée | Vérifier `docker ps` → mettre à jour l'URL image dans l'étape (voir ÉTAPE 3) |
+| QR scanné mais rien ne se passe | QR imprimé trop petit / mal éclairé | Agrandir dans Preview (Cmd+Maj+F = plein écran) ou rapprocher |
+| "QR code incorrect" affiché | QR contient un mauvais contenu | Regénérer avec le script ÉTAPE 4 — vérifier que le contenu est exactement `LOOTOPIA-AR-2026` |
+| La chasse s'affiche "terminée" | Progression non réinitialisée | Voir ÉTAPE 5 — supprimer la progression en base |
+| Caméra noire sur simulateur iOS | Le simulateur n'a pas de caméra | Tester obligatoirement sur **vrai appareil** pour la caméra AR |
+
+---
+
+## 12. Architecture RA — US12 (fait) vs US63 (futur)
+
+### US12 — RA 2D déclenchée par QR ✅
+
+| Élément | Détail |
 |---|---|
 | Branche | `feature/US12-ar-qr-overlay` |
-| `ar_content.type` | `'2d-overlay'` ou `'qr-overlay'` |
-| Technologie | `expo-camera` CameraView + Image React Native |
-| Composant | `apps/mobile/src/components/step/ARSection.tsx` |
+| `ar_content.type` supportés | `'2d-overlay'` (overlay immédiat) · `'qr-overlay'` (scan QR → overlay) |
+| Technologie | `expo-camera` `CameraView` + `Image` React Native superposée |
+| Composant mobile | `apps/mobile/src/components/step/ARSection.tsx` |
+| Validation serveur | `progress.service.ts` → `validateAr()` vérifie `qr_trigger` |
 | Types partagés | `ArContent2DOverlay`, `ArContentQROverlay` dans `packages/shared/src/types/step.types.ts` |
 
-### US63 (futur) — RA spatiale 3D (ViroARImageMarker)
+### US63 — RA spatiale 3D ❌ (non implémentée)
 
-| Élément | Valeur |
+| Élément | Détail |
 |---|---|
-| Objectif | Détecter une image physique et ancrer un objet 3D dans l'espace réel |
-| Technologie | `@reactvision/react-viro` — `ViroARImageMarker` + `ViroNode` |
-| Nouveau type | `ar_content.type: '3d-spatial'` + champs `marker_image`, `model_url` |
-| Bloquant | react-viro 2.53.1 cible RN ~0.81.4 ; projet sur RN 0.83.2 |
+| Objectif | Détecter une image physique réelle et ancrer un objet 3D dans l'espace |
+| Technologie visée | `@reactvision/react-viro` → `ViroARImageMarker` + `ViroNode` |
+| Nouveau `ar_content.type` | `'3d-spatial'` avec champs `marker_image` (URL image déclencheur) et `model_url` (fichier 3D) |
+| Blocage actuel | `react-viro 2.53.1` cible RN `~0.81.4` ; ce projet est sur RN `0.83.2` — migration ou fork nécessaire |
+| Branche future | `feature/US63-ar-3d-spatial` (à créer depuis `develop` **après** merge de US12) |
 
-### Pourquoi US63 n'interferera pas avec US12
+### Pourquoi US63 ne cassera pas US12
 
-Le code US12 est architecturé pour être **extensible sans casser l'existant** :
+Le composant `ARSection.tsx` est une cascade `if/else if` par type :
 
 ```
 ARSection.tsx
-  ├── if type === '2d-overlay'  → OverlayPhase (caméra + image)        ← US12
-  ├── if type === 'qr-overlay'  → QRScanPhase → OverlayPhase           ← US12
-  └── if type === '3d-spatial'  → ViroARPhase (à ajouter dans US63)    ← US63
+  ├── arContent.type === '2d-overlay'   → OverlayPhase directement       ← US12 ✅
+  ├── arContent.type === 'qr-overlay'   → QRScanPhase → OverlayPhase     ← US12 ✅
+  └── arContent.type === '3d-spatial'   → ViroARPhase  (à ajouter)       ← US63 ❌
 ```
 
-US63 se limitera à :
-1. Ajouter `ArContent3DSpatial` au type union dans `shared/src/types/step.types.ts`
-2. Ajouter un `else if` dans `ARSection.tsx` pour le nouveau cas
-3. Créer le composant `ViroARPhase` séparément
+US63 se limitera à trois ajouts isolés :
+1. `ArContent3DSpatial` dans le type union de `step.types.ts`
+2. Un `else if` dans `ARSection.tsx` pour router vers `ViroARPhase`
+3. Un nouveau composant `ViroARPhase.tsx`
 
-**Aucune modification** des cas `2d-overlay` et `qr-overlay` existants.
-La branche US63 naîtra de `develop` après merge de US12 → zéro conflit structurel.
+**Aucun code US12 ne sera modifié.** Les branches naissent de `develop` post-merge — zéro conflit structurel garanti.
 
 ---
 
