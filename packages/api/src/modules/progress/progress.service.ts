@@ -121,6 +121,9 @@ export class ProgressService {
       case 'photo':
         this.validatePhoto(dto);
         break;
+      case 'ar':
+        this.validateAr(step, dto);
+        break;
       default:
         throw new BadRequestException(`Unknown validation type: ${type}`);
     }
@@ -167,6 +170,18 @@ export class ProgressService {
     }
     if (dto.answer.toLowerCase().trim() !== expectedAnswer.toLowerCase().trim()) {
       throw new BadRequestException('Wrong answer');
+    }
+  }
+
+  private validateAr(step: StepEntity, dto: ValidateStepDto): void {
+    const content = step.ar_content as Record<string, unknown> | null;
+    const qrTrigger = content?.qr_trigger as string | undefined;
+    if (!qrTrigger) return;
+    if (!dto.qr_code) {
+      throw new BadRequestException('QR code required for this AR step');
+    }
+    if (dto.qr_code !== qrTrigger) {
+      throw new BadRequestException('Invalid QR code for this AR step');
     }
   }
 
@@ -218,6 +233,7 @@ export class ProgressService {
         validation_radius: step.validation_radius,
         validation_type: step.validation_type ?? 'gps',
         coordinates,
+        ar_content: (step.ar_content as Record<string, unknown> | null) ?? null,
       };
     });
 

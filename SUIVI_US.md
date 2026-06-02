@@ -1,6 +1,6 @@
 # Lootopia V3 — Suivi des User Stories
 
-Dernière mise à jour : 2026-05-30
+Dernière mise à jour : 2026-06-02
 
 ## Légende
 
@@ -62,7 +62,7 @@ Dernière mise à jour : 2026-05-30
 | US09 | Rejoindre une chasse                   | ✅     | `POST /hunts/:id/join` + `progress.service`.                                                                                                                                                                                                                                                                                 | —          |
 | US10 | Voir la progression sur la carte       | ⚠️     | `MapScreen` distingue les chasses complétées (marqueurs grisés) des actives. Mais la progression étape par étape (étape courante sur la carte) n'est pas implémentée.                                                                                                                                                        | 🟡 Basse   |
 | US11 | Valider une étape par proximité GPS    | ✅     | `StepValidationScreen` (`type: gps`) + `validate-step.dto` + `geo.service` PostGIS.                                                                                                                                                                                                                                          | —          |
-| US12 | Scanner une étape en RA simple         | ❌     | `ARScreen` (`screens/hunt/`) = stub `return null`. Non monté dans la navigation.                                                                                                                                                                                                                                             | 🟠 Moyenne |
+| US12 | Scanner une étape en RA simple         | ✅     | `ARSection` + `StepValidationScreen` : type `2d-overlay` (overlay immédiat) et `qr-overlay` (scan QR physique → overlay révélé). `validateAr` côté API vérifie `qr_trigger`. 4 tests API. Branch `feature/US12-ar-qr-overlay`.                                                                                              | —          |
 | US13 | Voir mes points et badges              | ✅     | `ProfileScreen` + `BadgesScreen`.                                                                                                                                                                                                                                                                                            | —          |
 | US14 | Sauvegarder ma progression             | ✅     | Module `progress` complet en base.                                                                                                                                                                                                                                                                                           | —          |
 | US15 | Multilangue FR/EN                      | ❌     | Aucune lib i18n dans aucun `package.json`. Interface fr hardcodée partout.                                                                                                                                                                                                                                                   | 🟡 Basse   |
@@ -82,6 +82,7 @@ Dernière mise à jour : 2026-05-30
 | US60 | Collection badges + historique         | ✅     | `BadgesScreen` — PR #49 mergé.                                                                                                                                                                                                                                                                                               | —          |
 | US61 | Modification profil + consentement GPS | ✅     | `SettingsScreen` — PR #50 mergé.                                                                                                                                                                                                                                                                                             | —          |
 | US62 | Sécurité du compte et suppression      | ✅     | `SecurityScreen` — PR #51 mergé.                                                                                                                                                                                                                                                                                             | —          |
+| US63 | RA spatiale 3D (image marker)          | ❌     | Non implémenté. Objectif : `@reactvision/react-viro` `ViroARImageMarker` — détecter une image physique et ancrer un objet 3D dans l'espace. Bloqué : react-viro 2.53.1 cible RN ~0.81.4 ; projet sur RN 0.83.2 — migration nécessaire ou fork.                                                                               | 🟠 Moyenne |
 
 ---
 
@@ -120,7 +121,8 @@ Dernière mise à jour : 2026-05-30
 ### 🟡 Nice-to-have
 
 - [ ] Supprimer le stub `screens/hunt/HuntDetailScreen.tsx` (dead code, jamais monté).
-- [ ] **US12** — Implémenter `ARScreen.tsx` : intégration react-viro réelle.
+- [x] **US12** — `ARSection` QR-triggered + 2d-overlay implémenté. Branch `feature/US12-ar-qr-overlay`.
+- [ ] **US63** — RA spatiale 3D : `ViroARImageMarker` via `@reactvision/react-viro`. Requiert compatibilité RN 0.83+.
 - [ ] **US15** — Multilangue : ajouter `i18next` ou `expo-localization`.
 - [ ] Supprimer ou implémenter `StatsViewer.tsx` et `StepEditor.tsx`.
 

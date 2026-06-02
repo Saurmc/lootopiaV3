@@ -147,6 +147,7 @@ export default function HuntDetailScreen() {
       validationType: step.validation_type,
       validationRadius: step.validation_radius,
       coordinates: step.coordinates,
+      arContent: step.ar_content,
     });
   };
 

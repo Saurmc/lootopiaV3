@@ -373,6 +373,66 @@ describe('ProgressService', () => {
     });
   });
 
+  describe('validateStep — AR (qr-overlay)', () => {
+    it('auto-accepts when no qr_trigger configured', async () => {
+      const progress = mockProgress();
+      progressRepo.findByUserAndHunt.mockResolvedValue(progress);
+      stepsRepo.findById.mockResolvedValue(mockStep({
+        validation_type: 'ar',
+        location: null,
+        ar_content: { type: '2d-overlay', image: 'http://x/img.png' },
+      }));
+      huntsRepo.findByIdWithSteps.mockResolvedValue(mockHunt({ steps: [mockStep()] as any }));
+      progressRepo.findAllByUser.mockResolvedValue([]);
+      progressRepo.save.mockResolvedValue({ ...progress, completed_steps: [0], current_step: 1, total_points: 0, completed_at: new Date() });
+
+      await expect(service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', {})).resolves.toBeDefined();
+    });
+
+    it('validates qr_trigger when configured', async () => {
+      const progress = mockProgress();
+      progressRepo.findByUserAndHunt.mockResolvedValue(progress);
+      stepsRepo.findById.mockResolvedValue(mockStep({
+        validation_type: 'ar',
+        location: null,
+        ar_content: { type: 'qr-overlay', qr_trigger: 'TRESOR_01', image: 'http://x/img.png' },
+      }));
+      huntsRepo.findByIdWithSteps.mockResolvedValue(mockHunt({ steps: [mockStep()] as any }));
+      progressRepo.findAllByUser.mockResolvedValue([]);
+      progressRepo.save.mockResolvedValue({ ...progress, completed_steps: [0], current_step: 1, total_points: 0, completed_at: new Date() });
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { qr_code: 'TRESOR_01' }),
+      ).resolves.toBeDefined();
+    });
+
+    it('throws BadRequestException when qr_trigger configured but qr_code missing', async () => {
+      progressRepo.findByUserAndHunt.mockResolvedValue(mockProgress());
+      stepsRepo.findById.mockResolvedValue(mockStep({
+        validation_type: 'ar',
+        location: null,
+        ar_content: { type: 'qr-overlay', qr_trigger: 'TRESOR_01', image: 'http://x/img.png' },
+      }));
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', {}),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('throws BadRequestException when qr_code does not match qr_trigger', async () => {
+      progressRepo.findByUserAndHunt.mockResolvedValue(mockProgress());
+      stepsRepo.findById.mockResolvedValue(mockStep({
+        validation_type: 'ar',
+        location: null,
+        ar_content: { type: 'qr-overlay', qr_trigger: 'TRESOR_01', image: 'http://x/img.png' },
+      }));
+
+      await expect(
+        service.validateStep('user-uuid', 'hunt-uuid', 'step-uuid', { qr_code: 'WRONG' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
   describe('validateStep — Photo', () => {
     it('should validate photo step when file_url provided', async () => {
       const progress = mockProgress();
