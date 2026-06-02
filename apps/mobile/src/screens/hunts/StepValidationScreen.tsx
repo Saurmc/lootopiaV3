@@ -513,7 +513,7 @@ export default function StepValidationScreen() {
         navigation.replace('HuntCompletion', {
           huntId,
           totalPoints: progress.total_points,
-          stepCount: progress.steps.length,
+          stepCount: progress.completed_steps?.length ?? 0,
           startedAt: progress.started_at,
           completedAt: progress.completed_at,
         });
