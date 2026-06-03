@@ -1,6 +1,7 @@
 import { api } from './api';
+import { filesService } from './files.service';
 
-export interface HuntDto {
+interface RawHuntDto {
   id: string;
   partner_id: string;
   title: string;
@@ -13,6 +14,10 @@ export interface HuntDto {
   created_at: string;
   step_count?: number;
   image_url?: string | null;
+}
+
+export interface HuntDto extends Omit<RawHuntDto, 'image_url'> {
+  plan_url?: string | null;
 }
 
 export interface HuntTemplate {
@@ -39,26 +44,36 @@ export interface CreateHuntPayload {
 
 export type UpdateHuntPayload = Partial<CreateHuntPayload>;
 
+function fromRaw(raw: RawHuntDto): HuntDto {
+  const { image_url, ...rest } = raw;
+  return { ...rest, plan_url: image_url ? filesService.getFileUrl(image_url) : null };
+}
+
+function toApiPayload(payload: CreateHuntPayload): Omit<CreateHuntPayload, 'plan_url'> & { image_url?: string } {
+  const { plan_url, ...rest } = payload;
+  return { ...rest, ...(plan_url !== undefined ? { image_url: plan_url } : {}) };
+}
+
 export const huntsService = {
   getAll: async (q?: string): Promise<HuntDto[]> => {
     const params = q ? { q } : {};
-    const { data } = await api.get<HuntDto[]>('/hunts', { params });
-    return data;
+    const { data } = await api.get<RawHuntDto[]>('/hunts', { params });
+    return data.map(fromRaw);
   },
 
   getById: async (id: string): Promise<HuntDto> => {
-    const { data } = await api.get<HuntDto>(`/hunts/${id}`);
-    return data;
+    const { data } = await api.get<RawHuntDto>(`/hunts/${id}`);
+    return fromRaw(data);
   },
 
   create: async (payload: CreateHuntPayload): Promise<HuntDto> => {
-    const { data } = await api.post<HuntDto>('/hunts', payload);
-    return data;
+    const { data } = await api.post<RawHuntDto>('/hunts', toApiPayload(payload));
+    return fromRaw(data);
   },
 
   update: async (id: string, payload: UpdateHuntPayload): Promise<HuntDto> => {
-    const { data } = await api.patch<HuntDto>(`/hunts/${id}`, payload);
-    return data;
+    const { data } = await api.patch<RawHuntDto>(`/hunts/${id}`, toApiPayload(payload));
+    return fromRaw(data);
   },
 
   remove: async (id: string): Promise<void> => {
@@ -71,7 +86,7 @@ export const huntsService = {
   },
 
   createFromTemplate: async (templateId: string): Promise<HuntDto> => {
-    const { data } = await api.post<HuntDto>(`/hunts/from-template/${templateId}`);
-    return data;
+    const { data } = await api.post<RawHuntDto>(`/hunts/from-template/${templateId}`);
+    return fromRaw(data);
   },
 };
