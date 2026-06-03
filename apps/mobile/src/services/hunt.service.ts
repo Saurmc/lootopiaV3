@@ -44,6 +44,7 @@ export interface StepDetail {
   validation_type: string;
   validation_radius: number;
   coordinates: { lat: number; lng: number } | null;
+  ar_content: Record<string, unknown> | null;
 }
 
 export interface HuntProgress {

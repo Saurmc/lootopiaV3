@@ -21,6 +21,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { huntService, haversineDistance, formatDistance } from '../../services/hunt.service';
 import type { HuntProgress } from '../../services/hunt.service';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
+import ARSection from '../../components/step/ARSection';
+import type { ArContent } from '../../components/step/ARSection';
 
 type RouteProps = RouteProp<AppStackParamList, 'StepValidation'>;
 type NavProp = NativeStackNavigationProp<AppStackParamList, 'StepValidation'>;
@@ -470,6 +472,7 @@ export default function StepValidationScreen() {
     validationType,
     validationRadius,
     coordinates,
+    arContent,
   } = route.params;
 
   const [state, setState] = useState<ValidationState>('idle');
@@ -510,7 +513,7 @@ export default function StepValidationScreen() {
         navigation.replace('HuntCompletion', {
           huntId,
           totalPoints: progress.total_points,
-          stepCount: progress.steps.length,
+          stepCount: progress.completed_steps?.length ?? 0,
           startedAt: progress.started_at,
           completedAt: progress.completed_at,
         });
@@ -600,6 +603,26 @@ export default function StepValidationScreen() {
     }
   };
 
+  // ── Validation AR ────────────────────────────────────────────────────────────
+
+  const handleArConfirm = async (qrCode?: string) => {
+    setState('validating');
+    setErrorMsg(null);
+    try {
+      const payload = qrCode ? { qr_code: qrCode } : {};
+      const progress = await huntService.validateStep(huntId, stepId, payload);
+      await onValidated(progress);
+    } catch (err) {
+      const msg = extractErrorMessage(err);
+      setState('error_other');
+      setErrorMsg(
+        msg.toLowerCase().includes('qr')
+          ? 'QR code incorrect. Trouvez le bon QR code.'
+          : (msg || 'Une erreur est survenue.'),
+      );
+    }
+  };
+
   // ── Validation Quiz ───────────────────────────────────────────────────────────
 
   const handleQuizSubmit = async () => {
@@ -646,6 +669,8 @@ export default function StepValidationScreen() {
             ? '❓ Validation par quiz'
             : validationType === 'photo'
             ? '📷 Validation par photo'
+            : validationType === 'ar'
+            ? '🔮 Validation par RA'
             : '📡 Validation par GPS'}
         </Text>
       </View>
@@ -681,6 +706,13 @@ export default function StepValidationScreen() {
             state={state}
             errorMsg={errorMsg}
             onSubmit={handlePhotoSubmit}
+          />
+        ) : validationType === 'ar' && arContent ? (
+          <ARSection
+            arContent={arContent as ArContent}
+            onConfirm={handleArConfirm}
+            validating={state === 'validating'}
+            errorMsg={errorMsg}
           />
         ) : (
           <GpsSection

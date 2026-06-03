@@ -50,7 +50,7 @@ export class UpdateStepDto {
   @Type(() => Number)
   validation_radius?: number;
 
-  @IsIn(['gps', 'qrcode', 'quiz', 'photo'])
+  @IsIn(['gps', 'qrcode', 'quiz', 'photo', 'ar'])
   @IsOptional()
   validation_type?: string;
 

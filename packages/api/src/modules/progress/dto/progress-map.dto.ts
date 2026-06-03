@@ -12,6 +12,7 @@ export class StepMapDto {
   // Coordonnées exposées uniquement pour les étapes complétées et l'étape courante
   // Étapes verrouillées n'exposent pas leur position (RGPD + gameplay)
   coordinates: { lat: number; lng: number } | null;
+  ar_content: Record<string, unknown> | null;
 }
 
 export class ProgressMapDto {

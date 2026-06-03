@@ -66,6 +66,7 @@ export type AppStackParamList = {
     validationType: string;
     validationRadius: number;
     coordinates: { lat: number; lng: number } | null;
+    arContent?: Record<string, unknown> | null;
   };
   HuntCompletion: {
     huntId: string;
