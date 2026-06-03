@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../hooks/useAuth';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 interface LoginFormValues {
   email: string;
@@ -10,6 +11,15 @@ interface LoginFormValues {
 export default function LoginPage() {
   const { login } = useAuth();
   const [serverError, setServerError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const successMessage =
+    searchParams.get('success') === 'account_created'
+      ? 'Compte créé avec succès. Vous pouvez maintenant vous connecter.'
+      : null;
+  const errorMessage =
+    searchParams.get('error') === 'invitation_required'
+      ? "Accès refusé. Utilisez le lien d'invitation reçu par email."
+      : null;
 
   const {
     register,
@@ -31,6 +41,13 @@ export default function LoginPage() {
       <div className="bg-white rounded-xl shadow-md w-full max-w-sm p-8">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Lootopia</h1>
         <p className="text-sm text-gray-500 mb-6">Connexion partenaire</p>
+
+        {successMessage && (
+          <p className="text-sm text-green-600 text-center mb-4">{successMessage}</p>
+        )}
+        {errorMessage && (
+          <p className="text-sm text-red-600 text-center mb-4">{errorMessage}</p>
+        )}
 
         <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
           <div>

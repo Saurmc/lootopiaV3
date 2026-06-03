@@ -7,6 +7,13 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface RegisterPartnerPayload {
+  token: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+}
+
 interface LoginResponse {
   access_token: string;
 }
@@ -40,5 +47,9 @@ export const authService = {
       email: payload.email,
     };
     return { token: data.access_token, user };
+  },
+
+  registerPartner: async (payload: RegisterPartnerPayload): Promise<void> => {
+    await api.post('/auth/register/partner', payload);
   },
 };

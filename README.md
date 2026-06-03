@@ -68,11 +68,30 @@ Attendu :
 - Backoffice et Admin exposent une URL locale Vite dans le terminal
 - Mobile lance Expo (QR code/URL Metro)
 
-5) Contrôles rapides
+5) Alimenter la base de données (seed)
+
+```bash
+npm run seed -w packages/api
+```
+
+Crée 1 admin, 2 partenaires, 6 joueurs, 6 chasses, étapes, zones, progressions et badges.
+
+Comptes de test :
+
+| Rôle | Email | Mot de passe |
+|---|---|---|
+| Admin | `admin@lootopia.fr` | `Admin1234` |
+| Partenaire | `musee@lootopia.fr` | `Partner123` |
+| Partenaire | `parc@lootopia.fr` | `Partner123` |
+| Joueur | `alice@example.com` | `Player123` |
+
+6) Contrôles rapides
 
 - API : ouvrir `http://localhost:3000` (doit répondre)
 - pgAdmin : `http://localhost:5050`
 - MinIO console : `http://localhost:9001`
+- Admin : `http://localhost:5174` — connectez-vous avec `admin@lootopia.fr`
+- Backoffice : `http://localhost:5173` — connectez-vous avec `musee@lootopia.fr`
 
 6) Arrêter l'environnement
 
@@ -134,6 +153,29 @@ Accès services :
 
 Map mobile : MapLibre est utilisé (pas de clé Mapbox requise).
 
-## Statut du repo
+## Flux invitation partenaire (US03)
 
-Ce repository contient uniquement un squelette de projet (structure, configuration, dépendances et TODO), sans logique métier implémentée.
+Pour créer un compte partenaire, l'inscription directe est désactivée. Le flux est :
+
+1. L'admin se connecte sur `http://localhost:5174`
+2. Aller dans **Invitations partenaires** → saisir l'email du futur partenaire → envoyer
+3. Le partenaire reçoit un email avec un lien valable 72h (via Mailtrap en dev — voir ci-dessous)
+4. Ouvrir ce lien → remplir le formulaire (prénom, nom, mot de passe)
+5. Se connecter sur `http://localhost:5173` avec l'email et le mot de passe choisis
+
+### Configuration email (Mailtrap)
+
+Les emails sont envoyés via [Mailtrap](https://mailtrap.io) (sandbox gratuit, les mails n'arrivent pas en vraie boîte).
+
+1. Créer un compte sur mailtrap.io
+2. **Email Testing** → **Inboxes** → ton inbox → onglet **SMTP Settings**
+3. Renseigner dans `packages/api/.env` :
+   ```
+   SMTP_HOST=sandbox.smtp.mailtrap.io
+   SMTP_PORT=2525
+   SMTP_USER=<username Mailtrap>
+   SMTP_PASS=<password Mailtrap>
+   ```
+4. Redémarrer le backend
+
+> Sans `SMTP_HOST`, le lien d'activation est loggué en console (mode dégradé).

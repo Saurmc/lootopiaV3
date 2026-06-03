@@ -4,9 +4,10 @@ import { AdminService } from './admin.service';
 import { UsersModule } from '../users/users.module';
 import { HuntsModule } from '../hunts/hunts.module';
 import { ProgressModule } from '../progress/progress.module';
+import { InvitationsModule } from '../invitations/invitations.module';
 
 @Module({
-  imports: [UsersModule, HuntsModule, ProgressModule],
+  imports: [UsersModule, HuntsModule, ProgressModule, InvitationsModule],
   controllers: [AdminController],
   providers: [AdminService],
 })
