@@ -15,6 +15,23 @@ import ZoneForm, { zoneDtoToFormValues } from '@/components/zone/ZoneForm';
 
 type Tab = 'steps' | 'zones';
 
+const VALIDATION_TYPE_STYLES: Record<string, string> = {
+  gps: 'bg-blue-100 text-blue-700',
+  qrcode: 'bg-violet-100 text-violet-700',
+  quiz: 'bg-orange-100 text-orange-700',
+  photo: 'bg-green-100 text-green-700',
+};
+
+function ValidationTypeBadge({ type }: { type?: string }) {
+  const label = type ?? 'gps';
+  const cls = VALIDATION_TYPE_STYLES[label] ?? 'bg-gray-100 text-gray-600';
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
 export default function StepsPage() {
   const { id: huntId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -171,7 +188,10 @@ export default function StepsPage() {
                       {step.order + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm">{step.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900 text-sm">{step.title}</p>
+                        <ValidationTypeBadge type={step.validation_type} />
+                      </div>
                       {step.description && (
                         <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{step.description}</p>
                       )}

@@ -6,6 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import FileUpload from '@/components/ui/file-upload';
 import type { CreateStepPayload, StepDto } from '@/services/steps.service';
 
+type ValidationType = 'gps' | 'qrcode' | 'quiz' | 'photo';
+
 export interface StepFormValues {
   order: string;
   title: string;
@@ -13,7 +15,10 @@ export interface StepFormValues {
   lat: string;
   lng: string;
   validation_radius: string;
-  ar_image_url: string; // uploaded image URL for ar_content
+  validation_type: ValidationType;
+  expected_code: string;
+  correct_answer: string;
+  ar_image_url: string;
 }
 
 interface StepFormProps {
@@ -28,12 +33,20 @@ function toPayload(v: StepFormValues): CreateStepPayload {
     order: parseInt(v.order, 10) || 0,
     title: v.title.trim(),
     validation_radius: parseInt(v.validation_radius, 10) || 50,
+    validation_type: v.validation_type,
   };
   if (v.description.trim()) payload.description = v.description.trim();
   const lat = parseFloat(v.lat);
   const lng = parseFloat(v.lng);
   if (!isNaN(lat)) payload.lat = lat;
   if (!isNaN(lng)) payload.lng = lng;
+  if (v.validation_type === 'qrcode' && v.expected_code.trim()) {
+    payload.validation_data = { expected_code: v.expected_code.trim() };
+  } else if (v.validation_type === 'quiz' && v.correct_answer.trim()) {
+    payload.validation_data = { correct_answer: v.correct_answer.trim() };
+  } else {
+    payload.validation_data = null;
+  }
   if (v.ar_image_url) {
     payload.ar_content = { type: '2d-overlay', image: v.ar_image_url };
   }
@@ -42,13 +55,20 @@ function toPayload(v: StepFormValues): CreateStepPayload {
 
 export function stepDtoToFormValues(step: StepDto): StepFormValues {
   const arContent = step.ar_content as { image?: string } | null;
+  const vType = (step.validation_type ?? 'gps') as ValidationType;
+  const vData = step.validation_data ?? {};
+  const location = step as unknown as { location?: { coordinates?: [number, number] } };
+  const coords = location?.location?.coordinates;
   return {
     order: String(step.order),
     title: step.title,
     description: step.description ?? '',
-    lat: '',
-    lng: '',
+    lat: coords ? String(coords[1]) : '',
+    lng: coords ? String(coords[0]) : '',
     validation_radius: String(step.validation_radius),
+    validation_type: vType,
+    expected_code: vType === 'qrcode' ? String(vData.expected_code ?? '') : '',
+    correct_answer: vType === 'quiz' ? String(vData.correct_answer ?? '') : '',
     ar_image_url: arContent?.image ?? '',
   };
 }
@@ -73,10 +93,14 @@ export default function StepForm({
       lat: '',
       lng: '',
       validation_radius: '50',
+      validation_type: 'gps',
+      expected_code: '',
+      correct_answer: '',
       ar_image_url: '',
     },
   });
 
+  const validationType = useWatch({ control, name: 'validation_type' });
   const arImageUrl = useWatch({ control, name: 'ar_image_url' });
 
   const handleFormSubmit = async (values: StepFormValues) => {
@@ -86,7 +110,6 @@ export default function StepForm({
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
-        {/* Ordre */}
         <div className="space-y-1.5">
           <Label htmlFor="order">Ordre</Label>
           <Input
@@ -96,8 +119,6 @@ export default function StepForm({
             {...register('order', { required: true, min: 0 })}
           />
         </div>
-
-        {/* Rayon de validation */}
         <div className="space-y-1.5">
           <Label htmlFor="validation_radius">Rayon de validation (m)</Label>
           <Input
@@ -113,7 +134,6 @@ export default function StepForm({
         </div>
       </div>
 
-      {/* Titre */}
       <div className="space-y-1.5">
         <Label htmlFor="title">
           Titre <span className="text-red-500">*</span>
@@ -128,7 +148,6 @@ export default function StepForm({
         )}
       </div>
 
-      {/* Description */}
       <div className="space-y-1.5">
         <Label htmlFor="description">Description</Label>
         <Textarea
@@ -139,32 +158,78 @@ export default function StepForm({
         />
       </div>
 
-      {/* Coordonnées GPS */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="lat">Latitude</Label>
-          <Input
-            id="lat"
-            type="number"
-            step="any"
-            placeholder="48.8566"
-            {...register('lat')}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="lng">Longitude</Label>
-          <Input
-            id="lng"
-            type="number"
-            step="any"
-            placeholder="2.3522"
-            {...register('lng')}
-          />
-        </div>
+      {/* Type de validation */}
+      <div className="space-y-1.5">
+        <Label htmlFor="validation_type">Type de validation</Label>
+        <select
+          id="validation_type"
+          className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          {...register('validation_type', { required: true })}
+        >
+          <option value="gps">GPS — proximité géographique</option>
+          <option value="qrcode">QR Code</option>
+          <option value="quiz">Quiz — réponse textuelle</option>
+          <option value="photo">Photo — validation automatique</option>
+        </select>
       </div>
-      <p className="text-xs text-gray-400">
-        Les coordonnées GPS définissent le point de validation sur la carte.
-      </p>
+
+      {/* Champs conditionnels selon le type */}
+      {validationType === 'gps' && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="lat">Latitude</Label>
+            <Input
+              id="lat"
+              type="number"
+              step="any"
+              placeholder="48.8566"
+              {...register('lat')}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="lng">Longitude</Label>
+            <Input
+              id="lng"
+              type="number"
+              step="any"
+              placeholder="2.3522"
+              {...register('lng')}
+            />
+          </div>
+        </div>
+      )}
+
+      {validationType === 'qrcode' && (
+        <div className="space-y-1.5">
+          <Label htmlFor="expected_code">
+            Code QR attendu <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="expected_code"
+            placeholder="Ex : LOOTOPIA-2024"
+            {...register('expected_code', { required: validationType === 'qrcode' })}
+          />
+          {errors.expected_code && (
+            <p className="text-xs text-red-500">Le code QR est requis</p>
+          )}
+        </div>
+      )}
+
+      {validationType === 'quiz' && (
+        <div className="space-y-1.5">
+          <Label htmlFor="correct_answer">
+            Bonne réponse <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            id="correct_answer"
+            placeholder="Ex : Paris"
+            {...register('correct_answer', { required: validationType === 'quiz' })}
+          />
+          {errors.correct_answer && (
+            <p className="text-xs text-red-500">La réponse est requise</p>
+          )}
+        </div>
+      )}
 
       {/* AR Content */}
       <div className="space-y-1.5">

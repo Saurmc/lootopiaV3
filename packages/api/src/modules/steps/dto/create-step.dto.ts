@@ -54,5 +54,9 @@ export class CreateStepDto {
 
   @IsObject()
   @IsOptional()
+  validation_data?: Record<string, unknown>;
+
+  @IsObject()
+  @IsOptional()
   ar_content?: Record<string, unknown>;
 }

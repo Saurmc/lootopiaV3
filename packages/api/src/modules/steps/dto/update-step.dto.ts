@@ -56,5 +56,9 @@ export class UpdateStepDto {
 
   @IsObject()
   @IsOptional()
+  validation_data?: Record<string, unknown>;
+
+  @IsObject()
+  @IsOptional()
   ar_content?: Record<string, unknown>;
 }

@@ -31,6 +31,8 @@ const mockStep = (overrides: Partial<StepEntity> = {}): StepEntity => ({
   description: null,
   location: null,
   validation_radius: 50,
+  validation_type: 'gps',
+  validation_data: null,
   ar_content: null,
   created_at: new Date(),
   ...overrides,
@@ -143,6 +145,83 @@ describe('StepsService', () => {
       await expect(
         service.updateStep('hunt-uuid', 'unknown-step', 'partner-uuid', { title: 'X' }),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('createStep — validation_data', () => {
+    it('should persist validation_data for qrcode type', async () => {
+      huntsRepo.findById.mockResolvedValue(mockHunt());
+      stepsRepo.save.mockResolvedValue(
+        mockStep({ validation_type: 'qrcode', validation_data: { expected_code: 'ABC' } }),
+      );
+
+      await service.createStep('hunt-uuid', 'partner-uuid', {
+        order: 0,
+        title: 'QR',
+        validation_type: 'qrcode',
+        validation_data: { expected_code: 'ABC' },
+      });
+
+      expect(stepsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          validation_type: 'qrcode',
+          validation_data: { expected_code: 'ABC' },
+        }),
+      );
+    });
+
+    it('should persist validation_data for quiz type', async () => {
+      huntsRepo.findById.mockResolvedValue(mockHunt());
+      stepsRepo.save.mockResolvedValue(
+        mockStep({ validation_type: 'quiz', validation_data: { correct_answer: 'Paris' } }),
+      );
+
+      await service.createStep('hunt-uuid', 'partner-uuid', {
+        order: 0,
+        title: 'Quiz',
+        validation_type: 'quiz',
+        validation_data: { correct_answer: 'Paris' },
+      });
+
+      expect(stepsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          validation_type: 'quiz',
+          validation_data: { correct_answer: 'Paris' },
+        }),
+      );
+    });
+
+    it('should not throw when validation_data is absent (nullable)', async () => {
+      huntsRepo.findById.mockResolvedValue(mockHunt());
+      stepsRepo.save.mockResolvedValue(mockStep());
+
+      await expect(
+        service.createStep('hunt-uuid', 'partner-uuid', { order: 0, title: 'GPS step' }),
+      ).resolves.not.toThrow();
+
+      expect(stepsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ validation_data: null }),
+      );
+    });
+  });
+
+  describe('updateStep — validation_data', () => {
+    it('should overwrite validation_data on update', async () => {
+      huntsRepo.findById.mockResolvedValue(mockHunt());
+      stepsRepo.findById.mockResolvedValue(
+        mockStep({ validation_type: 'qrcode', validation_data: { expected_code: 'OLD' } }),
+      );
+      stepsRepo.save.mockResolvedValue(
+        mockStep({ validation_type: 'qrcode', validation_data: { expected_code: 'NEW' } }),
+      );
+
+      await service.updateStep('hunt-uuid', 'step-uuid', 'partner-uuid', {
+        validation_data: { expected_code: 'NEW' },
+      });
+
+      expect(stepsRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({ validation_data: { expected_code: 'NEW' } }),
+      );
     });
   });
 
