@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
 import { Auth } from '../../common/guards/auth-roles.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
@@ -51,5 +51,23 @@ export class AdminController {
   @Get('partners')
   getPartners() {
     return this.adminService.getPartners();
+  }
+
+  /**
+   * PATCH /admin/partners/:id/block — Suspend un compte partenaire (bloque le login)
+   */
+  @Patch('partners/:id/block')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  blockPartner(@Param('id') id: string) {
+    return this.adminService.setPartnerBlocked(id, true);
+  }
+
+  /**
+   * PATCH /admin/partners/:id/unblock — Réactive un compte partenaire suspendu
+   */
+  @Patch('partners/:id/unblock')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  unblockPartner(@Param('id') id: string) {
+    return this.adminService.setPartnerBlocked(id, false);
   }
 }
