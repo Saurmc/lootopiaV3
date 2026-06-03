@@ -24,7 +24,7 @@ async function bootstrap() {
   app.useGlobalFilters(new HttpExceptionFilter());
 
   // CORS — supporte une liste séparée par des virgules dans CORS_ORIGIN
-  const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:5173';
+  const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174';
   const origins = rawOrigins.split(',').map((o) => o.trim());
   app.enableCors({
     origin: origins.length === 1 ? origins[0] : origins,

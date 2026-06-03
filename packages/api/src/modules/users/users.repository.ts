@@ -14,6 +14,10 @@ export class UsersRepository {
     return this.repo.find();
   }
 
+  findByRole(role: string): Promise<UserEntity[]> {
+    return this.repo.find({ where: { role: role as any }, order: { created_at: 'DESC' } });
+  }
+
   findById(id: string): Promise<UserEntity | null> {
     return this.repo.findOneBy({ id });
   }

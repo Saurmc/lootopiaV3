@@ -44,4 +44,12 @@ export class AdminController {
   listInvitations() {
     return this.invitationsService.findAll();
   }
+
+  /**
+   * GET /admin/partners — Liste tous les comptes partenaires avec leurs stats
+   */
+  @Get('partners')
+  getPartners() {
+    return this.adminService.getPartners();
+  }
 }
