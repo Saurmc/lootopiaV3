@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { authService } from '../services/auth.service';
 import { TOKEN_KEY } from '../services/api';
 
@@ -63,7 +64,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialize: async () => {
     try {
       const [token, consentRaw] = await Promise.all([
-        AsyncStorage.getItem(TOKEN_KEY),
+        SecureStore.getItemAsync(TOKEN_KEY),
         AsyncStorage.getItem(CONSENT_GPS_KEY),
       ]);
       if (token) {
@@ -78,7 +79,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   _setToken: async (token: string, isGuest = false) => {
-    await AsyncStorage.setItem(TOKEN_KEY, token);
+    await SecureStore.setItemAsync(TOKEN_KEY, token);
     const payload = decodeJwtPayload(token);
     const guestFromPayload =
       typeof payload.is_guest === 'boolean' ? payload.is_guest : isGuest;
@@ -129,7 +130,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    await SecureStore.deleteItemAsync(TOKEN_KEY);
     set({
       user: null,
       token: null,
