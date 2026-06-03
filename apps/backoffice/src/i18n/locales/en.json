@@ -18,6 +18,8 @@
     "required": "required"
   },
   "nav": {
+    "sectionMain": "Main Menu",
+    "sectionSettings": "Management",
     "hunts": "My Hunts",
     "stats": "Statistics",
     "settings": "Settings"
@@ -57,7 +59,19 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "subtitle": "Welcome to your partner portal"
+    "subtitle": "Welcome to your partner portal",
+    "kpiActiveHunts": "Active hunts",
+    "kpiTotal": "total",
+    "kpiParticipants": "Participants",
+    "kpiAllHunts": "all hunts",
+    "kpiCompletion": "Completion rate",
+    "kpiGlobalAvg": "global average",
+    "kpiAvgPoints": "Average points",
+    "kpiPerHunt": "per hunt",
+    "chartTitle": "Participants per hunt",
+    "recentHunts": "My recent hunts",
+    "participants": "participants",
+    "draft": "Draft"
   },
   "hunts": {
     "title": "My Hunts",
@@ -194,6 +208,41 @@
   },
   "settings": {
     "title": "Settings",
-    "subtitle": "Manage your partner account"
+    "subtitle": "Manage your partner account.",
+    "profileSection": "General information",
+    "logoLabel": "Organisation logo",
+    "logoUpload": "Drag your logo here",
+    "displayNameLabel": "Organisation name",
+    "displayNamePlaceholder": "E.g.: The Louvre Museum",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Describe your organisation in a few words…",
+    "emailLabel": "Email address",
+    "emailReadonly": "Email editing is not yet available.",
+    "saving": "Saving…",
+    "save": "Save",
+    "saved": "Changes saved.",
+    "saveError": "An error occurred.",
+    "passwordSection": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "fieldRequired": "Required field",
+    "passwordMin": "Minimum 8 characters",
+    "passwordMismatch": "Passwords do not match",
+    "updating": "Updating…",
+    "update": "Update",
+    "passwordUpdated": "Password updated.",
+    "passwordError": "Current password is incorrect.",
+    "dangerSection": "Danger zone",
+    "logoutTitle": "Logout",
+    "logoutDesc": "Close your session on this device.",
+    "logoutBtn": "Sign out",
+    "deleteTitle": "Delete account",
+    "deleteDesc": "Permanently deletes your account, hunts, steps and data. This action is irreversible.",
+    "deleteBtn": "Delete",
+    "deleteConfirmPrompt": "Type DELETE to confirm the deletion of your account.",
+    "deleteConfirmWord": "DELETE",
+    "deleteConfirmBtn": "Confirm deletion",
+    "deleting": "Deleting…"
   }
 }

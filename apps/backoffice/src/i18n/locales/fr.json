@@ -18,6 +18,8 @@
     "required": "requis"
   },
   "nav": {
+    "sectionMain": "Menu Principal",
+    "sectionSettings": "Gestion",
     "hunts": "Mes Chasses",
     "stats": "Statistiques",
     "settings": "Paramètres"
@@ -57,7 +59,19 @@
   },
   "dashboard": {
     "title": "Tableau de bord",
-    "subtitle": "Bienvenue sur votre espace partenaire"
+    "subtitle": "Bienvenue sur votre espace partenaire",
+    "kpiActiveHunts": "Chasses actives",
+    "kpiTotal": "au total",
+    "kpiParticipants": "Participants",
+    "kpiAllHunts": "toutes chasses",
+    "kpiCompletion": "Taux de complétion",
+    "kpiGlobalAvg": "moyenne globale",
+    "kpiAvgPoints": "Points moyens",
+    "kpiPerHunt": "par chasse",
+    "chartTitle": "Participants par chasse",
+    "recentHunts": "Mes chasses récentes",
+    "participants": "participants",
+    "draft": "Brouillon"
   },
   "hunts": {
     "title": "Mes Chasses",
@@ -194,6 +208,41 @@
   },
   "settings": {
     "title": "Paramètres",
-    "subtitle": "Gérez votre compte partenaire"
+    "subtitle": "Gérez votre compte partenaire.",
+    "profileSection": "Informations générales",
+    "logoLabel": "Logo de l'enseigne",
+    "logoUpload": "Glissez votre logo ici",
+    "displayNameLabel": "Nom d'enseigne",
+    "displayNamePlaceholder": "Ex : Musée des Arts",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Décrivez votre enseigne en quelques mots…",
+    "emailLabel": "Adresse e-mail",
+    "emailReadonly": "La modification de l'email n'est pas encore disponible.",
+    "saving": "Enregistrement…",
+    "save": "Enregistrer",
+    "saved": "Modifications sauvegardées.",
+    "saveError": "Une erreur est survenue.",
+    "passwordSection": "Changer le mot de passe",
+    "currentPassword": "Mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "confirmPassword": "Confirmer le nouveau mot de passe",
+    "fieldRequired": "Champ requis",
+    "passwordMin": "Minimum 8 caractères",
+    "passwordMismatch": "Les mots de passe ne correspondent pas",
+    "updating": "Mise à jour…",
+    "update": "Mettre à jour",
+    "passwordUpdated": "Mot de passe mis à jour.",
+    "passwordError": "Mot de passe actuel incorrect.",
+    "dangerSection": "Zone de danger",
+    "logoutTitle": "Déconnexion",
+    "logoutDesc": "Ferme votre session sur cet appareil.",
+    "logoutBtn": "Se déconnecter",
+    "deleteTitle": "Supprimer le compte",
+    "deleteDesc": "Supprime définitivement votre compte, vos chasses, étapes et données. Cette action est irréversible.",
+    "deleteBtn": "Supprimer",
+    "deleteConfirmPrompt": "Tapez SUPPRIMER pour confirmer la suppression de votre compte.",
+    "deleteConfirmWord": "SUPPRIMER",
+    "deleteConfirmBtn": "Confirmer la suppression",
+    "deleting": "Suppression…"
   }
 }

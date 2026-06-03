@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { profileService, type UpdateProfilePayload } from '@/services/profile.service';
 import { filesService } from '@/services/files.service';
 import { useAuthStore } from '@/store/auth.store';
@@ -18,6 +19,7 @@ interface ProfileFormValues {
 
 function ProfileSection() {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const [saved, setSaved] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | undefined>(undefined);
   const [logoInit, setLogoInit] = useState(false);
@@ -68,51 +70,51 @@ function ProfileSection() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Informations générales</CardTitle>
+        <CardTitle className="text-base">{t('settings.profileSection')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Logo */}
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Logo de l'enseigne</label>
+            <label className="text-sm font-medium text-gray-700">{t('settings.logoLabel')}</label>
             <FileUpload
               value={logoUrl}
               onChange={(url: string | null) => setLogoUrl(url ?? undefined)}
               accept={['image/jpeg', 'image/png', 'image/gif', 'image/webp']}
-              label="Glissez votre logo ici"
+              label={t('settings.logoUpload')}
             />
           </div>
 
           {/* Display name */}
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Nom d'enseigne</label>
+            <label className="text-sm font-medium text-gray-700">{t('settings.displayNameLabel')}</label>
             <input
               {...register('display_name')}
-              placeholder="Ex : Musée des Arts"
+              placeholder={t('settings.displayNamePlaceholder')}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
             />
           </div>
 
           {/* Description */}
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Description</label>
+            <label className="text-sm font-medium text-gray-700">{t('settings.descriptionLabel')}</label>
             <textarea
               {...register('description')}
               rows={3}
-              placeholder="Décrivez votre enseigne en quelques mots…"
+              placeholder={t('settings.descriptionPlaceholder')}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
             />
           </div>
 
           {/* Email (read-only) */}
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Adresse e-mail</label>
+            <label className="text-sm font-medium text-gray-700">{t('settings.emailLabel')}</label>
             <input
               value={profile?.email ?? ''}
               readOnly
               className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-400 cursor-not-allowed"
             />
-            <p className="text-xs text-gray-400">La modification de l'email n'est pas encore disponible.</p>
+            <p className="text-xs text-gray-400">{t('settings.emailReadonly')}</p>
           </div>
 
           <div className="flex items-center gap-3 pt-1">
@@ -121,11 +123,11 @@ function ProfileSection() {
               disabled={mutation.isPending}
               className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
-              {mutation.isPending ? 'Enregistrement…' : 'Enregistrer'}
+              {mutation.isPending ? t('settings.saving') : t('settings.save')}
             </button>
-            {saved && <span className="text-sm text-green-600">Modifications sauvegardées.</span>}
+            {saved && <span className="text-sm text-green-600">{t('settings.saved')}</span>}
             {mutation.isError && (
-              <span className="text-sm text-red-500">Une erreur est survenue.</span>
+              <span className="text-sm text-red-500">{t('settings.saveError')}</span>
             )}
           </div>
         </form>
@@ -143,6 +145,7 @@ interface PasswordFormValues {
 }
 
 function PasswordSection() {
+  const { t } = useTranslation();
   const [saved, setSaved] = useState(false);
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<PasswordFormValues>();
 
@@ -165,38 +168,38 @@ function PasswordSection() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Changer le mot de passe</CardTitle>
+        <CardTitle className="text-base">{t('settings.passwordSection')}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 max-w-md">
-          <Field label="Mot de passe actuel" error={errors.current_password?.message}>
+          <Field label={t('settings.currentPassword')} error={errors.current_password?.message}>
             <input
               type="password"
               autoComplete="current-password"
-              {...register('current_password', { required: 'Champ requis' })}
+              {...register('current_password', { required: t('settings.fieldRequired') })}
               className="field"
             />
           </Field>
 
-          <Field label="Nouveau mot de passe" error={errors.new_password?.message}>
+          <Field label={t('settings.newPassword')} error={errors.new_password?.message}>
             <input
               type="password"
               autoComplete="new-password"
               {...register('new_password', {
-                required: 'Champ requis',
-                minLength: { value: 8, message: 'Minimum 8 caractères' },
+                required: t('settings.fieldRequired'),
+                minLength: { value: 8, message: t('settings.passwordMin') },
               })}
               className="field"
             />
           </Field>
 
-          <Field label="Confirmer le nouveau mot de passe" error={errors.confirm_password?.message}>
+          <Field label={t('settings.confirmPassword')} error={errors.confirm_password?.message}>
             <input
               type="password"
               autoComplete="new-password"
               {...register('confirm_password', {
-                required: 'Champ requis',
-                validate: (v) => v === watch('new_password') || 'Les mots de passe ne correspondent pas',
+                required: t('settings.fieldRequired'),
+                validate: (v) => v === watch('new_password') || t('settings.passwordMismatch'),
               })}
               className="field"
             />
@@ -208,11 +211,11 @@ function PasswordSection() {
               disabled={mutation.isPending}
               className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
             >
-              {mutation.isPending ? 'Mise à jour…' : 'Mettre à jour'}
+              {mutation.isPending ? t('settings.updating') : t('settings.update')}
             </button>
-            {saved && <span className="text-sm text-green-600">Mot de passe mis à jour.</span>}
+            {saved && <span className="text-sm text-green-600">{t('settings.passwordUpdated')}</span>}
             {mutation.isError && (
-              <span className="text-sm text-red-500">Mot de passe actuel incorrect.</span>
+              <span className="text-sm text-red-500">{t('settings.passwordError')}</span>
             )}
           </div>
         </form>
@@ -224,6 +227,7 @@ function PasswordSection() {
 // ─── Danger zone ─────────────────────────────────────────────────────────────
 
 function DangerSection() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const clearAuth = useAuthStore((s) => s.clearAuth);
   const [confirmText, setConfirmText] = useState('');
@@ -245,63 +249,58 @@ function DangerSection() {
   return (
     <Card className="border-red-200">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base text-red-600">Zone de danger</CardTitle>
+        <CardTitle className="text-base text-red-600">{t('settings.dangerSection')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
         {/* Logout */}
         <div className="flex items-center justify-between py-3 border-b border-gray-100">
           <div>
-            <p className="text-sm font-medium text-gray-900">Déconnexion</p>
-            <p className="text-xs text-gray-400">Ferme votre session sur cet appareil.</p>
+            <p className="text-sm font-medium text-gray-900">{t('settings.logoutTitle')}</p>
+            <p className="text-xs text-gray-400">{t('settings.logoutDesc')}</p>
           </div>
           <button
             onClick={handleLogout}
             className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Se déconnecter
+            {t('settings.logoutBtn')}
           </button>
         </div>
 
-        {/* Delete account */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-gray-900">Supprimer le compte</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Supprime définitivement votre compte, vos chasses, étapes et données. Cette action est irréversible.
-            </p>
+            <p className="text-sm font-medium text-gray-900">{t('settings.deleteTitle')}</p>
+            <p className="text-xs text-gray-400 mt-0.5">{t('settings.deleteDesc')}</p>
           </div>
           <button
             onClick={() => setShowConfirm(true)}
             className="shrink-0 px-4 py-2 rounded-lg border border-red-300 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
           >
-            Supprimer
+            {t('settings.deleteBtn')}
           </button>
         </div>
 
         {showConfirm && (
           <div className="rounded-lg bg-red-50 border border-red-200 p-4 space-y-3">
-            <p className="text-sm text-red-700 font-medium">
-              Tapez <strong>SUPPRIMER</strong> pour confirmer la suppression de votre compte.
-            </p>
+            <p className="text-sm text-red-700 font-medium">{t('settings.deleteConfirmPrompt')}</p>
             <input
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="SUPPRIMER"
+              placeholder={t('settings.deleteConfirmWord')}
               className="w-full rounded-lg border border-red-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
             />
             <div className="flex gap-2">
               <button
                 onClick={() => deleteMutation.mutate()}
-                disabled={confirmText !== 'SUPPRIMER' || deleteMutation.isPending}
+                disabled={confirmText !== t('settings.deleteConfirmWord') || deleteMutation.isPending}
                 className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-40 transition-colors"
               >
-                {deleteMutation.isPending ? 'Suppression…' : 'Confirmer la suppression'}
+                {deleteMutation.isPending ? t('settings.deleting') : t('settings.deleteConfirmBtn')}
               </button>
               <button
                 onClick={() => { setShowConfirm(false); setConfirmText(''); }}
                 className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
               >
-                Annuler
+                {t('common.cancel')}
               </button>
             </div>
           </div>
@@ -335,11 +334,12 @@ function Field({
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Paramètres</h2>
-        <p className="text-sm text-gray-500 mt-0.5">Gérez votre compte partenaire.</p>
+        <h2 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h2>
+        <p className="text-sm text-gray-500 mt-0.5">{t('settings.subtitle')}</p>
       </div>
 
       <ProfileSection />

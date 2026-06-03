@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueries } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -12,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 export default function DashboardPage() {
   const user = useAuthStore((s) => s.user);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const { data: hunts = [], isLoading: huntsLoading } = useQuery({
     queryKey: ['hunts'],
@@ -59,9 +61,9 @@ export default function DashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Tableau de bord</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{t('dashboard.title')}</h2>
         <p className="text-sm text-gray-500 mt-0.5">
-          Bienvenue{user?.email ? `, ${user.email}` : ''}.
+          {t('dashboard.subtitle')}{user?.email ? `, ${user.email}` : ''}.
         </p>
       </div>
 
@@ -69,28 +71,28 @@ export default function DashboardPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           icon={<Map className="h-5 w-5 text-primary" />}
-          label="Chasses actives"
+          label={t('dashboard.kpiActiveHunts')}
           value={isLoading ? '—' : String(activeCount)}
-          sub={`${hunts.length} au total`}
+          sub={`${hunts.length} ${t('dashboard.kpiTotal')}`}
           onClick={() => navigate('/hunts')}
         />
         <KpiCard
           icon={<Users className="h-5 w-5 text-blue-500" />}
-          label="Participants"
+          label={t('dashboard.kpiParticipants')}
           value={isLoading ? '—' : String(totalParticipants)}
-          sub="toutes chasses"
+          sub={t('dashboard.kpiAllHunts')}
         />
         <KpiCard
           icon={<TrendingUp className="h-5 w-5 text-green-500" />}
-          label="Taux de complétion"
+          label={t('dashboard.kpiCompletion')}
           value={isLoading ? '—' : `${avgCompletion} %`}
-          sub="moyenne globale"
+          sub={t('dashboard.kpiGlobalAvg')}
         />
         <KpiCard
           icon={<Award className="h-5 w-5 text-amber-500" />}
-          label="Points moyens"
+          label={t('dashboard.kpiAvgPoints')}
           value={isLoading ? '—' : String(Math.round(totalPoints / Math.max(allStats.length, 1)))}
-          sub="par chasse"
+          sub={t('dashboard.kpiPerHunt')}
         />
       </div>
 
@@ -98,7 +100,7 @@ export default function DashboardPage() {
       {chartData.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Participants par chasse</CardTitle>
+            <CardTitle className="text-base">{t('dashboard.chartTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
@@ -119,7 +121,7 @@ export default function DashboardPage() {
       {!isLoading && hunts.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Mes chasses récentes</CardTitle>
+            <CardTitle className="text-base">{t('dashboard.recentHunts')}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <ul className="divide-y">
@@ -136,9 +138,9 @@ export default function DashboardPage() {
                       <p className="text-xs text-gray-400">{hunt.location ?? '—'}</p>
                     </div>
                     <div className="flex items-center gap-6 text-xs text-gray-500">
-                      <span>{stats?.participant_count ?? '—'} participants</span>
+                      <span>{stats?.participant_count ?? '—'} {t('dashboard.participants')}</span>
                       <span className={hunt.is_active ? 'text-green-600 font-medium' : 'text-orange-500'}>
-                        {hunt.is_active ? 'Actif' : 'Brouillon'}
+                        {hunt.is_active ? t('hunts.statusActive') : t('dashboard.draft')}
                       </span>
                     </div>
                   </li>
@@ -151,11 +153,10 @@ export default function DashboardPage() {
 
       {!isLoading && hunts.length === 0 && (
         <div className="py-16 text-center text-sm text-gray-400">
-          Aucune chasse.{' '}
+          {t('hunts.noHunts')}{' '}
           <button className="text-primary hover:underline" onClick={() => navigate('/hunts/new')}>
-            Créez-en une
-          </button>
-          .
+            {t('hunts.noHuntsCreate')}
+          </button>.
         </div>
       )}
     </div>
