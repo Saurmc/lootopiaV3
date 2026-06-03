@@ -34,6 +34,10 @@ export class UserEntity {
   @Column({ type: 'boolean', default: false })
   consent_gps: boolean;
 
+  // Modération admin : compte suspendu (bloque login + accès backoffice)
+  @Column({ type: 'boolean', default: false })
+  is_blocked: boolean;
+
   // Pseudo affiché dans l'app (nullable : facultatif pour les invités)
   @Column({ type: 'varchar', length: 50, nullable: true })
   pseudo: string | null;

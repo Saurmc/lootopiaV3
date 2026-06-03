@@ -17,6 +17,7 @@ export interface Partner {
   pseudo: string | null;
   hunt_count: number;
   active_hunt_count: number;
+  is_blocked: boolean;
   created_at: string;
 }
 
@@ -29,5 +30,13 @@ export const adminService = {
   getPartners: async (): Promise<Partner[]> => {
     const { data } = await api.get<Partner[]>('/admin/partners');
     return data;
+  },
+
+  blockPartner: async (id: string): Promise<void> => {
+    await api.patch(`/admin/partners/${id}/block`);
+  },
+
+  unblockPartner: async (id: string): Promise<void> => {
+    await api.patch(`/admin/partners/${id}/unblock`);
   },
 };

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { UsersRepository } from '../users/users.repository';
 import { HuntsRepository } from '../hunts/hunts.repository';
 import { ProgressRepository } from '../progress/progress.repository';
@@ -20,6 +20,7 @@ export interface PartnerDto {
   pseudo: string | null;
   hunt_count: number;
   active_hunt_count: number;
+  is_blocked: boolean;
   created_at: Date;
 }
 
@@ -72,8 +73,17 @@ export class AdminService {
         pseudo: p.pseudo ?? null,
         hunt_count: partnerHunts.length,
         active_hunt_count: partnerHunts.filter((h) => h.is_active).length,
+        is_blocked: p.is_blocked ?? false,
         created_at: p.created_at,
       };
     });
+  }
+
+  async setPartnerBlocked(partnerId: string, blocked: boolean): Promise<void> {
+    const user = await this.usersRepository.findById(partnerId);
+    if (!user || user.role !== 'PARTNER') {
+      throw new NotFoundException('Partner not found');
+    }
+    await this.usersRepository.setBlocked(partnerId, blocked);
   }
 }

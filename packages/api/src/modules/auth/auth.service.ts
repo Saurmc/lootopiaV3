@@ -58,6 +58,9 @@ export class AuthService {
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    if (user.is_blocked) {
+      throw new UnauthorizedException('Account suspended. Contact an administrator.');
+    }
     const token = this.jwtService.sign(
       { sub: user.id, role: user.role },
       { expiresIn: JWT_EXPIRES_IN },

@@ -41,4 +41,8 @@ export class UsersRepository {
   async updateConsentGps(id: string, consent: boolean): Promise<void> {
     await this.repo.update(id, { consent_gps: consent });
   }
+
+  async setBlocked(id: string, is_blocked: boolean): Promise<void> {
+    await this.repo.update(id, { is_blocked });
+  }
 }

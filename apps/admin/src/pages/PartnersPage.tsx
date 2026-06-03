@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { adminService, type Partner } from '../services/admin.service';
 
-function statusBadge(huntCount: number) {
-  if (huntCount === 0) return { label: 'Inactif', cls: 'bg-gray-100 text-gray-500' };
-  if (huntCount < 3) return { label: 'Actif', cls: 'bg-green-100 text-green-700' };
+function statusBadge(p: Partner) {
+  if (p.is_blocked) return { label: 'Suspendu', cls: 'bg-red-100 text-red-700' };
+  if (p.hunt_count === 0) return { label: 'Inactif', cls: 'bg-gray-100 text-gray-500' };
+  if (p.hunt_count < 3) return { label: 'Actif', cls: 'bg-green-100 text-green-700' };
   return { label: 'Très actif', cls: 'bg-blue-100 text-blue-700' };
 }
 
 export default function PartnersPage() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [search, setSearch] = useState('');
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   const { data: partners = [], isLoading } = useQuery({
     queryKey: ['admin-partners'],
@@ -19,13 +22,22 @@ export default function PartnersPage() {
     staleTime: 30_000,
   });
 
+  const blockMutation = useMutation({
+    mutationFn: (id: string) => adminService.blockPartner(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['admin-partners'] }); setConfirmId(null); },
+  });
+
+  const unblockMutation = useMutation({
+    mutationFn: (id: string) => adminService.unblockPartner(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-partners'] }),
+  });
+
   const filtered = partners.filter((p) => {
     const q = search.toLowerCase();
-    return (
-      p.email?.toLowerCase().includes(q) ||
-      p.pseudo?.toLowerCase().includes(q)
-    );
+    return p.email?.toLowerCase().includes(q) || p.pseudo?.toLowerCase().includes(q);
   });
+
+  const confirmTarget = partners.find((p) => p.id === confirmId);
 
   return (
     <div className="space-y-6">
@@ -35,6 +47,11 @@ export default function PartnersPage() {
           <h1 className="text-2xl font-bold text-gray-900">Partenaires</h1>
           <p className="text-sm text-gray-500 mt-1">
             {partners.length} compte{partners.length > 1 ? 's' : ''} partenaire{partners.length > 1 ? 's' : ''}
+            {partners.filter((p) => p.is_blocked).length > 0 && (
+              <span className="ml-2 text-red-500">
+                · {partners.filter((p) => p.is_blocked).length} suspendu{partners.filter((p) => p.is_blocked).length > 1 ? 's' : ''}
+              </span>
+            )}
           </p>
         </div>
         <button
@@ -46,15 +63,13 @@ export default function PartnersPage() {
       </div>
 
       {/* Recherche */}
-      <div>
-        <input
-          type="text"
-          placeholder="Rechercher par email ou nom…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-72 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
-        />
-      </div>
+      <input
+        type="text"
+        placeholder="Rechercher par email ou nom…"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        className="w-72 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+      />
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -67,13 +82,10 @@ export default function PartnersPage() {
           <div className="py-16 text-center">
             <p className="text-4xl mb-3">🏢</p>
             <p className="text-sm text-gray-500">
-              {search ? 'Aucun partenaire trouvé.' : 'Aucun partenaire pour l\'instant.'}
+              {search ? 'Aucun partenaire trouvé.' : "Aucun partenaire pour l'instant."}
             </p>
             {!search && (
-              <button
-                onClick={() => navigate('/invitations')}
-                className="mt-4 text-sm text-orange-500 hover:underline"
-              >
+              <button onClick={() => navigate('/invitations')} className="mt-4 text-sm text-orange-500 hover:underline">
                 Envoyer une première invitation
               </button>
             )}
@@ -84,26 +96,23 @@ export default function PartnersPage() {
               <tr>
                 <th className="px-6 py-3 text-left">Partenaire</th>
                 <th className="px-6 py-3 text-left">Statut</th>
-                <th className="px-6 py-3 text-right">Chasses totales</th>
-                <th className="px-6 py-3 text-right">Chasses actives</th>
-                <th className="px-6 py-3 text-left">Membre depuis</th>
+                <th className="px-6 py-3 text-right">Chasses</th>
+                <th className="px-6 py-3 text-right">Actives</th>
+                <th className="px-6 py-3 text-left">Depuis</th>
+                <th className="px-6 py-3 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtered.map((p: Partner) => {
-                const badge = statusBadge(p.hunt_count);
+                const badge = statusBadge(p);
                 const initials = (p.pseudo ?? p.email ?? '?')
-                  .split(' ')
-                  .map((w) => w[0])
-                  .join('')
-                  .toUpperCase()
-                  .slice(0, 2);
+                  .split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
 
                 return (
-                  <tr key={p.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={p.id} className={`hover:bg-gray-50 transition-colors ${p.is_blocked ? 'opacity-60' : ''}`}>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${p.is_blocked ? 'bg-red-100 text-red-400' : 'bg-orange-100 text-orange-600'}`}>
                           {initials}
                         </div>
                         <div>
@@ -119,9 +128,7 @@ export default function PartnersPage() {
                         {badge.label}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <span className="font-semibold text-gray-800">{p.hunt_count}</span>
-                    </td>
+                    <td className="px-6 py-4 text-right font-semibold text-gray-800">{p.hunt_count}</td>
                     <td className="px-6 py-4 text-right">
                       {p.active_hunt_count > 0 ? (
                         <span className="font-semibold text-green-600">{p.active_hunt_count}</span>
@@ -130,11 +137,25 @@ export default function PartnersPage() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-gray-400">
-                      {new Date(p.created_at).toLocaleDateString('fr-FR', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      {p.is_blocked ? (
+                        <button
+                          disabled={unblockMutation.isPending}
+                          onClick={() => unblockMutation.mutate(p.id)}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-green-300 text-green-600 hover:bg-green-50 disabled:opacity-50 transition-colors"
+                        >
+                          Réactiver
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setConfirmId(p.id)}
+                          className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          Suspendre
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );
@@ -143,6 +164,34 @@ export default function PartnersPage() {
           </table>
         )}
       </div>
+
+      {/* Modale de confirmation suspension */}
+      {confirmId && confirmTarget && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-2">Suspendre le partenaire</h3>
+            <p className="text-sm text-gray-600 mb-5">
+              Suspendre <span className="font-medium text-gray-900">{confirmTarget.pseudo ?? confirmTarget.email}</span> ?
+              Son compte sera bloqué et il ne pourra plus se connecter au backoffice.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmId(null)}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+              >
+                Annuler
+              </button>
+              <button
+                disabled={blockMutation.isPending}
+                onClick={() => blockMutation.mutate(confirmId)}
+                className="px-4 py-2 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+              >
+                {blockMutation.isPending ? 'Suspension…' : 'Suspendre'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
