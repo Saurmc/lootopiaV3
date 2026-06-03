@@ -1,16 +1,21 @@
 import { NavLink } from 'react-router-dom';
-
-const links = [
-  { to: '/dashboard', label: 'Dashboard' },
-  { to: '/partners', label: 'Partenaires' },
-  { to: '/invitations', label: 'Invitations' },
-];
+import { useTranslation } from 'react-i18next';
 
 export default function Sidebar() {
+  const { t } = useTranslation();
+
+  const links = [
+    { to: '/dashboard', label: t('nav.dashboard') },
+    { to: '/partners', label: t('nav.partners') },
+    { to: '/invitations', label: t('nav.invitations') },
+  ];
+
   return (
     <aside className="w-56 bg-gray-900 text-gray-100 flex flex-col flex-shrink-0">
       <div className="px-5 py-5 border-b border-gray-700">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Navigation</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest">
+          {t('nav.section')}
+        </p>
       </div>
       <nav className="flex-1 py-3">
         {links.map(({ to, label }) => (
