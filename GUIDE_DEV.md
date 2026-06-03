@@ -1,5 +1,5 @@
 # Guide développeur — LootopiaV3
-> Fichier personnel, ignoré par git. Dernière mise à jour : 2026-06-02.
+> Fichier personnel, ignoré par git. Dernière mise à jour : 2026-06-03.
 
 ---
 
@@ -15,8 +15,9 @@
 9. [Lancer les tests automatisés](#9-lancer-les-tests-automatisés)
 10. [Problèmes fréquents et solutions](#10-problèmes-fréquents-et-solutions)
 11. [Démo — Validation AR avec QR code (US12)](#11-démo--validation-ar-avec-qr-code-us12)
-12. [Architecture RA — US12 vs US63 (futur)](#12-architecture-ra--us12-vs-us63-futur)
-13. [Écrire des prompts efficaces pour Claude Code](#13-écrire-des-prompts-efficaces-pour-claude-code)
+12. [Architecture RA — US12 vs US63](#12-architecture-ra--us12-vs-us63)
+13. [Démo — AR spatiale 3D (US63)](#13-démo--ar-spatiale-3d-us63)
+14. [Écrire des prompts efficaces pour Claude Code](#14-écrire-des-prompts-efficaces-pour-claude-code)
 
 ---
 
@@ -604,7 +605,7 @@ Puis dans l'app : secoue le téléphone → **Reload** (ou Cmd+R sur simulateur)
 
 ---
 
-## 12. Architecture RA — US12 (fait) vs US63 (futur)
+## 12. Architecture RA — US12 vs US63
 
 ### US12 — RA 2D déclenchée par QR ✅
 
@@ -617,37 +618,188 @@ Puis dans l'app : secoue le téléphone → **Reload** (ou Cmd+R sur simulateur)
 | Validation serveur | `progress.service.ts` → `validateAr()` vérifie `qr_trigger` |
 | Types partagés | `ArContent2DOverlay`, `ArContentQROverlay` dans `packages/shared/src/types/step.types.ts` |
 
-### US63 — RA spatiale 3D ❌ (non implémentée)
+### US63 — RA spatiale 3D ✅ (implémentée)
 
 | Élément | Détail |
 |---|---|
-| Objectif | Détecter une image physique réelle et ancrer un objet 3D dans l'espace |
-| Technologie visée | `@reactvision/react-viro` → `ViroARImageMarker` + `ViroNode` |
-| Nouveau `ar_content.type` | `'3d-spatial'` avec champs `marker_image` (URL image déclencheur) et `model_url` (fichier 3D) |
-| Blocage actuel | `react-viro 2.53.1` cible RN `~0.81.4` ; ce projet est sur RN `0.83.2` — migration ou fork nécessaire |
-| Branche future | `feature/US63-ar-3d-spatial` (à créer depuis `develop` **après** merge de US12) |
+| Branche | `feature/US63-ar-3d-spatial` |
+| `ar_content.type` | `'ar-3d-spatial'` |
+| Technologie | `@reactvision/react-viro` 2.55.0 — `ViroARImageMarker` (2D) ou `ViroARObjectMarker` (3D physique) |
+| Composant mobile | `apps/mobile/src/components/step/ViroARPhase.tsx` |
+| Validation serveur | `progress.service.ts` → `validateAr()` vérifie `marker_triggered: true` |
+| Types partagés | `ArContent3DSpatial` dans `packages/shared/src/types/step.types.ts` |
+| Champs `ArContent3DSpatial` | `marker_image?` (URL image déclencheur 2D) · `object_scan?` (URL `.arobject` pour objet 3D physique) · `model_url?` (URL GLB/OBJ/VRX à afficher) · `model_type?` |
 
-### Pourquoi US63 ne cassera pas US12
-
-Le composant `ARSection.tsx` est une cascade `if/else if` par type :
+### Routage dans ARSection.tsx
 
 ```
 ARSection.tsx
-  ├── arContent.type === '2d-overlay'   → OverlayPhase directement       ← US12 ✅
-  ├── arContent.type === 'qr-overlay'   → QRScanPhase → OverlayPhase     ← US12 ✅
-  └── arContent.type === '3d-spatial'   → ViroARPhase  (à ajouter)       ← US63 ❌
+  ├── arContent.type === '2d-overlay'    → OverlayPhase directement     ← US12 ✅
+  ├── arContent.type === 'qr-overlay'    → QRScanPhase → OverlayPhase   ← US12 ✅
+  └── arContent.type === 'ar-3d-spatial' → ViroARPhase                  ← US63 ✅
 ```
 
-US63 se limitera à trois ajouts isolés :
-1. `ArContent3DSpatial` dans le type union de `step.types.ts`
-2. Un `else if` dans `ARSection.tsx` pour router vers `ViroARPhase`
-3. Un nouveau composant `ViroARPhase.tsx`
+### Contraintes techniques ViroKit (à ne pas réapprendre)
 
-**Aucun code US12 ne sera modifié.** Les branches naissent de `develop` post-merge — zéro conflit structurel garanti.
+| Problème | Cause | Solution appliquée |
+|---|---|---|
+| Image non affichée (jaune/orange) | `ViroMaterials.createMaterials` injecte `type:'unknown'` sur les URI → ViroKit affiche du jaune | Ne jamais utiliser `ViroMaterials` pour les images — utiliser `ViroImage` directement |
+| `ViroImage` ne charge pas les URLs HTTP | ViroKit ne peut pas charger `http://` nativement | Télécharger en `data:image/png;base64,…` via `expo-file-system` |
+| `ViroImage` invisible (vue de côté) | L'image fait face à +Z (horizontal), la caméra est en +Y (au-dessus) | `transformBehaviors={['billboard']}` sur le `ViroNode` parent |
+| Modèle 3D GLB "model failed to load" | ViroKit ne supporte pas les GLB sans normales/matériaux (ex : export trimesh brut) | Utiliser un GLB exporté depuis Blender avec normales + matériau basique |
+| `ViroARSceneNavigator` ne monte que quand tout est prêt | `setReady(true)` appelé avant le mount → `localModelUri` déjà défini | `(ready && localImageUri)` gate le mount du navigator |
 
 ---
 
-## 13. Écrire des prompts efficaces pour Claude Code
+## 13. Démo — AR spatiale 3D (US63)
+
+> Comment créer une nouvelle chasse avec une étape AR 3D de A à Z.
+
+### Vue d'ensemble
+
+Le **backoffice** permet de créer chasses et étapes (champs de base). Le champ `ar_content` n'est **pas encore exposé dans le StepForm** (prévu US55/56/57) — on le renseigne via SQL ou API après création.
+
+---
+
+### ÉTAPE 1 — Uploader l'image marqueur
+
+L'image marqueur est ce que la caméra va reconnaître (affiche, photo d'œuvre, impression…).
+
+**Option A — Via le backoffice (plus simple)**
+
+Les images uploadées dans le backoffice (chasses, étapes) sont stockées dans `/uploads/` sur le serveur API. L'URL résultante est `http://192.168.1.14:3000/uploads/<filename>`.
+
+Tu peux utiliser n'importe quelle image déjà présente dans une chasse/étape comme marqueur AR — il suffit de copier son URL.
+
+**Option B — Via MinIO directement (pour GLB, .arobject, ou images dédiées AR)**
+
+1. Ouvre `http://localhost:9001` (MinIO console) → `minioadmin` / `minioadmin123`
+2. Bucket `lootopia` → dossier `ar/` → **Upload** ton fichier
+3. Note l'URL S3 résultante : `http://192.168.1.14:9000/lootopia/ar/<nom-fichier>`
+
+> **URL S3 ≠ URL navigateur.** L'URL navigateur ressemble à `localhost:9001/browser/lootopia/ar%2F...` — ça ne marche pas.
+> Format correct : `http://<IP_MAC>:9000/lootopia/ar/<nom-fichier>`
+
+> **Note :** MinIO est obligatoire pour les modèles 3D (GLB/OBJ) et les fichiers `.arobject` car le backoffice ne les accepte pas (types MIME non autorisés — seuls JPG/PNG/GIF/WebP/PDF sont acceptés).
+
+---
+
+### ÉTAPE 2 — (Optionnel) Uploader un modèle 3D
+
+Si tu veux afficher un modèle 3D quand le marqueur est détecté :
+- Upload un fichier GLB/OBJ sur MinIO, même dossier `ar/`
+- Le GLB **doit avoir des normales et un matériau** (export Blender). Les GLB générés par trimesh/outils IA bruts échouent.
+- Note l'URL S3 : `http://192.168.1.14:9000/lootopia/ar/<modele.glb>`
+
+---
+
+### ÉTAPE 3 — Créer la chasse via le backoffice
+
+1. Ouvre `http://localhost:5173` → connecte-toi avec `musee@lootopia.fr` / `Partner123`
+2. **Chasses** → **Nouvelle chasse** → remplis titre, description, difficulté, position GPS
+3. Sauvegarde → note l'ID de la chasse (visible dans l'URL ou via API)
+
+---
+
+### ÉTAPE 4 — Créer l'étape via le backoffice
+
+1. Dans la chasse créée → **Ajouter une étape**
+2. Remplis : titre, description, `validation_type = ar`, rayon de validation
+3. Sauvegarde → note l'ID de l'étape
+
+> Le backoffice ne montre pas encore le champ `ar_content` → on le renseigne à l'étape suivante.
+
+---
+
+### ÉTAPE 5 — Injecter ar_content via SQL
+
+```bash
+# Remplace les valeurs entre < >
+docker exec lootopia_postgres psql -U lootopia -d lootopia -c "
+UPDATE steps
+SET ar_content = '{
+  \"type\": \"ar-3d-spatial\",
+  \"marker_image\": \"http://192.168.1.14:9000/lootopia/ar/<ton-image.png>\"
+}'
+WHERE id = '<ID_ETAPE>';
+"
+```
+
+**Avec modèle 3D en plus :**
+```bash
+docker exec lootopia_postgres psql -U lootopia -d lootopia -c "
+UPDATE steps
+SET ar_content = '{
+  \"type\": \"ar-3d-spatial\",
+  \"marker_image\": \"http://192.168.1.14:9000/lootopia/ar/<ton-image.png>\",
+  \"model_url\": \"http://192.168.1.14:9000/lootopia/ar/<modele.glb>\",
+  \"model_type\": \"GLTF\"
+}'
+WHERE id = '<ID_ETAPE>';
+"
+```
+
+**Mode objet 3D physique (statue avec fichier .arobject) :**
+```bash
+docker exec lootopia_postgres psql -U lootopia -d lootopia -c "
+UPDATE steps
+SET ar_content = '{
+  \"type\": \"ar-3d-spatial\",
+  \"object_scan\": \"http://192.168.1.14:9000/lootopia/ar/<scan.arobject>\",
+  \"model_url\": \"http://192.168.1.14:9000/lootopia/ar/<modele.glb>\",
+  \"model_type\": \"GLTF\"
+}'
+WHERE id = '<ID_ETAPE>';
+"
+```
+
+---
+
+### ÉTAPE 6 — Tester sur l'app mobile
+
+1. Lance l'app → va sur la chasse → rejoins → sélectionne l'étape AR
+2. Pointe la caméra vers l'image marqueur (affichée sur écran ou imprimée)
+3. Le badge **"Œuvre reconnue ✅"** apparaît quand ARKit détecte l'image
+4. Si `model_url` est présent : le modèle 3D apparaît en rotation au-dessus du marqueur
+5. Sinon : l'image elle-même flotte en 3D avec effet billboard
+6. Appuie sur **Valider l'étape**
+
+---
+
+### ÉTAPE 7 — Réinitialiser la progression
+
+```bash
+docker exec lootopia_postgres psql -U lootopia -d lootopia -c "
+DELETE FROM progress WHERE hunt_id = '<ID_CHASSE>';
+"
+```
+
+---
+
+### Bonnes pratiques pour l'image marqueur
+
+| ✅ Bon | ❌ Mauvais |
+|---|---|
+| Image riche en détails et contrastes | Image floue, unie, ou très symétrique |
+| Fond neutre (blanc/noir uni) | Fond complexe similaire à l'environnement |
+| Minimum 200×200 px | Trop petite (< 100 px) |
+| Imprimée en ≥ A5 ou affichée en ≥ 15 cm | Trop petite physiquement |
+| Tenue à plat, bien éclairée | Froissée, en contre-jour |
+
+---
+
+### Détecter des problèmes courants
+
+| Symptôme | Cause | Solution |
+|---|---|---|
+| Le marqueur n'est jamais détecté | Image trop simple ou mal éclairée | Utilise une image plus riche / augmente `physicalWidth` dans le code |
+| L'image flottante n'apparaît pas | `localImageUri` non chargé | Vérifie les logs Metro `[AR] model cached at` |
+| "model failed to load" | GLB sans normales ou format non supporté | Ré-exporter depuis Blender avec normales + matériau |
+| Chasse déjà terminée | Progression non réinitialisée | Voir ÉTAPE 7 ci-dessus |
+
+---
+
+## 14. Écrire des prompts efficaces pour Claude Code
 
 ### Pourquoi c'est important
 Claude Code facture par token (unité de texte traité). Un mauvais prompt force Claude à
@@ -799,8 +951,9 @@ Priorité haute :
 
 Priorité moyenne :
 4. Corriger les mocks `.spec.ts` cassés (backend, tests)
-5. **US63** — RA spatiale 3D (`ViroARImageMarker`) — nécessite compatibilité react-viro 2.53+ avec RN 0.83
-6. **US15** — Multilangue (toutes les apps, nécessite i18next)
+5. ~~**US63** — RA spatiale 3D~~ ✅ `ViroARImageMarker` + `ViroARObjectMarker` + `ViroARPhase` (2026-06-03)
+6. **US55/56/57** — Exposer `ar_content` dans le StepForm du backoffice (champs dynamiques par type)
+7. **US15** — Multilangue (toutes les apps, nécessite i18next)
 
 ---
 

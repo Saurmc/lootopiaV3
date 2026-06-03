@@ -1,6 +1,6 @@
 # Lootopia V3 — Suivi des User Stories
 
-Dernière mise à jour : 2026-06-02 (US63)
+Dernière mise à jour : 2026-06-03 (US63 ✅, US23/US24 ⚠️→⚠️, fix CORS)
 
 ## Légende
 
@@ -32,8 +32,8 @@ Dernière mise à jour : 2026-06-02 (US63)
 | US20 | Templates de chasse                      | ✅     | `GET /hunts/templates` + `POST /hunts/from-template/:id` connectés.                                                                                                                                                                                                               | —          |
 | US21 | Ajouter un plan ou une image             | ✅     | Upload via `POST /files/upload` (multer local). `HuntForm` champ `plan_url`. Stockage local `/uploads` au lieu de MinIO (déviation technique, fonctionnel).                                                                                                                       | —          |
 | US22 | Définir des zones sur le plan            | ⚠️     | `ZoneCanvas.tsx` absent sur `develop` (sur `feature/US22-zone-visual-editor`). Référence morte "US44" toujours présente dans `ZoneForm.tsx`. Formulaire textuel fonctionnel pour `rect` et `circle` uniquement.                                                                   | 🟠 Moyenne |
-| US23 | Gérer les étapes d'une chasse            | ⚠️     | CRUD complet (`StepsPage` + `StepForm` + endpoints). `StepEditor.tsx` = stub `TODO`. `StepForm` ne propose pas de `validation_type` — toutes les étapes créées depuis le backoffice sont en GPS par défaut.                                                                       | 🟠 Moyenne |
-| US24 | Configurer les éléments RA d'une étape   | ⚠️     | `StepForm` upload image AR → `ar_content: { type: '2d-overlay', image: url }`. Pas de sélecteur `validation_type` (qrcode/quiz/photo non configurables). Pas de vrai configurateur RA (positionnement 3D, preview).                                                               | 🟠 Moyenne |
+| US23 | Gérer les étapes d'une chasse            | ⚠️     | CRUD complet (`StepsPage` + `StepForm` + endpoints). `StepEditor.tsx` = stub `TODO`. `StepForm` expose maintenant `validation_type` (gps/ar/qrcode/quiz/photo). Champs dynamiques qrcode/quiz/photo non configurables (réponse attendue, code QR).                                | 🟠 Moyenne |
+| US24 | Configurer les éléments RA d'une étape   | ⚠️     | `StepForm` expose sélecteur `validation_type=ar` + mode AR (`2d-overlay` ou `ar-3d-spatial`). `ar-3d-spatial` : upload image marqueur + URL modèle 3D optionnel. URL absolue stockée en base. Pas de preview 3D ni positionnement spatial dans le BO.                             | 🟠 Moyenne |
 | US25 | Statistiques de base d'une chasse        | ✅     | `StatsPage` : `participant_count`, `completed_count`, `completion_rate`, `average_points`. `GET /hunts/:id/stats` connecté.                                                                                                                                                       | —          |
 | US26 | Liste des participants                   | ✅     | Tableau expandable dans `StatsPage`. `GET /hunts/:id/participants` chargé au clic. Champs : email, étapes, points, dates.                                                                                                                                                         | —          |
 
@@ -74,15 +74,15 @@ Dernière mise à jour : 2026-06-02 (US63)
 | US52 | Vue liste des chasses avec filtres     | ✅     | `HuntsListScreen` : search, filtres difficulté, tri distance.                                                                                                                                                                                                                                                                | —          |
 | US53 | Rejoindre une chasse + voir étapes     | ✅     | `HuntDetailScreen` + `progress.service`.                                                                                                                                                                                                                                                                                     | —          |
 | US54 | Validation d'étape par GPS             | ✅     | `StepValidationScreen` (`validationType='gps'`) + `POST validate`.                                                                                                                                                                                                                                                           | —          |
-| US55 | Validation d'étape par QR Code         | ⚠️     | `StepValidationScreen` (`validationType='qrcode'`) : scanner `CameraView` fonctionnel, envoie `{ qr_code }`. Manque : `StepForm` backoffice ne permet pas de configurer `validation_type=qrcode` ni le code QR attendu — seules les étapes en GPS sont créables depuis le backoffice.                                        | 🟠 Moyenne |
-| US56 | Validation d'étape par Quiz            | ⚠️     | `StepValidationScreen` (`validationType='quiz'`) : champ texte libre, validation insensible à la casse. Manque : QCM non supporté (spec prévoit liste de choix). `StepForm` backoffice ne permet pas de configurer `validation_type=quiz` ni la réponse attendue.                                                            | 🟠 Moyenne |
-| US57 | Validation d'étape par photo           | ⚠️     | `StepValidationScreen` (`validationType='photo'`) : prise de photo avec `CameraView`, envoi de l'URI locale comme `file_url`. Backend accepte automatiquement (pas de vraie validation image). La photo n'est pas uploadée sur le serveur avant envoi. `StepForm` backoffice ne peut pas configurer `validation_type=photo`. | 🟠 Moyenne |
+| US55 | Validation d'étape par QR Code         | ⚠️     | `StepValidationScreen` (`validationType='qrcode'`) : scanner `CameraView` fonctionnel, envoie `{ qr_code }`. `StepForm` expose `validation_type=qrcode` mais pas le champ `qr_trigger` — non configurable depuis le BO sans SQL.                                           | 🟠 Moyenne |
+| US56 | Validation d'étape par Quiz            | ⚠️     | `StepValidationScreen` (`validationType='quiz'`) : champ texte libre, validation insensible à la casse. QCM non supporté. `StepForm` expose `validation_type=quiz` mais pas la réponse attendue.                                                                            | 🟠 Moyenne |
+| US57 | Validation d'étape par photo           | ⚠️     | `StepValidationScreen` (`validationType='photo'`) : prise de photo, envoi URI locale comme `file_url`. Backend accepte automatiquement. Photo non uploadée avant envoi. `StepForm` expose `validation_type=photo` mais sans config spécifique.                               | 🟠 Moyenne |
 | US58 | Récapitulatif fin de chasse            | ✅     | `HuntCompletionScreen`.                                                                                                                                                                                                                                                                                                      | —          |
 | US59 | Page de profil joueur                  | ✅     | `ProfileScreen` + `GET /me/profile`.                                                                                                                                                                                                                                                                                         | —          |
 | US60 | Collection badges + historique         | ✅     | `BadgesScreen` — PR #49 mergé.                                                                                                                                                                                                                                                                                               | —          |
 | US61 | Modification profil + consentement GPS | ✅     | `SettingsScreen` — PR #50 mergé.                                                                                                                                                                                                                                                                                             | —          |
 | US62 | Sécurité du compte et suppression      | ✅     | `SecurityScreen` — PR #51 mergé.                                                                                                                                                                                                                                                                                             | —          |
-| US63 | RA spatiale 3D (image marker)          | ⚠️     | Implémenté sur `feature/US63-ar-3d-spatial` (base US12). `ViroARPhase.tsx`, `ArContent3DSpatial` type, `validateAr` étendu, `marker_triggered` DTO. En attente merge US12 en develop avant PR US63.                                                                                                                           | 🟠 Moyenne |
+| US63 | RA spatiale 3D (image marker)          | ✅     | `ViroARPhase.tsx` : `ViroARImageMarker` (2D) + `ViroARObjectMarker` (3D physique). Image via data-URI, modèle 3D via `file://` local. `billboard` pour orientation. `ArContent3DSpatial` type shared. `validateAr` étendu. Configurable depuis le `StepForm` BO sans SQL. GLB nécessite normales+matériaux (Blender).          | —          |
 
 ---
 
@@ -114,15 +114,17 @@ Dernière mise à jour : 2026-06-02 (US63)
 
 ### 🟠 Important
 
-- [ ] **US23** — Ajouter `validation_type` selector dans `StepForm.tsx` (gps/qrcode/quiz/photo) + champs dynamiques (code QR, réponse quiz). `StepEditor.tsx` stub à implémenter.
-- [ ] **US24** — Enrichir la configuration RA dans `StepForm.tsx` : sélecteur type overlay, position 3D, taille.
-- [ ] **US55/56/57** — Compléter la configuration backoffice (validation_type) + corriger l'upload photo côté mobile (upload vers `/files/upload` avant envoi de `file_url`).
+- [x] **US23** — `validation_type` selector ajouté dans `StepForm.tsx` (gps/ar/qrcode/quiz/photo). Reste : champs dynamiques `qr_trigger` et réponse quiz. `StepEditor.tsx` stub toujours présent.
+- [x] **US24** — `StepForm` expose `ar-3d-spatial` : upload image marqueur + URL modèle 3D + type. Reste : preview 3D, positionnement spatial.
+- [ ] **US55** — Ajouter champ `qr_trigger` dans `StepForm` quand `validation_type=qrcode`.
+- [ ] **US56** — Ajouter champ réponse attendue dans `StepForm` quand `validation_type=quiz`.
+- [ ] **US55/56/57** — Corriger upload photo mobile (upload vers `/files/upload` avant envoi de `file_url`).
 
 ### 🟡 Nice-to-have
 
 - [ ] Supprimer le stub `screens/hunt/HuntDetailScreen.tsx` (dead code, jamais monté).
 - [x] **US12** — `ARSection` QR-triggered + 2d-overlay implémenté. Branch `feature/US12-ar-qr-overlay`.
-- [x] **US63** — RA spatiale 3D : `ViroARPhase.tsx` + `ArContent3DSpatial` + `validateAr` étendu. Branch `feature/US63-ar-3d-spatial` (attend merge US12).
+- [x] **US63** — RA spatiale 3D : `ViroARPhase.tsx` + `ArContent3DSpatial` + `validateAr` étendu + configurable depuis `StepForm` BO.
 - [ ] **US15** — Multilangue : ajouter `i18next` ou `expo-localization`.
 - [ ] Supprimer ou implémenter `StatsViewer.tsx` et `StepEditor.tsx`.
 
