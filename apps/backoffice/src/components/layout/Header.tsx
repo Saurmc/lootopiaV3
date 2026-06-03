@@ -1,4 +1,4 @@
-import { Bell, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -20,14 +20,7 @@ export default function Header() {
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0">
-      {/* Sélecteur de langue */}
       <LanguageSwitcher />
-
-      {/* Notification bell */}
-      <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
-        <Bell className="h-5 w-5 text-gray-500" />
-        <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-orange-500 rounded-full" />
-      </button>
 
       {/* Avatar dropdown */}
       <div className="relative">

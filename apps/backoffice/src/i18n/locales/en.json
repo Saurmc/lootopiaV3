@@ -18,6 +18,8 @@
     "required": "required"
   },
   "nav": {
+    "sectionMain": "Main Menu",
+    "sectionSettings": "Management",
     "hunts": "My Hunts",
     "stats": "Statistics",
     "settings": "Settings"

@@ -30,7 +30,7 @@ export default function Sidebar() {
       {/* Navigation principale */}
       <nav className="flex-1 px-3 py-4 space-y-0.5">
         <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest px-3 mb-2">
-          Menu Principal
+          {t('nav.sectionMain')}
         </p>
         {MAIN_NAV.map(({ to, label, icon: Icon }) => (
           <NavLink
@@ -52,7 +52,7 @@ export default function Sidebar() {
 
         <div className="pt-4">
           <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest px-3 mb-2">
-            Gestion
+            {t('nav.sectionSettings')}
           </p>
           {SETTINGS_NAV.map(({ to, label, icon: Icon }) => (
             <NavLink

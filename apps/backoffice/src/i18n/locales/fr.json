@@ -18,6 +18,8 @@
     "required": "requis"
   },
   "nav": {
+    "sectionMain": "Menu Principal",
+    "sectionSettings": "Gestion",
     "hunts": "Mes Chasses",
     "stats": "Statistiques",
     "settings": "Paramètres"
