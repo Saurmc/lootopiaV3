@@ -1,8 +1,12 @@
-export type ValidationType = 'gps' | 'qrcode' | 'quiz' | 'photo' | 'ar';
+export type ValidationType = 'gps' | 'qrcode' | 'quiz' | 'photo';
 
-export type ArContent2DOverlay = { type: '2d-overlay'; image: string };
-export type ArContentQROverlay = { type: 'qr-overlay'; qr_trigger: string; image: string };
-export type ArContent = ArContent2DOverlay | ArContentQROverlay | null;
+export interface ARContent {
+  type: '2d-overlay' | '3d-model';
+  image?: string;
+  model_url?: string;
+  position?: { x: number; y: number; z: number };
+  scale?: number;
+}
 
 export interface Step {
   id: string;
@@ -11,5 +15,5 @@ export interface Step {
   description: string | null;
   validationRadius: number;
   validationType: ValidationType;
-  arContent: ArContent;
+  arContent: ARContent | null;
 }

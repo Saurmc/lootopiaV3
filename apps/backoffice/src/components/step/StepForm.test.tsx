@@ -1,56 +1,61 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import StepForm from './StepForm';
+import { describe, it, expect } from 'vitest';
+import { toPayload } from './StepForm';
 
-vi.mock('@/components/ui/file-upload', () => ({
-  default: () => null,
-}));
+const base = {
+  order: '1',
+  title: 'Devant la fontaine',
+  description: '',
+  lat: '',
+  lng: '',
+  validation_radius: '50',
+  ar_image_url: '',
+  ar_type: '2d-overlay' as const,
+  ar_pos_x: '0',
+  ar_pos_y: '0',
+  ar_pos_z: '0',
+  ar_scale: '1',
+};
 
-const noop = vi.fn().mockResolvedValue(undefined);
-
-function renderForm(defaultValues?: Parameters<typeof StepForm>[0]['defaultValues']) {
-  render(<StepForm onSubmit={noop} defaultValues={defaultValues} />);
-}
-
-describe('StepForm — validation_type selector', () => {
-  it('renders validation_type select with gps as default', () => {
-    renderForm();
-    const select = screen.getByLabelText('Type de validation') as HTMLSelectElement;
-    expect(select.value).toBe('gps');
+describe('toPayload — ar_content', () => {
+  it("pas d'ar_content si ar_image_url vide", () => {
+    const payload = toPayload({ ...base, ar_image_url: '' });
+    expect(payload.ar_content).toBeUndefined();
   });
 
-  it('selecting qrcode shows expected_code field', async () => {
-    renderForm();
-    const select = screen.getByLabelText('Type de validation');
-    fireEvent.change(select, { target: { value: 'qrcode' } });
-    await waitFor(() => {
-      expect(screen.getByLabelText(/Code QR attendu/i)).toBeInTheDocument();
+  it('2d-overlay sérialisé avec image, position et scale', () => {
+    const payload = toPayload({
+      ...base,
+      ar_image_url: 'https://cdn.example.com/img.png',
+      ar_type: '2d-overlay',
+      ar_pos_x: '1.5',
+      ar_pos_y: '-0.5',
+      ar_pos_z: '2',
+      ar_scale: '0.8',
+    });
+    expect(payload.ar_content).toEqual({
+      type: '2d-overlay',
+      image: 'https://cdn.example.com/img.png',
+      position: { x: 1.5, y: -0.5, z: 2 },
+      scale: 0.8,
     });
   });
 
-  it('selecting quiz shows correct_answer field', async () => {
-    renderForm();
-    const select = screen.getByLabelText('Type de validation');
-    fireEvent.change(select, { target: { value: 'quiz' } });
-    await waitFor(() => {
-      expect(screen.getByLabelText(/Bonne réponse/i)).toBeInTheDocument();
+  it("3d-model sérialisé avec model_url à la place d'image", () => {
+    const payload = toPayload({
+      ...base,
+      ar_image_url: 'https://cdn.example.com/model.glb',
+      ar_type: '3d-model',
+      ar_pos_x: '0',
+      ar_pos_y: '0',
+      ar_pos_z: '0',
+      ar_scale: '1',
     });
-  });
-
-  it('selecting photo shows no extra field', async () => {
-    renderForm();
-    const select = screen.getByLabelText('Type de validation');
-    fireEvent.change(select, { target: { value: 'photo' } });
-    await waitFor(() => {
-      expect(screen.queryByLabelText(/Code QR attendu/i)).not.toBeInTheDocument();
-      expect(screen.queryByLabelText(/Bonne réponse/i)).not.toBeInTheDocument();
-      expect(screen.queryByLabelText(/Latitude/i)).not.toBeInTheDocument();
+    expect(payload.ar_content).toEqual({
+      type: '3d-model',
+      model_url: 'https://cdn.example.com/model.glb',
+      position: { x: 0, y: 0, z: 0 },
+      scale: 1,
     });
-  });
-
-  it('gps type shows lat/lng fields', () => {
-    renderForm();
-    expect(screen.getByLabelText('Latitude')).toBeInTheDocument();
-    expect(screen.getByLabelText('Longitude')).toBeInTheDocument();
+    expect((payload.ar_content as { image?: string }).image).toBeUndefined();
   });
 });

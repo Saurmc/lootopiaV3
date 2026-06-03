@@ -270,7 +270,7 @@ export default function StepsPage() {
 
       {/* Step create/edit dialog */}
       <Dialog open={stepDialog !== null} onOpenChange={(open) => !open && setStepDialog(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {stepDialog === 'create' ? "Nouvelle étape" : "Modifier l'étape"}
