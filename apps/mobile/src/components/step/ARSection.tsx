@@ -9,10 +9,12 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import type { BarcodeScanningResult } from 'expo-camera';
+import type { ArContent3DSpatial } from '@lootopia/shared';
+import ViroARPhase from './ViroARPhase';
 
 export type ArContent2DOverlay = { type: '2d-overlay'; image: string };
 export type ArContentQROverlay = { type: 'qr-overlay'; qr_trigger: string; image: string };
-export type ArContent = ArContent2DOverlay | ArContentQROverlay;
+export type ArContent = ArContent2DOverlay | ArContentQROverlay | ArContent3DSpatial;
 
 interface ARSectionProps {
   arContent: ArContent;
@@ -175,6 +177,16 @@ export default function ARSection({ arContent, onConfirm, validating = false, er
         onDetected={handleDetected}
         errorMsg={errorMsg}
         onRetry={() => setScannedCode(undefined)}
+      />
+    );
+  }
+
+  if (arContent.type === 'ar-3d-spatial') {
+    return (
+      <ViroARPhase
+        arContent={arContent}
+        onConfirm={() => onConfirm()}
+        isValidating={validating}
       />
     );
   }

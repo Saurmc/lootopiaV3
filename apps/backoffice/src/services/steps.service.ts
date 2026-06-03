@@ -1,5 +1,4 @@
 import { api } from './api';
-import type { ARContent } from '@lootopia/shared';
 
 export interface StepDto {
   id: string;
@@ -8,7 +7,8 @@ export interface StepDto {
   title: string;
   description: string | null;
   validation_radius: number;
-  ar_content: ARContent | null;
+  validation_type: 'gps' | 'qrcode' | 'quiz' | 'photo' | 'ar' | null;
+  ar_content: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -19,7 +19,8 @@ export interface CreateStepPayload {
   lat?: number;
   lng?: number;
   validation_radius: number;
-  ar_content?: ARContent | null;
+  validation_type?: 'gps' | 'qrcode' | 'quiz' | 'photo' | 'ar';
+  ar_content?: Record<string, unknown> | null;
 }
 
 export type UpdateStepPayload = Partial<CreateStepPayload>;

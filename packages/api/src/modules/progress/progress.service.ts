@@ -175,6 +175,16 @@ export class ProgressService {
 
   private validateAr(step: StepEntity, dto: ValidateStepDto): void {
     const content = step.ar_content as Record<string, unknown> | null;
+    const arType = content?.type as string | undefined;
+
+    if (arType === 'ar-3d-spatial') {
+      if (!dto.marker_triggered) {
+        throw new BadRequestException('Marker must be triggered to validate this step');
+      }
+      return;
+    }
+
+    // qr-overlay: check qr_trigger
     const qrTrigger = content?.qr_trigger as string | undefined;
     if (!qrTrigger) return;
     if (!dto.qr_code) {

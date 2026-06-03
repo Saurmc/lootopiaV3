@@ -1,12 +1,18 @@
-export type ValidationType = 'gps' | 'qrcode' | 'quiz' | 'photo';
+export type ValidationType = 'gps' | 'qrcode' | 'quiz' | 'photo' | 'ar';
 
-export interface ARContent {
-  type: '2d-overlay' | '3d-model';
-  image?: string;
+export type ArContent2DOverlay = { type: '2d-overlay'; image: string };
+export type ArContentQROverlay = { type: 'qr-overlay'; qr_trigger: string; image: string };
+export type ArContent3DSpatial = {
+  type: 'ar-3d-spatial';
+  /** Oeuvre 2D : image imprimée scannée par ARKit ImageTracking */
+  marker_image?: string;
+  /** Oeuvre 3D (statue…) : fichier .arobject pré-scanné par ARKit ObjectTracking */
+  object_scan?: string;
+  /** Modèle 3D à afficher en AR quand le marqueur est détecté */
   model_url?: string;
-  position?: { x: number; y: number; z: number };
-  scale?: number;
-}
+  model_type?: 'GLTF' | 'OBJ' | 'VRX';
+};
+export type ArContent = ArContent2DOverlay | ArContentQROverlay | ArContent3DSpatial | null;
 
 export interface Step {
   id: string;
@@ -15,5 +21,5 @@ export interface Step {
   description: string | null;
   validationRadius: number;
   validationType: ValidationType;
-  arContent: ARContent | null;
+  arContent: ArContent;
 }
