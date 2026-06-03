@@ -1,18 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { adminService, type Partner } from '../services/admin.service';
-
-function statusBadge(p: Partner) {
-  if (p.is_blocked) return { label: 'Suspendu', cls: 'bg-red-100 text-red-700' };
-  if (p.hunt_count === 0) return { label: 'Inactif', cls: 'bg-gray-100 text-gray-500' };
-  if (p.hunt_count < 3) return { label: 'Actif', cls: 'bg-green-100 text-green-700' };
-  return { label: 'Très actif', cls: 'bg-blue-100 text-blue-700' };
-}
 
 export default function PartnersPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
@@ -39,17 +34,25 @@ export default function PartnersPage() {
 
   const confirmTarget = partners.find((p) => p.id === confirmId);
 
+  function statusBadge(p: Partner) {
+    if (p.is_blocked) return { label: t('partners.statusSuspended'), cls: 'bg-red-100 text-red-700' };
+    if (p.hunt_count === 0) return { label: t('partners.statusInactive'), cls: 'bg-gray-100 text-gray-500' };
+    if (p.hunt_count < 3) return { label: t('partners.statusActive'), cls: 'bg-green-100 text-green-700' };
+    return { label: t('partners.statusVeryActive'), cls: 'bg-blue-100 text-blue-700' };
+  }
+
+  const suspendedCount = partners.filter((p) => p.is_blocked).length;
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Partenaires</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t('partners.title')}</h1>
           <p className="text-sm text-gray-500 mt-1">
-            {partners.length} compte{partners.length > 1 ? 's' : ''} partenaire{partners.length > 1 ? 's' : ''}
-            {partners.filter((p) => p.is_blocked).length > 0 && (
+            {t('partners.subtitle_other', { count: partners.length })}
+            {suspendedCount > 0 && (
               <span className="ml-2 text-red-500">
-                · {partners.filter((p) => p.is_blocked).length} suspendu{partners.filter((p) => p.is_blocked).length > 1 ? 's' : ''}
+                {t('partners.suspended_other', { count: suspendedCount })}
               </span>
             )}
           </p>
@@ -58,35 +61,33 @@ export default function PartnersPage() {
           onClick={() => navigate('/invitations')}
           className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
-          + Inviter un partenaire
+          {t('partners.inviteBtn')}
         </button>
       </div>
 
-      {/* Recherche */}
       <input
         type="text"
-        placeholder="Rechercher par email ou nom…"
+        placeholder={t('partners.searchPlaceholder')}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="w-72 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
       />
 
-      {/* Table */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="py-16 text-center">
             <div className="inline-block w-6 h-6 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm text-gray-400 mt-3">Chargement…</p>
+            <p className="text-sm text-gray-400 mt-3">{t('common.loading')}</p>
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center">
             <p className="text-4xl mb-3">🏢</p>
             <p className="text-sm text-gray-500">
-              {search ? 'Aucun partenaire trouvé.' : "Aucun partenaire pour l'instant."}
+              {search ? t('partners.noSearch') : t('partners.noPartners')}
             </p>
             {!search && (
               <button onClick={() => navigate('/invitations')} className="mt-4 text-sm text-orange-500 hover:underline">
-                Envoyer une première invitation
+                {t('partners.firstInvite')}
               </button>
             )}
           </div>
@@ -94,12 +95,12 @@ export default function PartnersPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs text-gray-500 uppercase tracking-wide border-b border-gray-100">
               <tr>
-                <th className="px-6 py-3 text-left">Partenaire</th>
-                <th className="px-6 py-3 text-left">Statut</th>
-                <th className="px-6 py-3 text-right">Chasses</th>
-                <th className="px-6 py-3 text-right">Actives</th>
-                <th className="px-6 py-3 text-left">Depuis</th>
-                <th className="px-6 py-3 text-right">Action</th>
+                <th className="px-6 py-3 text-left">{t('partners.colPartner')}</th>
+                <th className="px-6 py-3 text-left">{t('partners.colStatus')}</th>
+                <th className="px-6 py-3 text-right">{t('partners.colHunts')}</th>
+                <th className="px-6 py-3 text-right">{t('partners.colActive')}</th>
+                <th className="px-6 py-3 text-left">{t('partners.colSince')}</th>
+                <th className="px-6 py-3 text-right">{t('partners.colAction')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -117,7 +118,7 @@ export default function PartnersPage() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900">
-                            {p.pseudo ?? <span className="text-gray-400 italic">Sans nom</span>}
+                            {p.pseudo ?? <span className="text-gray-400 italic">{t('partners.noName')}</span>}
                           </p>
                           <p className="text-xs text-gray-400">{p.email}</p>
                         </div>
@@ -130,14 +131,12 @@ export default function PartnersPage() {
                     </td>
                     <td className="px-6 py-4 text-right font-semibold text-gray-800">{p.hunt_count}</td>
                     <td className="px-6 py-4 text-right">
-                      {p.active_hunt_count > 0 ? (
-                        <span className="font-semibold text-green-600">{p.active_hunt_count}</span>
-                      ) : (
-                        <span className="text-gray-300">0</span>
-                      )}
+                      {p.active_hunt_count > 0
+                        ? <span className="font-semibold text-green-600">{p.active_hunt_count}</span>
+                        : <span className="text-gray-300">0</span>}
                     </td>
                     <td className="px-6 py-4 text-gray-400">
-                      {new Date(p.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      {new Date(p.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 text-right">
                       {p.is_blocked ? (
@@ -146,14 +145,14 @@ export default function PartnersPage() {
                           onClick={() => unblockMutation.mutate(p.id)}
                           className="text-xs px-3 py-1.5 rounded-lg border border-green-300 text-green-600 hover:bg-green-50 disabled:opacity-50 transition-colors"
                         >
-                          Réactiver
+                          {t('partners.reactivate')}
                         </button>
                       ) : (
                         <button
                           onClick={() => setConfirmId(p.id)}
                           className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
                         >
-                          Suspendre
+                          {t('partners.suspend')}
                         </button>
                       )}
                     </td>
@@ -165,28 +164,26 @@ export default function PartnersPage() {
         )}
       </div>
 
-      {/* Modale de confirmation suspension */}
       {confirmId && confirmTarget && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm mx-4">
-            <h3 className="text-base font-semibold text-gray-900 mb-2">Suspendre le partenaire</h3>
+            <h3 className="text-base font-semibold text-gray-900 mb-2">{t('partners.confirmTitle')}</h3>
             <p className="text-sm text-gray-600 mb-5">
-              Suspendre <span className="font-medium text-gray-900">{confirmTarget.pseudo ?? confirmTarget.email}</span> ?
-              Son compte sera bloqué et il ne pourra plus se connecter au backoffice.
+              {t('partners.confirmDesc', { name: confirmTarget.pseudo ?? confirmTarget.email })}
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setConfirmId(null)}
                 className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
               >
-                Annuler
+                {t('common.cancel')}
               </button>
               <button
                 disabled={blockMutation.isPending}
                 onClick={() => blockMutation.mutate(confirmId)}
                 className="px-4 py-2 text-sm rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
               >
-                {blockMutation.isPending ? 'Suspension…' : 'Suspendre'}
+                {blockMutation.isPending ? t('partners.suspending') : t('partners.confirmBtn')}
               </button>
             </div>
           </div>
