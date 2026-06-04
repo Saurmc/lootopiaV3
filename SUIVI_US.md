@@ -1,6 +1,6 @@
 # Lootopia V3 — Suivi des User Stories
 
-Dernière mise à jour : 2026-05-30
+Dernière mise à jour : 2026-06-04
 
 ## Légende
 
@@ -82,6 +82,7 @@ Dernière mise à jour : 2026-05-30
 | US60 | Collection badges + historique         | ✅     | `BadgesScreen` — PR #49 mergé.                                                                                                                                                                                                                                                                                               | —          |
 | US61 | Modification profil + consentement GPS | ✅     | `SettingsScreen` — PR #50 mergé.                                                                                                                                                                                                                                                                                             | —          |
 | US62 | Sécurité du compte et suppression      | ✅     | `SecurityScreen` — PR #51 mergé.                                                                                                                                                                                                                                                                                             | —          |
+| US64 | Refonte graphique application mobile   | ❌     | Aucun token centralisé. Couleurs hardcodées par fichier. NativeWind installé mais inutilisé. Aucune cohérence visuelle avec la maquette Figma. 6 écrans à refondre : Login, Map/Home, Liste chasses, Détail chasse + étapes, Fin de chasse, Profil joueur. Menu de navigation également à refondre. | 🟠 Moyenne |
 
 ---
 
@@ -116,6 +117,16 @@ Dernière mise à jour : 2026-05-30
 - [ ] **US23** — Ajouter `validation_type` selector dans `StepForm.tsx` (gps/qrcode/quiz/photo) + champs dynamiques (code QR, réponse quiz). `StepEditor.tsx` stub à implémenter.
 - [ ] **US24** — Enrichir la configuration RA dans `StepForm.tsx` : sélecteur type overlay, position 3D, taille.
 - [ ] **US55/56/57** — Compléter la configuration backoffice (validation_type) + corriger l'upload photo côté mobile (upload vers `/files/upload` avant envoi de `file_url`).
+- [ ] **US64** — Refonte graphique mobile (branche `feature/US64-refonte-graphique-mobile`) :
+  - [ ] Créer `apps/mobile/src/constants/theme.ts` (tokens : couleurs, spacing, radius, typography)
+  - [ ] Refondre `Button.tsx`, `Input.tsx` avec les nouveaux tokens
+  - [ ] Refondre tab bar + headers (`AppNavigator.tsx`)
+  - [ ] Refondre `LoginScreen`
+  - [ ] Refondre `MapScreen` (visuel uniquement — logique carte intacte)
+  - [ ] Refondre `HuntsListScreen`
+  - [ ] Refondre `HuntDetailScreen`
+  - [ ] Refondre `HuntCompletionScreen`
+  - [ ] Refondre `ProfileScreen`
 
 ### 🟡 Nice-to-have
 
