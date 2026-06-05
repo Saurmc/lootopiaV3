@@ -11,15 +11,18 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { useAuth } from '../../hooks/useAuth';
 import { extractApiError } from '../../utils/error.utils';
+import theme from '../../constants/theme';
 
 export default function RegisterScreen() {
   const { register } = useAuth();
 
+  const [pseudo, setPseudo] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{
+    pseudo?: string;
     email?: string;
     password?: string;
     confirm?: string;
@@ -28,6 +31,8 @@ export default function RegisterScreen() {
 
   const validate = (): boolean => {
     const next: typeof errors = {};
+    if (!pseudo.trim()) next.pseudo = 'Le pseudo est requis.';
+    else if (pseudo.trim().length < 2) next.pseudo = 'Minimum 2 caractères.';
     if (!email.trim()) next.email = "L'email est requis.";
     if (!password) next.password = 'Le mot de passe est requis.';
     else if (password.length < 8) next.password = 'Minimum 8 caractères.';
@@ -42,14 +47,12 @@ export default function RegisterScreen() {
     setLoading(true);
     setErrors({});
     try {
-      await register(email.trim(), password);
+      await register(email.trim(), password, pseudo.trim());
       // RootNavigator bascule automatiquement vers AppNavigator
     } catch (err: unknown) {
       const { status, message } = extractApiError(err);
       if (status === 409) {
         setErrors({ email: 'Cet email est déjà utilisé.' });
-      } else if (status === 400) {
-        setErrors({ global: message });
       } else {
         setErrors({ global: message });
       }
@@ -64,51 +67,70 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerStyle={styles.form}
+        contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Créer un compte</Text>
+        <View style={styles.logoSection}>
+          <Text style={styles.logoText}>Lootopia</Text>
+          <Text style={styles.logoSubtitle}>Créez votre compte</Text>
+        </View>
 
-        {errors.global && (
-          <View style={styles.globalError}>
-            <Text style={styles.globalErrorText}>{errors.global}</Text>
-          </View>
-        )}
+        <View style={styles.form}>
+          {errors.global && (
+            <View style={styles.globalError}>
+              <Text style={styles.globalErrorText}>{errors.global}</Text>
+            </View>
+          )}
 
-        <Input
-          label="Email"
-          placeholder="vous@exemple.com"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-          error={errors.email}
-        />
+          <Input
+            label="Pseudo"
+            placeholder="Votre nom d'aventurier"
+            value={pseudo}
+            onChangeText={setPseudo}
+            error={errors.pseudo}
+            variant="dark"
+            autoCapitalize="words"
+            maxLength={50}
+          />
 
-        <Input
-          label="Mot de passe"
-          placeholder="Minimum 8 caractères"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          error={errors.password}
-        />
+          <Input
+            label="Email"
+            placeholder="vous@exemple.com"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+            error={errors.email}
+            variant="dark"
+          />
 
-        <Input
-          label="Confirmer le mot de passe"
-          placeholder="••••••••"
-          secureTextEntry
-          value={confirm}
-          onChangeText={setConfirm}
-          error={errors.confirm}
-        />
+          <Input
+            label="Mot de passe"
+            placeholder="Minimum 8 caractères"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            error={errors.password}
+            variant="dark"
+          />
 
-        <Button
-          label="Créer mon compte"
-          loading={loading}
-          onPress={handleRegister}
-          style={styles.button}
-        />
+          <Input
+            label="Confirmer le mot de passe"
+            placeholder="••••••••"
+            secureTextEntry
+            value={confirm}
+            onChangeText={setConfirm}
+            error={errors.confirm}
+            variant="dark"
+          />
+
+          <Button
+            label="Créer mon compte"
+            loading={loading}
+            onPress={handleRegister}
+            style={styles.button}
+          />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -117,30 +139,43 @@ export default function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
   },
-  form: {
+  scroll: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.xxl,
   },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 24,
+  logoSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xl,
+  },
+  logoText: {
+    ...theme.typography.logoFont,
+    color: theme.colors.textInverse,
+    fontStyle: 'italic',
+  },
+  logoSubtitle: {
+    ...theme.typography.bodySmall,
+    color: 'rgba(255,255,255,0.65)',
+    marginTop: theme.spacing.xs,
+    letterSpacing: 0.5,
+  },
+  form: {
+    width: '100%',
   },
   globalError: {
-    backgroundColor: '#FEE2E2',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: theme.colors.errorLight,
+    borderRadius: theme.borderRadius.sm,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   globalErrorText: {
-    color: '#B91C1C',
-    fontSize: 14,
+    ...theme.typography.bodySmall,
+    color: theme.colors.error,
   },
   button: {
-    marginTop: 8,
+    marginTop: theme.spacing.md,
   },
 });

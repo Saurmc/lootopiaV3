@@ -25,7 +25,7 @@ export class FilesController {
    * Accessible aux partenaires et admins uniquement.
    * Format accepté : jpg, png, gif, webp, pdf — max 10 Mo.
    */
-  @Auth(Role.PARTNER, Role.ADMIN)
+  @Auth(Role.PLAYER, Role.PARTNER, Role.ADMIN)
   @Post('upload')
   @HttpCode(HttpStatus.CREATED)
   @UseInterceptors(

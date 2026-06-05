@@ -26,6 +26,7 @@ export class AuthService {
       dto.email,
       passwordHash,
       dto.role ?? Role.PLAYER,
+      dto.pseudo,
     );
     const token = this.jwtService.sign(
       { sub: user.id, role: user.role },

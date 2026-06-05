@@ -1,4 +1,5 @@
 import { api } from './api';
+import { API_BASE_URL } from '../constants/api.constants';
 
 export interface PlayerBadge {
   id: string;
@@ -52,6 +53,18 @@ export const profileService = {
   fetchBadges: async (): Promise<PlayerBadge[]> => {
     const res = await api.get<PlayerBadge[]>('/me/badges');
     return res.data;
+  },
+
+  /** POST /files/upload — upload avatar, retourne l'URL complète */
+  uploadAvatar: async (localUri: string, mimeType: string): Promise<string> => {
+    const form = new FormData();
+    const filename = localUri.split('/').pop() ?? 'avatar.jpg';
+    form.append('file', { uri: localUri, name: filename, type: mimeType } as unknown as Blob);
+    const res = await api.post<{ url: string }>('/files/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    // L'API renvoie un chemin relatif (/uploads/...) → on préfixe avec la base URL
+    return `${API_BASE_URL}${res.data.url}`;
   },
 
   /** PATCH /me/password */

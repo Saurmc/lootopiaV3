@@ -32,7 +32,7 @@ interface AuthState {
 
   initialize: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, pseudo: string) => Promise<void>;
   loginAsGuest: () => Promise<void>;
   convertAccount: (email: string, password: string) => Promise<void>;
   setConsentGps: (consent: boolean) => Promise<void>;
@@ -101,8 +101,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await get()._setToken(access_token, false);
   },
 
-  register: async (email: string, password: string) => {
-    const { access_token } = await authService.register(email, password);
+  register: async (email: string, password: string, pseudo: string) => {
+    const { access_token } = await authService.register(email, password, pseudo);
     await get()._setToken(access_token, false);
   },
 
