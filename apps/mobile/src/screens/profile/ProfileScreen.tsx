@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   SafeAreaView,
   ScrollView,
@@ -9,11 +10,14 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppTabParamList, AppStackParamList } from '../../navigation/AppNavigator';
 import { useProfile, usePlayerStats } from '../../hooks/useProfile';
+import { useAuthStore } from '../../store/auth.store';
+import theme from '../../constants/theme';
 
 type ProfileNavProp = CompositeNavigationProp<
   BottomTabNavigationProp<AppTabParamList, 'Profile'>,
@@ -47,10 +51,20 @@ function computeLevel(points: number) {
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 
-function StatCard({ icon, value, label }: { icon: string; value: number | string; label: string }) {
+function StatCard({
+  iconName,
+  iconColor,
+  value,
+  label,
+}: {
+  iconName: React.ComponentProps<typeof Ionicons>['name'];
+  iconColor: string;
+  value: number | string;
+  label: string;
+}) {
   return (
     <View style={styles.statCard}>
-      <Text style={styles.statIcon}>{icon}</Text>
+      <Ionicons name={iconName} size={20} color={iconColor} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -67,11 +81,12 @@ export default function ProfileScreen() {
   const navigation = useNavigation<ProfileNavProp>();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: stats, isLoading: statsLoading } = usePlayerStats();
+  const { logout } = useAuthStore();
 
   if (profileLoading || statsLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -85,7 +100,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* ── Avatar + identité ── */}
+        {/* ── Hero — fond violet ── */}
         <View style={styles.heroSection}>
           {profile?.avatar_url ? (
             <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
@@ -99,6 +114,14 @@ export default function ProfileScreen() {
           {profile?.email && profile.pseudo && (
             <Text style={styles.email}>{profile.email}</Text>
           )}
+
+          <View style={styles.levelRow}>
+            <View style={styles.levelBadge}>
+              <Text style={styles.levelBadgeText}>Niveau {level}</Text>
+            </View>
+            <Text style={styles.levelTitle}>{title}</Text>
+          </View>
+
           {profile?.role && profile.role !== 'player' && (
             <View style={styles.roleBadge}>
               <Text style={styles.roleBadgeText}>{profile.role.toUpperCase()}</Text>
@@ -108,19 +131,20 @@ export default function ProfileScreen() {
 
         {/* ── Points mis en évidence ── */}
         <View style={styles.pointsCard}>
+          <Ionicons name="star" size={24} color={theme.colors.points} />
           <Text style={styles.pointsValue}>{totalPoints.toLocaleString('fr-FR')}</Text>
           <Text style={styles.pointsLabel}>points cumulés</Text>
         </View>
 
         {/* ── Niveau ── */}
         <View style={styles.levelCard}>
-          <View style={styles.levelHeader}>
+          <View style={styles.levelCardHeader}>
             <View>
-              <Text style={styles.levelTitle}>{title}</Text>
-              <Text style={styles.levelSub}>Niveau {level}</Text>
+              <Text style={styles.levelCardTitle}>{title}</Text>
+              <Text style={styles.levelCardSub}>Niveau {level}</Text>
             </View>
-            <View style={styles.levelBadge}>
-              <Text style={styles.levelBadgeText}>Niv. {level}</Text>
+            <View style={styles.levelCardBadge}>
+              <Text style={styles.levelCardBadgeText}>Niv. {level}</Text>
             </View>
           </View>
 
@@ -130,17 +154,17 @@ export default function ProfileScreen() {
 
           <Text style={styles.progressHint}>
             {isMax
-              ? '🏅 Niveau maximum atteint !'
+              ? 'Niveau maximum atteint !'
               : `encore ${ptsToNext} pts pour le niveau suivant · ${Math.round(progress * 100)} %`}
           </Text>
         </View>
 
         {/* ── Stats ── */}
         <View style={styles.statsGrid}>
-          <StatCard icon="⭐" value={totalPoints} label="Points" />
-          <StatCard icon="🗺" value={stats?.hunt_count ?? 0} label="Chasses" />
-          <StatCard icon="✅" value={stats?.completed_hunts ?? 0} label="Terminées" />
-          <StatCard icon="🏅" value={stats?.badge_count ?? 0} label="Badges" />
+          <StatCard iconName="star" iconColor={theme.colors.points} value={totalPoints} label="Points" />
+          <StatCard iconName="map" iconColor={theme.colors.primary} value={stats?.hunt_count ?? 0} label="Chasses" />
+          <StatCard iconName="checkmark-circle" iconColor={theme.colors.success} value={stats?.completed_hunts ?? 0} label="Terminées" />
+          <StatCard iconName="ribbon" iconColor={theme.colors.gradientStart} value={stats?.badge_count ?? 0} label="Badges" />
         </View>
 
         {/* ── Actions ── */}
@@ -151,9 +175,11 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
             onPress={() => navigation.navigate('BadgesHistory')}
           >
-            <Text style={styles.actionIcon}>🏅</Text>
+            <View style={styles.actionIconBox}>
+              <Ionicons name="ribbon-outline" size={20} color={theme.colors.primary} />
+            </View>
             <Text style={styles.actionLabel}>Mes badges et historique</Text>
-            <Text style={styles.actionChevron}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
           </TouchableOpacity>
 
           <View style={styles.divider} />
@@ -164,11 +190,28 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
             onPress={() => navigation.navigate('Settings')}
           >
-            <Text style={styles.actionIcon}>⚙️</Text>
+            <View style={styles.actionIconBox}>
+              <Ionicons name="settings-outline" size={20} color={theme.colors.primary} />
+            </View>
             <Text style={styles.actionLabel}>Paramètres</Text>
-            <Text style={styles.actionChevron}>›</Text>
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
+
+        {/* Déconnexion */}
+        <TouchableOpacity
+          style={styles.logoutBtn}
+          activeOpacity={0.7}
+          onPress={() =>
+            Alert.alert('Se déconnecter', 'Confirmer la déconnexion ?', [
+              { text: 'Annuler', style: 'cancel' },
+              { text: 'Déconnexion', style: 'destructive', onPress: logout },
+            ])
+          }
+        >
+          <Ionicons name="log-out-outline" size={20} color={theme.colors.error} />
+          <Text style={styles.logoutLabel}>Se déconnecter</Text>
+        </TouchableOpacity>
 
         {/* Membre depuis */}
         {profile?.created_at && (
@@ -188,125 +231,249 @@ export default function ProfileScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 40, gap: 16 },
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.surfaceElevated,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    paddingBottom: theme.spacing.xxl,
+    gap: theme.spacing.md,
+  },
 
-  heroSection: { alignItems: 'center', gap: 6, paddingBottom: 4 },
+  heroSection: {
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.xl,
+    paddingHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.gradientStart,
+  },
   avatar: {
     width: 88,
     height: 88,
-    borderRadius: 44,
+    borderRadius: theme.borderRadius.full,
     borderWidth: 3,
-    borderColor: '#DBEAFE',
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   avatarPlaceholder: {
     width: 88,
     height: 88,
-    borderRadius: 44,
-    backgroundColor: '#1D4ED8',
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.gradientEnd,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.25)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarInitials: { fontSize: 32, fontWeight: '800', color: '#fff' },
-  displayName: { fontSize: 22, fontWeight: '800', color: '#111827', marginTop: 4 },
-  email: { fontSize: 13, color: '#6B7280' },
-  roleBadge: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
+  avatarInitials: {
+    ...theme.typography.h2,
+    color: theme.colors.textInverse,
   },
-  roleBadgeText: { fontSize: 11, fontWeight: '700', color: '#92400E' },
+  displayName: {
+    ...theme.typography.h2,
+    color: theme.colors.textInverse,
+    marginTop: theme.spacing.xs,
+  },
+  email: {
+    ...theme.typography.caption,
+    color: 'rgba(255,255,255,0.65)',
+  },
+  levelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
+  },
+  levelBadge: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.full,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+  },
+  levelBadgeText: {
+    ...theme.typography.caption,
+    color: theme.colors.textInverse,
+    fontWeight: '700',
+  },
+  levelTitle: {
+    ...theme.typography.bodySmall,
+    color: 'rgba(255,255,255,0.85)',
+    fontWeight: '500',
+  },
+  roleBadge: {
+    backgroundColor: theme.colors.warningLight,
+    borderRadius: theme.borderRadius.sm,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderWidth: 1,
+    borderColor: theme.colors.warning + '66',
+  },
+  roleBadgeText: {
+    ...theme.typography.caption,
+    fontWeight: '700',
+    color: theme.colors.text,
+  },
 
   pointsCard: {
-    backgroundColor: '#1D4ED8',
-    borderRadius: 16,
-    paddingVertical: 20,
+    marginHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.lg,
     alignItems: 'center',
-    gap: 2,
-    shadowColor: '#1D4ED8',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    gap: theme.spacing.xs,
+    ...theme.shadows.elevated,
   },
-  pointsValue: { fontSize: 40, fontWeight: '900', color: '#fff' },
-  pointsLabel: { fontSize: 13, color: '#BFDBFE', fontWeight: '500' },
+  pointsValue: {
+    ...theme.typography.h1,
+    color: theme.colors.textInverse,
+  },
+  pointsLabel: {
+    ...theme.typography.bodySmall,
+    color: 'rgba(255,255,255,0.8)',
+    fontWeight: '500',
+  },
 
   levelCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 16,
+    marginHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 10,
+    borderColor: theme.colors.border,
+    gap: theme.spacing.md,
+    ...theme.shadows.card,
   },
-  levelHeader: {
+  levelCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  levelTitle: { fontSize: 17, fontWeight: '800', color: '#111827' },
-  levelSub: { fontSize: 12, color: '#6B7280', marginTop: 2 },
-  levelBadge: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
+  levelCardTitle: {
+    ...theme.typography.h3,
+    color: theme.colors.text,
   },
-  levelBadgeText: { fontSize: 13, fontWeight: '700', color: '#1D4ED8' },
+  levelCardSub: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+  },
+  levelCardBadge: {
+    backgroundColor: theme.colors.primaryLight,
+    borderRadius: theme.borderRadius.full,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderWidth: 1,
+    borderColor: theme.colors.primary + '33',
+  },
+  levelCardBadgeText: {
+    ...theme.typography.label,
+    color: theme.colors.primary,
+  },
   progressTrack: {
     height: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.borderRadius.full,
     overflow: 'hidden',
   },
-  progressFill: { height: '100%', backgroundColor: '#3B82F6', borderRadius: 4 },
-  progressHint: { fontSize: 12, color: '#6B7280' },
+  progressFill: {
+    height: '100%',
+    backgroundColor: theme.colors.progressFill,
+    borderRadius: theme.borderRadius.full,
+  },
+  progressHint: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+  },
 
-  statsGrid: { flexDirection: 'row', gap: 10 },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
+  },
   statCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
-    gap: 3,
+    gap: theme.spacing.xs,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
+    ...theme.shadows.card,
   },
-  statIcon: { fontSize: 20 },
-  statValue: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  statValue: {
+    ...theme.typography.h3,
+    fontSize: 18,
+    color: theme.colors.text,
+  },
   statLabel: {
-    fontSize: 10,
-    color: '#6B7280',
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
     fontWeight: '500',
     textTransform: 'uppercase',
   },
 
   actionsSection: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
+    marginHorizontal: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
     overflow: 'hidden',
+    ...theme.shadows.card,
   },
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
   },
-  actionIcon: { fontSize: 20 },
-  actionLabel: { flex: 1, fontSize: 15, color: '#111827', fontWeight: '500' },
-  actionChevron: { fontSize: 20, color: '#9CA3AF' },
-  divider: { height: 1, backgroundColor: '#F3F4F6', marginLeft: 52 },
+  actionIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: theme.colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionLabel: {
+    flex: 1,
+    ...theme.typography.body,
+    color: theme.colors.text,
+    fontWeight: '500',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.borderLight,
+    marginLeft: 68,
+  },
 
-  memberSince: { fontSize: 12, color: '#9CA3AF', textAlign: 'center' },
+  memberSince: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
+
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.error + '44',
+    backgroundColor: theme.colors.errorLight,
+  },
+  logoutLabel: {
+    ...theme.typography.label,
+    color: theme.colors.error,
+  },
 });

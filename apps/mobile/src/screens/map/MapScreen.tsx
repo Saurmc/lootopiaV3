@@ -1,11 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   Camera,
   MapView,
@@ -14,11 +17,13 @@ import {
   type CameraRef,
 } from '@maplibre/maplibre-react-native';
 import * as Location from 'expo-location';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../../store/auth.store';
+import theme from '../../constants/theme';
 import type { AppTabParamList, AppStackParamList } from '../../navigation/AppNavigator';
 import { useHuntsOnMap, useHuntHistory } from '../../hooks/useHunts';
 import type { HuntListItem } from '../../services/hunt.service';
@@ -40,11 +45,15 @@ const OSM_STYLE = {
   layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
 };
 
+// PNG 2×100px généré : #242156 à 90%→60%→0% (stops Figma exacts, interpolation GPU)
+const GRADIENT_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAIAAABkCAYAAACsG+FjAAABCUlEQVR4nB3GQSsDAACA0ZXDaoeVg1I7iKQclINaOSgH5aDUDisHtcNK7bByUA6rHVbKQTmsFCJEIyJELDIRIkQjGhH5HfZ2eF9foLU5/kegml/MD+Yb84X5xHxgKph3zBvmFfOCKWOeMU+YR8wD5h5zh7nF3GCuMVeYS8wF5hxTwpxhTjEnmCLmGHOEOcQcYPYxe5hdzA5mG7OF2cRsYNYxBcwaZhWzglnGLGEWMQuYecwcZhYzg8ljpjFTmEnMBCaHyWIymHHMGGYUk8akMCOYJCaBGcYMYeKYGGYQM4Dpx/RhejE9mG5MFNOF6cR0YNoxbZgWTBMmgmnENGDqMWFMCBPE1GFq/gG/yeX5d7aTDAAAAABJRU5ErkJggg==';
+
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: '#22C55E',
   medium: '#F97316',
   hard: '#EF4444',
 };
+
 
 type MapNavProp = CompositeNavigationProp<
   BottomTabNavigationProp<AppTabParamList, 'Map'>,
@@ -55,12 +64,15 @@ export default function MapScreen() {
   const { consentGps } = useAuthStore();
   const navigation = useNavigation<MapNavProp>();
   const cameraRef = useRef<CameraRef>(null);
+  const insets = useSafeAreaInsets();
 
   const [center, setCenter] = useState<[number, number]>(PARIS);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [selectedHunt, setSelectedHunt] = useState<HuntListItem | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [cityName, setCityName] = useState<string | null>(null);
 
   const { data: hunts = [] } = useHuntsOnMap();
   const { data: history = [] } = useHuntHistory();
@@ -69,6 +81,27 @@ export default function MapScreen() {
     () => new Set(history.filter((h) => h.completed_at !== null).map((h) => h.hunt_id)),
     [history],
   );
+
+  // Filtre les marqueurs par recherche
+  const visibleHunts = useMemo(() => {
+    if (!searchQuery.trim()) return hunts;
+    const q = searchQuery.toLowerCase();
+    return hunts.filter((h) => h.title.toLowerCase().includes(q));
+  }, [hunts, searchQuery]);
+
+  // Nom de ville via IP geolocation — aucune permission GPS requise
+  useEffect(() => {
+    let cancelled = false;
+    fetch('https://ipapi.co/json/')
+      .then((r) => r.json())
+      .then((data: { city?: string; region?: string }) => {
+        if (!cancelled && (data.city ?? data.region)) {
+          setCityName(data.city ?? data.region ?? null);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!consentGps) return;
@@ -94,6 +127,15 @@ export default function MapScreen() {
             zoomLevel: DEFAULT_ZOOM,
             animationDuration: 600,
           });
+          // Reverse geocoding — chaîne de fallback élargie (city/district/subregion/name)
+          const geocoded = await Location.reverseGeocodeAsync({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+          if (!cancelled && geocoded[0]) {
+            const addr = geocoded[0];
+            setCityName(prev => prev ?? addr.city ?? addr.district ?? addr.subregion ?? addr.name ?? null);
+          }
         }
       } finally {
         if (!cancelled) setLocating(false);
@@ -123,6 +165,9 @@ export default function MapScreen() {
     }
   }, [consentGps, permissionDenied]);
 
+  // Gradient couvre UNIQUEMENT la ligne logo+ville (pas la search bar)
+  const logoCityRowH = insets.top + 52;
+
   return (
     <View style={styles.container}>
       <MapView
@@ -143,7 +188,7 @@ export default function MapScreen() {
 
         {consentGps && !permissionDenied && <UserLocation visible renderMode="normal" />}
 
-        {hunts.map((hunt) => {
+        {visibleHunts.map((hunt) => {
           const isCompleted = completedIds.has(hunt.id);
           const color = isCompleted
             ? '#9CA3AF'
@@ -164,24 +209,69 @@ export default function MapScreen() {
         })}
       </MapView>
 
-      {/* Spinner localisation */}
-      {locating && (
-        <View style={styles.locatingBadge}>
-          <ActivityIndicator size="small" color="#3B82F6" />
-          <Text style={styles.locatingText}>Localisation…</Text>
-        </View>
-      )}
+      {/* ── Gradient PNG Base64 : #242156 90%→60%→0% — zéro module natif ── */}
+      <Image
+        source={{ uri: `data:image/png;base64,${GRADIENT_PNG}` }}
+        style={[styles.gradientImage, { height: logoCityRowH + 28 }]}
+        resizeMode="stretch"
+        pointerEvents="none"
+      />
 
-      {/* Avertissement permission OS refusée */}
-      {permissionDenied && (
-        <View style={styles.permissionBanner}>
-          <Text style={styles.permissionText}>
-            Autorisation GPS refusée — carte centrée sur Paris
-          </Text>
+      {/* ── Contenu interactif de l'overlay ── */}
+      <View
+        style={[styles.overlayContent, { paddingTop: insets.top + theme.spacing.sm }]}
+        pointerEvents="box-none"
+      >
+        {/* Ligne 1 : Logo à gauche, Ville à droite */}
+        <View style={styles.topRow} pointerEvents="box-none">
+          <Text style={styles.logoText}>Lootopia</Text>
+          <View style={styles.cityBadge} pointerEvents="none">
+            {locating ? (
+              <ActivityIndicator size="small" color={theme.colors.textInverse} />
+            ) : (
+              <>
+                <Ionicons name="location-sharp" size={11} color={theme.colors.textInverse} />
+                {cityName ? <Text style={styles.cityText}>{cityName}</Text> : null}
+              </>
+            )}
+          </View>
         </View>
-      )}
 
-      {/* Bouton Recentrer */}
+        {/* Ligne 2 : Search bar + Hamburger */}
+        <View style={styles.searchRow} pointerEvents="box-none">
+          <View style={styles.searchBarWrapper}>
+            <Ionicons name="search-outline" size={15} color={theme.colors.textSecondary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher une chasse…"
+              placeholderTextColor={theme.colors.textDisabled}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              returnKeyType="search"
+              clearButtonMode="while-editing"
+            />
+          </View>
+          <TouchableOpacity
+            style={styles.hamburgerBtn}
+            onPress={() => navigation.navigate('HuntsList')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="menu" size={24} color={theme.colors.textInverse} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Bannière permission refusée */}
+        {permissionDenied && (
+          <View style={styles.permissionBanner}>
+            <Ionicons name="warning-outline" size={13} color={theme.colors.warning} />
+            <Text style={styles.permissionText}>
+              GPS refusé — carte centrée sur Paris
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* ── Bouton Recentrer ── */}
       {consentGps && !permissionDenied && (
         <TouchableOpacity
           style={styles.recenterBtn}
@@ -189,20 +279,11 @@ export default function MapScreen() {
           activeOpacity={0.8}
           disabled={locating}
         >
-          <Text style={styles.recenterIcon}>⊙</Text>
+          <Ionicons name="locate" size={22} color={theme.colors.primary} />
         </TouchableOpacity>
       )}
 
-      {/* Bouton Liste */}
-      <TouchableOpacity
-        style={styles.listBtn}
-        onPress={() => navigation.navigate('Hunts')}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.listBtnLabel}>☰ Liste</Text>
-      </TouchableOpacity>
-
-      {/* Bottom sheet chasse sélectionnée */}
+      {/* ── Bottom sheet chasse sélectionnée ── */}
       <HuntBottomSheet
         hunt={selectedHunt}
         userLat={userCoords?.lat ?? null}
@@ -220,6 +301,8 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+
+  // ── Markers (intouchables) ──
   marker: {
     width: 36,
     height: 36,
@@ -235,66 +318,114 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   markerText: { fontSize: 14 },
-  locatingBadge: {
+
+
+  // ── Gradient PNG overlay ──
+  gradientImage: {
     position: 'absolute',
-    top: 16,
-    alignSelf: 'center',
+    top: 0,
+    left: 0,
+    right: 0,
+    width: '100%',
+  },
+
+  // ── Overlay content ──
+  overlayContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.lg,
+  },
+  topRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 4,
+    justifyContent: 'space-between',
   },
-  locatingText: { fontSize: 13, color: '#374151' },
-  permissionBanner: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    right: 16,
-    backgroundColor: '#FEF3C7',
-    borderRadius: 8,
-    padding: 10,
+  logoText: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: theme.colors.textInverse,
+    fontStyle: 'italic',
+    letterSpacing: 0.5,
+  },
+  cityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: 5,
+    paddingHorizontal: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
-  permissionText: { fontSize: 12, color: '#92400E', textAlign: 'center' },
-  recenterBtn: {
-    position: 'absolute',
-    bottom: 24,
-    right: 16,
-    backgroundColor: '#fff',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  cityText: {
+    ...theme.typography.caption,
+    color: theme.colors.textInverse,
+    fontWeight: '600',
+  },
+
+  // ── Search row ──
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  searchBarWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: theme.borderRadius.full,
+    paddingHorizontal: theme.spacing.md,
+    height: 42,
+  },
+  searchInput: {
+    flex: 1,
+    ...theme.typography.bodySmall,
+    color: theme.colors.text,
+    paddingVertical: 0,
+  },
+  hamburgerBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    ...theme.shadows.card,
   },
-  recenterIcon: { fontSize: 22, color: '#3B82F6' },
-  listBtn: {
+
+  // ── Permission banner (inside overlay) ──
+  permissionBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.warningLight,
+    borderRadius: theme.borderRadius.sm,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+    alignSelf: 'flex-start',
+  },
+  permissionText: {
+    ...theme.typography.caption,
+    color: theme.colors.text,
+  },
+
+  // ── Recenter button ──
+  recenterBtn: {
     position: 'absolute',
-    bottom: 24,
-    left: 16,
-    backgroundColor: '#1D4ED8',
-    borderRadius: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 4,
+    bottom: theme.spacing.lg,
+    right: theme.spacing.md,
+    backgroundColor: theme.colors.surface,
+    width: 48,
+    height: 48,
+    borderRadius: theme.borderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...theme.shadows.elevated,
   },
-  listBtnLabel: { color: '#fff', fontSize: 14, fontWeight: '600' },
 });

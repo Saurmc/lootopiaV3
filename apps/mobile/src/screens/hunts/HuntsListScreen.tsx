@@ -10,16 +10,16 @@ import {
   View,
 } from 'react-native';
 import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import type { CompositeNavigationProp } from '@react-navigation/native';
-import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuthStore } from '../../store/auth.store';
 import { useHuntsList } from '../../hooks/useHunts';
-import type { AppTabParamList, AppStackParamList } from '../../navigation/AppNavigator';
+import type { AppStackParamList } from '../../navigation/AppNavigator';
 import { haversineDistance, formatDistance } from '../../services/hunt.service';
 import type { HuntListItem } from '../../services/hunt.service';
 import HuntBottomSheet from '../map/HuntBottomSheet';
+import theme from '../../constants/theme';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
@@ -31,9 +31,9 @@ const DIFFICULTIES = [
 ] as const;
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: '#22C55E',
-  medium: '#F97316',
-  hard: '#EF4444',
+  easy: theme.colors.difficultyEasy,
+  medium: theme.colors.difficultyMedium,
+  hard: theme.colors.difficultyHard,
 };
 
 const DIFFICULTY_LABELS: Record<string, string> = {
@@ -63,7 +63,7 @@ interface HuntCardProps {
 }
 
 function HuntCard({ hunt, userLat, userLng, onPress }: HuntCardProps) {
-  const diffColor = DIFFICULTY_COLORS[hunt.difficulty ?? ''] ?? '#6B7280';
+  const diffColor = DIFFICULTY_COLORS[hunt.difficulty ?? ''] ?? theme.colors.textSecondary;
   const diffLabel = DIFFICULTY_LABELS[hunt.difficulty ?? ''] ?? hunt.difficulty;
 
   const distance =
@@ -73,28 +73,53 @@ function HuntCard({ hunt, userLat, userLng, onPress }: HuntCardProps) {
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.cardHeader}>
-        <Text style={styles.cardTitle} numberOfLines={1}>{hunt.title}</Text>
-        {hunt.difficulty && (
-          <View style={[styles.diffBadge, { borderColor: diffColor }]}>
-            <Text style={[styles.diffText, { color: diffColor }]}>{diffLabel}</Text>
+      {/* Icône carrée violette gauche */}
+      <View style={styles.cardIconBox}>
+        <Ionicons name="compass" size={28} color={theme.colors.textInverse} />
+      </View>
+
+      {/* Contenu central */}
+      <View style={styles.cardContent}>
+        <View style={styles.cardTitleRow}>
+          <Text style={styles.cardTitle} numberOfLines={1}>{hunt.title}</Text>
+          {hunt.difficulty && (
+            <View style={[styles.diffBadge, { borderColor: diffColor }]}>
+              <Text style={[styles.diffText, { color: diffColor }]}>{diffLabel}</Text>
+            </View>
+          )}
+        </View>
+
+        {hunt.location ? (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={12} color={theme.colors.textSecondary} />
+            <Text style={styles.location} numberOfLines={1}>{hunt.location}</Text>
           </View>
-        )}
+        ) : null}
+
+        <View style={styles.cardMeta}>
+          {distance ? (
+            <View style={styles.metaItem}>
+              <Ionicons name="map-outline" size={11} color={theme.colors.textSecondary} />
+              <Text style={styles.metaText}>{distance}</Text>
+            </View>
+          ) : null}
+          {hunt.duration ? (
+            <View style={styles.metaItem}>
+              <Ionicons name="time-outline" size={11} color={theme.colors.textSecondary} />
+              <Text style={styles.metaText}>{hunt.duration} min</Text>
+            </View>
+          ) : null}
+          <View style={styles.metaItem}>
+            <Ionicons name="star" size={11} color={theme.colors.points} />
+            <Text style={styles.metaText}>{hunt.points} pts</Text>
+          </View>
+        </View>
       </View>
 
-      {hunt.location ? (
-        <Text style={styles.location} numberOfLines={1}>📍 {hunt.location}</Text>
-      ) : null}
-
-      {hunt.description ? (
-        <Text style={styles.description} numberOfLines={2}>{hunt.description}</Text>
-      ) : null}
-
-      <View style={styles.cardMeta}>
-        {distance ? <Text style={styles.metaChip}>🗺 {distance}</Text> : null}
-        {hunt.duration ? <Text style={styles.metaChip}>⏱ {hunt.duration} min</Text> : null}
-        <Text style={styles.metaChip}>⭐ {hunt.points} pts</Text>
-      </View>
+      {/* Bouton play corail */}
+      <TouchableOpacity style={styles.playBtn} onPress={onPress} activeOpacity={0.8}>
+        <Ionicons name="play" size={18} color={theme.colors.textInverse} />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -104,11 +129,9 @@ function HuntCard({ hunt, userLat, userLng, onPress }: HuntCardProps) {
 /**
  * HuntsListScreen — liste des chasses avec recherche textuelle et filtres.
  * Triée par distance (GPS) ou par titre (fallback).
+ * Accessible depuis le hamburger de MapScreen (stack modal).
  */
-type HuntsNavProp = CompositeNavigationProp<
-  BottomTabNavigationProp<AppTabParamList, 'Hunts'>,
-  NativeStackNavigationProp<AppStackParamList>
->;
+type HuntsNavProp = NativeStackNavigationProp<AppStackParamList>;
 
 export default function HuntsListScreen() {
   const { consentGps } = useAuthStore();
@@ -156,11 +179,11 @@ export default function HuntsListScreen() {
     <SafeAreaView style={styles.container}>
       {/* Barre de recherche */}
       <View style={styles.searchRow}>
-        <Text style={styles.searchIcon}>🔍</Text>
+        <Ionicons name="search-outline" size={16} color={theme.colors.textSecondary} />
         <TextInput
           style={styles.searchInput}
           placeholder="Rechercher une chasse…"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={theme.colors.textDisabled}
           value={search}
           onChangeText={setSearch}
           returnKeyType="search"
@@ -195,7 +218,7 @@ export default function HuntsListScreen() {
 
       {/* Liste */}
       {isLoading ? (
-        <ActivityIndicator size="large" color="#3B82F6" style={styles.loader} />
+        <ActivityIndicator size="large" color={theme.colors.primary} style={styles.loader} />
       ) : (
         <FlatList
           data={filtered}
@@ -212,7 +235,7 @@ export default function HuntsListScreen() {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>🔍</Text>
+              <Ionicons name="search-outline" size={48} color={theme.colors.textDisabled} />
               <Text style={styles.emptyText}>Aucune chasse trouvée</Text>
               {search ? (
                 <Text style={styles.emptyHint}>Essayez un autre mot-clé</Text>
@@ -242,141 +265,159 @@ export default function HuntsListScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.surfaceElevated,
   },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 8,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
+    borderColor: theme.colors.border,
+    gap: theme.spacing.sm,
   },
   searchInput: {
     flex: 1,
     height: 44,
-    fontSize: 15,
-    color: '#111827',
+    ...theme.typography.body,
+    color: theme.colors.text,
   },
   filterRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 8,
-    marginBottom: 4,
+    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   chip: {
     paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: theme.colors.border,
   },
   chipActive: {
-    backgroundColor: '#1D4ED8',
-    borderColor: '#1D4ED8',
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   chipText: {
-    fontSize: 13,
+    ...theme.typography.caption,
     fontWeight: '500',
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
   chipTextActive: {
-    color: '#fff',
+    color: theme.colors.textInverse,
   },
   count: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    marginHorizontal: 16,
-    marginBottom: 8,
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    marginHorizontal: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   loader: {
     marginTop: 60,
   },
   list: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
-    gap: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.lg,
+    gap: theme.spacing.md,
+    paddingTop: theme.spacing.sm,
   },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    borderColor: theme.colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    ...theme.shadows.card,
   },
-  cardHeader: {
+  cardIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.huntIconBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  cardContent: {
+    flex: 1,
+    gap: theme.spacing.xs,
+  },
+  cardTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
-    gap: 8,
+    gap: theme.spacing.sm,
   },
   cardTitle: {
     flex: 1,
+    ...theme.typography.h3,
     fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
   },
   diffBadge: {
     paddingVertical: 2,
-    paddingHorizontal: 8,
-    borderRadius: 10,
+    paddingHorizontal: theme.spacing.sm,
+    borderRadius: theme.borderRadius.full,
     borderWidth: 1,
   },
   diffText: {
-    fontSize: 11,
+    ...theme.typography.caption,
     fontWeight: '600',
   },
-  location: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
-  description: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 18,
-    marginBottom: 8,
+  location: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    flex: 1,
   },
   cardMeta: {
     flexDirection: 'row',
-    gap: 10,
+    gap: theme.spacing.md,
     flexWrap: 'wrap',
   },
-  metaChip: {
-    fontSize: 12,
-    color: '#374151',
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  metaText: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
     fontWeight: '500',
+  },
+  playBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
   },
   empty: {
     alignItems: 'center',
     paddingTop: 60,
-    gap: 8,
-  },
-  emptyIcon: {
-    fontSize: 40,
+    gap: theme.spacing.sm,
   },
   emptyText: {
-    fontSize: 16,
-    color: '#9CA3AF',
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   emptyHint: {
-    fontSize: 13,
-    color: '#D1D5DB',
+    ...theme.typography.bodySmall,
+    color: theme.colors.textDisabled,
   },
 });

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,6 +16,7 @@ import { useHuntDetail, useHuntProgress } from '../../hooks/useHunts';
 import { huntService } from '../../services/hunt.service';
 import type { StepDetail } from '../../services/hunt.service';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
+import theme from '../../constants/theme';
 
 type RouteProps = RouteProp<AppStackParamList, 'HuntDetail'>;
 type NavProp = NativeStackNavigationProp<AppStackParamList, 'HuntDetail'>;
@@ -26,21 +28,15 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: '#22C55E',
-  medium: '#F97316',
-  hard: '#EF4444',
-};
-
-const STATUS_ICONS: Record<string, string> = {
-  completed: '✓',
-  current: '▶',
-  locked: '🔒',
+  easy: theme.colors.difficultyEasy,
+  medium: theme.colors.difficultyMedium,
+  hard: theme.colors.difficultyHard,
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  completed: '#22C55E',
-  current: '#1D4ED8',
-  locked: '#D1D5DB',
+  completed: theme.colors.success,
+  current: theme.colors.primary,
+  locked: theme.colors.textDisabled,
 };
 
 // ─── StepRow ─────────────────────────────────────────────────────────────────
@@ -51,16 +47,19 @@ interface StepRowProps {
 }
 
 function StepRow({ step, onStartStep }: StepRowProps) {
-  const iconColor = STATUS_COLORS[step.status] ?? '#6B7280';
+  const iconColor = STATUS_COLORS[step.status] ?? theme.colors.textSecondary;
   const isCurrent = step.status === 'current';
   const isLocked = step.status === 'locked';
 
+  const badgeIcon =
+    step.status === 'completed' ? 'checkmark' :
+    step.status === 'current' ? 'play' :
+    'lock-closed';
+
   return (
     <View style={[styles.stepRow, isCurrent && styles.stepRowCurrent]}>
-      <View style={[styles.stepBadge, { backgroundColor: isLocked ? '#F3F4F6' : iconColor + '20' }]}>
-        <Text style={[styles.stepBadgeText, { color: isLocked ? '#9CA3AF' : iconColor }]}>
-          {STATUS_ICONS[step.status] ?? step.order}
-        </Text>
+      <View style={[styles.stepBadge, { backgroundColor: isLocked ? theme.colors.surfaceElevated : iconColor + '22' }]}>
+        <Ionicons name={badgeIcon} size={16} color={isLocked ? theme.colors.textDisabled : iconColor} />
       </View>
 
       <View style={styles.stepInfo}>
@@ -155,7 +154,7 @@ export default function HuntDetailScreen() {
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -163,7 +162,7 @@ export default function HuntDetailScreen() {
   if (huntError || !hunt) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorIcon}>⚠️</Text>
+        <Ionicons name="warning-outline" size={40} color={theme.colors.textSecondary} />
         <Text style={styles.errorText}>Chasse introuvable</Text>
       </View>
     );
@@ -171,7 +170,7 @@ export default function HuntDetailScreen() {
 
   // ── Données dérivées ─────────────────────────────────────────────────────────
 
-  const diffColor = DIFFICULTY_COLORS[hunt.difficulty ?? ''] ?? '#6B7280';
+  const diffColor = DIFFICULTY_COLORS[hunt.difficulty ?? ''] ?? theme.colors.textSecondary;
   const diffLabel = DIFFICULTY_LABELS[hunt.difficulty ?? ''] ?? hunt.difficulty ?? '—';
   const completedCount = progress
     ? progress.steps.filter((s) => s.status === 'completed').length
@@ -181,15 +180,18 @@ export default function HuntDetailScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* En-tête */}
+      {/* En-tête violet */}
       <View style={styles.header}>
-        <View style={[styles.diffBadge, { backgroundColor: diffColor + '20' }]}>
+        <View style={[styles.diffBadge, { backgroundColor: diffColor + '33' }]}>
           <Text style={[styles.diffText, { color: diffColor }]}>{diffLabel}</Text>
         </View>
         <Text style={styles.title}>{hunt.title}</Text>
 
         {hunt.location ? (
-          <Text style={styles.location}>📍 {hunt.location}</Text>
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.7)" />
+            <Text style={styles.location}>{hunt.location}</Text>
+          </View>
         ) : null}
 
         {hunt.description ? (
@@ -200,14 +202,17 @@ export default function HuntDetailScreen() {
         <View style={styles.metaRow}>
           {hunt.duration ? (
             <View style={styles.metaChip}>
-              <Text style={styles.metaChipText}>⏱ {hunt.duration} min</Text>
+              <Ionicons name="time-outline" size={12} color={theme.colors.textInverse} />
+              <Text style={styles.metaChipText}>{hunt.duration} min</Text>
             </View>
           ) : null}
           <View style={styles.metaChip}>
-            <Text style={styles.metaChipText}>⭐ {hunt.points} pts</Text>
+            <Ionicons name="star" size={12} color={theme.colors.points} />
+            <Text style={styles.metaChipText}>{hunt.points} pts</Text>
           </View>
           <View style={styles.metaChip}>
-            <Text style={styles.metaChipText}>📋 {hunt.step_count} étape{hunt.step_count !== 1 ? 's' : ''}</Text>
+            <Ionicons name="list-outline" size={12} color={theme.colors.textInverse} />
+            <Text style={styles.metaChipText}>{hunt.step_count} étape{hunt.step_count !== 1 ? 's' : ''}</Text>
           </View>
         </View>
       </View>
@@ -219,7 +224,8 @@ export default function HuntDetailScreen() {
           <ProgressBar completed={completedCount} total={progress.steps.length} />
           {progress.completed_at && (
             <View style={styles.completedBanner}>
-              <Text style={styles.completedBannerText}>🏆 Chasse terminée !</Text>
+              <Ionicons name="trophy" size={18} color={theme.colors.success} />
+              <Text style={styles.completedBannerText}>Chasse terminée !</Text>
             </View>
           )}
         </View>
@@ -265,7 +271,7 @@ export default function HuntDetailScreen() {
             activeOpacity={0.8}
           >
             {joining ? (
-              <ActivityIndicator color="#fff" size="small" />
+              <ActivityIndicator color={theme.colors.textInverse} size="small" />
             ) : (
               <Text style={styles.joinBtnLabel}>Rejoindre la chasse</Text>
             )}
@@ -283,217 +289,216 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
-    backgroundColor: '#F9FAFB',
+    gap: theme.spacing.md,
+    backgroundColor: theme.colors.surfaceElevated,
   },
-  errorIcon: { fontSize: 40 },
-  errorText: { fontSize: 16, color: '#9CA3AF' },
+  errorText: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: theme.colors.surfaceElevated,
   },
   content: {
-    paddingBottom: 40,
+    paddingBottom: theme.spacing.xxl,
   },
   header: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    gap: 8,
+    backgroundColor: theme.colors.gradientStart,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    gap: theme.spacing.sm,
   },
   diffBadge: {
     alignSelf: 'flex-start',
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    borderRadius: 12,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.full,
   },
   diffText: {
-    fontSize: 12,
+    ...theme.typography.caption,
     fontWeight: '600',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
-    lineHeight: 28,
+    ...theme.typography.h2,
+    color: theme.colors.textInverse,
+    lineHeight: 30,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
   location: {
-    fontSize: 13,
-    color: '#6B7280',
+    ...theme.typography.bodySmall,
+    color: 'rgba(255,255,255,0.75)',
   },
   description: {
-    fontSize: 14,
-    color: '#374151',
+    ...theme.typography.bodySmall,
+    color: 'rgba(255,255,255,0.85)',
     lineHeight: 20,
   },
   metaRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
+    gap: theme.spacing.sm,
+    marginTop: theme.spacing.xs,
   },
   metaChip: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: theme.borderRadius.full,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.xs,
   },
   metaChipText: {
-    fontSize: 12,
-    color: '#374151',
+    ...theme.typography.caption,
+    color: theme.colors.textInverse,
     fontWeight: '500',
   },
   section: {
-    marginTop: 16,
-    paddingHorizontal: 16,
-    gap: 10,
+    marginTop: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   sectionTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 2,
+    ...theme.typography.label,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
   },
   progressContainer: {
-    gap: 6,
+    gap: theme.spacing.sm,
   },
   progressTrack: {
     height: 8,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 4,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.borderRadius.full,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#3B82F6',
-    borderRadius: 4,
+    backgroundColor: theme.colors.progressFill,
+    borderRadius: theme.borderRadius.full,
   },
   progressLabel: {
-    fontSize: 13,
-    color: '#6B7280',
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
   },
   completedBanner: {
-    backgroundColor: '#F0FDF4',
-    borderRadius: 10,
-    paddingVertical: 10,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.successLight,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.sm,
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: theme.colors.success + '44',
   },
   completedBannerText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#15803D',
+    ...theme.typography.label,
+    color: theme.colors.success,
   },
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 12,
+    borderColor: theme.colors.border,
+    gap: theme.spacing.md,
+    ...theme.shadows.card,
   },
   stepRowCurrent: {
-    borderColor: '#3B82F6',
+    borderColor: theme.colors.primary,
     borderWidth: 2,
   },
   stepRowPreview: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    gap: 12,
+    borderColor: theme.colors.border,
+    gap: theme.spacing.md,
   },
   stepBadge: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: theme.borderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
-  },
-  stepBadgeText: {
-    fontSize: 14,
-    fontWeight: '700',
   },
   stepBadgePreview: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: theme.borderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#EFF6FF',
+    backgroundColor: theme.colors.primaryLight,
     flexShrink: 0,
   },
   stepBadgePreviewText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#3B82F6',
+    ...theme.typography.label,
+    color: theme.colors.primary,
   },
   stepInfo: {
     flex: 1,
-    gap: 2,
+    gap: theme.spacing.xs,
   },
   stepTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
+    ...theme.typography.label,
+    color: theme.colors.text,
   },
   stepTitleLocked: {
-    color: '#9CA3AF',
+    color: theme.colors.textDisabled,
   },
   stepDesc: {
-    fontSize: 12,
-    color: '#6B7280',
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
     lineHeight: 16,
   },
   startBtn: {
-    backgroundColor: '#1D4ED8',
-    borderRadius: 8,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.md,
     flexShrink: 0,
   },
   startBtnLabel: {
-    color: '#fff',
-    fontSize: 12,
+    color: theme.colors.textInverse,
+    ...theme.typography.caption,
     fontWeight: '600',
   },
   joinSection: {
-    marginTop: 24,
-    paddingHorizontal: 20,
-    gap: 10,
+    marginTop: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.lg,
+    gap: theme.spacing.md,
   },
   joinError: {
-    fontSize: 13,
-    color: '#EF4444',
+    ...theme.typography.bodySmall,
+    color: theme.colors.error,
     textAlign: 'center',
   },
   joinBtn: {
-    backgroundColor: '#1D4ED8',
-    borderRadius: 14,
-    paddingVertical: 16,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.xl,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
-    shadowColor: '#1D4ED8',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    ...theme.shadows.elevated,
   },
   joinBtnDisabled: {
     opacity: 0.6,
   },
   joinBtnLabel: {
-    color: '#fff',
-    fontSize: 16,
+    color: theme.colors.textInverse,
+    ...theme.typography.body,
     fontWeight: '700',
   },
 });

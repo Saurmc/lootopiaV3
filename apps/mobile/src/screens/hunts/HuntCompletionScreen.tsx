@@ -8,11 +8,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useHuntDetail } from '../../hooks/useHunts';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
+import theme from '../../constants/theme';
 
 type RouteProps = RouteProp<AppStackParamList, 'HuntCompletion'>;
 type NavProp = NativeStackNavigationProp<AppStackParamList, 'HuntCompletion'>;
@@ -20,8 +22,8 @@ type NavProp = NativeStackNavigationProp<AppStackParamList, 'HuntCompletion'>;
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get('window');
 
 const CONFETTI_COLORS = [
-  '#EF4444', '#3B82F6', '#22C55E', '#F59E0B',
-  '#8B5CF6', '#EC4899', '#F97316', '#06B6D4',
+  theme.colors.primary, '#3B82F6', theme.colors.success, theme.colors.points,
+  '#8B5CF6', '#EC4899', theme.colors.warning, '#06B6D4',
 ];
 
 const PIECE_COUNT = 22;
@@ -115,10 +117,20 @@ function Confetti() {
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 
-function StatCard({ icon, label, value }: { icon: string; label: string; value: string }) {
+function StatCard({
+  iconName,
+  iconColor,
+  label,
+  value,
+}: {
+  iconName: React.ComponentProps<typeof Ionicons>['name'];
+  iconColor: string;
+  label: string;
+  value: string;
+}) {
   return (
     <View style={styles.statCard}>
-      <Text style={styles.statIcon}>{icon}</Text>
+      <Ionicons name={iconName} size={22} color={iconColor} />
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -173,18 +185,22 @@ export default function HuntCompletionScreen() {
 
         {/* Titre */}
         <Text style={styles.congratsTitle}>Félicitations !</Text>
-        <Text style={styles.congratsSub}>
-          Tu as terminé la chasse
-        </Text>
+        <Text style={styles.congratsSub}>Tu as terminé la chasse</Text>
         {hunt && (
           <Text style={styles.huntTitle} numberOfLines={2}>{hunt.title}</Text>
         )}
 
+        {/* Badge 100% complète */}
+        <View style={styles.completeBadge}>
+          <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
+          <Text style={styles.completeBadgeText}>100% Complète</Text>
+        </View>
+
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatCard icon="⭐" label="Points" value={`${totalPoints}`} />
-          <StatCard icon="📋" label="Étapes" value={`${stepCount}`} />
-          <StatCard icon="⏱" label="Durée" value={durationLabel} />
+          <StatCard iconName="time-outline" iconColor={theme.colors.textInverse} label="Durée" value={durationLabel} />
+          <StatCard iconName="star" iconColor={theme.colors.points} label="Points" value={`${totalPoints}`} />
+          <StatCard iconName="list-outline" iconColor={theme.colors.textInverse} label="Étapes" value={`${stepCount}`} />
         </View>
 
         {/* Boutons */}
@@ -193,7 +209,8 @@ export default function HuntCompletionScreen() {
           onPress={() => navigation.popToTop()}
           activeOpacity={0.8}
         >
-          <Text style={styles.primaryBtnLabel}>🗺 Retour à la carte</Text>
+          <Ionicons name="map-outline" size={18} color={theme.colors.textInverse} />
+          <Text style={styles.primaryBtnLabel}>Retour à la carte</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -216,14 +233,14 @@ export default function HuntCompletionScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: theme.colors.background,
   },
   content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 28,
-    gap: 12,
+    paddingHorizontal: theme.spacing.xl,
+    gap: theme.spacing.md,
   },
   confettiPiece: {
     position: 'absolute',
@@ -231,84 +248,91 @@ const styles = StyleSheet.create({
   },
   trophy: {
     fontSize: 88,
-    marginBottom: 4,
+    marginBottom: theme.spacing.xs,
   },
   congratsTitle: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#F1F5F9',
+    ...theme.typography.h1,
+    color: theme.colors.textInverse,
     textAlign: 'center',
   },
   congratsSub: {
-    fontSize: 15,
-    color: '#94A3B8',
+    ...theme.typography.body,
+    color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
   },
   huntTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FCD34D',
+    ...theme.typography.h3,
+    color: theme.colors.points,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 26,
+  },
+  completeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    backgroundColor: theme.colors.successLight,
+    borderRadius: theme.borderRadius.full,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+  },
+  completeBadgeText: {
+    ...theme.typography.label,
+    color: theme.colors.success,
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-    marginBottom: 8,
+    gap: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
   },
   statCard: {
     flex: 1,
-    backgroundColor: '#1E293B',
-    borderRadius: 14,
-    paddingVertical: 14,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.md,
     alignItems: 'center',
-    gap: 4,
+    gap: theme.spacing.xs,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.18)',
   },
-  statIcon: { fontSize: 22 },
   statValue: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#F1F5F9',
+    ...theme.typography.h3,
+    color: theme.colors.textInverse,
   },
   statLabel: {
-    fontSize: 11,
-    color: '#64748B',
+    ...theme.typography.caption,
+    color: 'rgba(255,255,255,0.6)',
     fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   primaryBtn: {
     width: '100%',
-    backgroundColor: '#1D4ED8',
-    borderRadius: 14,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    shadowColor: '#1D4ED8',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 6,
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.xl,
+    paddingVertical: theme.spacing.md,
+    marginTop: theme.spacing.sm,
+    ...theme.shadows.elevated,
   },
   primaryBtnLabel: {
-    color: '#fff',
-    fontSize: 16,
+    color: theme.colors.textInverse,
+    ...theme.typography.body,
     fontWeight: '700',
   },
   secondaryBtn: {
     width: '100%',
     paddingVertical: 13,
     alignItems: 'center',
-    borderRadius: 14,
+    borderRadius: theme.borderRadius.xl,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: 'rgba(255,255,255,0.25)',
   },
   secondaryBtnLabel: {
-    color: '#94A3B8',
-    fontSize: 15,
-    fontWeight: '500',
+    ...theme.typography.label,
+    color: 'rgba(255,255,255,0.75)',
   },
 });

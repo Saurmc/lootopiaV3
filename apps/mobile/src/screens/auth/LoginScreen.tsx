@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -10,6 +11,7 @@ import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { useAuth } from '../../hooks/useAuth';
 import { extractApiError } from '../../utils/error.utils';
+import theme from '../../constants/theme';
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -51,40 +53,51 @@ export default function LoginScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.form}>
-        <Text style={styles.title}>Connexion</Text>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.logoSection}>
+          <Text style={styles.logoText}>Lootopia</Text>
+          <Text style={styles.logoSubtitle}>Explorez. Découvrez. Gagnez.</Text>
+        </View>
 
-        {errors.global && (
-          <View style={styles.globalError}>
-            <Text style={styles.globalErrorText}>{errors.global}</Text>
-          </View>
-        )}
+        <View style={styles.form}>
+          {errors.global && (
+            <View style={styles.globalError}>
+              <Text style={styles.globalErrorText}>{errors.global}</Text>
+            </View>
+          )}
 
-        <Input
-          label="Email"
-          placeholder="vous@exemple.com"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-          error={errors.email}
-        />
+          <Input
+            label="Email"
+            placeholder="vous@exemple.com"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+            error={errors.email}
+            variant="dark"
+          />
 
-        <Input
-          label="Mot de passe"
-          placeholder="••••••••"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-          error={errors.password}
-        />
+          <Input
+            label="Mot de passe"
+            placeholder="••••••••"
+            secureTextEntry
+            value={password}
+            onChangeText={setPassword}
+            error={errors.password}
+            variant="dark"
+          />
 
-        <Button
-          label="Se connecter"
-          loading={loading}
-          onPress={handleLogin}
-          style={styles.button}
-        />
-      </View>
+          <Button
+            label="Se connecter"
+            loading={loading}
+            onPress={handleLogin}
+            style={styles.button}
+          />
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -92,29 +105,43 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  scroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.lg,
+    paddingVertical: theme.spacing.xxl,
+  },
+  logoSection: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.xxl,
+  },
+  logoText: {
+    ...theme.typography.logoFont,
+    color: theme.colors.textInverse,
+    fontStyle: 'italic',
+  },
+  logoSubtitle: {
+    ...theme.typography.bodySmall,
+    color: 'rgba(255,255,255,0.65)',
+    marginTop: theme.spacing.xs,
+    letterSpacing: 0.5,
   },
   form: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 24,
+    width: '100%',
   },
   globalError: {
-    backgroundColor: '#FEE2E2',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 16,
+    backgroundColor: theme.colors.errorLight,
+    borderRadius: theme.borderRadius.sm,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   globalErrorText: {
-    color: '#B91C1C',
-    fontSize: 14,
+    ...theme.typography.bodySmall,
+    color: theme.colors.error,
   },
   button: {
-    marginTop: 8,
+    marginTop: theme.spacing.md,
   },
 });
