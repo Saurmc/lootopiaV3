@@ -29,7 +29,7 @@ import { useHuntsOnMap, useHuntHistory } from '../../hooks/useHunts';
 import type { HuntListItem } from '../../services/hunt.service';
 import HuntBottomSheet from './HuntBottomSheet';
 
-const PARIS: [number, number] = [2.3522, 48.8566];
+const RENNES: [number, number] = [-1.6743, 48.1173];
 const DEFAULT_ZOOM = 13;
 
 const OSM_STYLE = {
@@ -66,7 +66,7 @@ export default function MapScreen() {
   const cameraRef = useRef<CameraRef>(null);
   const insets = useSafeAreaInsets();
 
-  const [center, setCenter] = useState<[number, number]>(PARIS);
+  const [center, setCenter] = useState<[number, number]>(RENNES);
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
   const [permissionDenied, setPermissionDenied] = useState(false);
@@ -224,7 +224,11 @@ export default function MapScreen() {
       >
         {/* Ligne 1 : Logo à gauche, Ville à droite */}
         <View style={styles.topRow} pointerEvents="box-none">
-          <Text style={styles.logoText}>Lootopia</Text>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <View style={styles.cityBadge} pointerEvents="none">
             {locating ? (
               <ActivityIndicator size="small" color={theme.colors.textInverse} />
@@ -343,12 +347,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  logoText: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: theme.colors.textInverse,
-    fontStyle: 'italic',
-    letterSpacing: 0.5,
+  logoImage: {
+    width: 120,
+    height: 50,
   },
   cityBadge: {
     flexDirection: 'row',

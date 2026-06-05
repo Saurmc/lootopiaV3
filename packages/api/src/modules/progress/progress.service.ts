@@ -121,6 +121,9 @@ export class ProgressService {
       case 'photo':
         this.validatePhoto(dto);
         break;
+      case 'ar':
+        this.validateAr(dto);
+        break;
       default:
         throw new BadRequestException(`Unknown validation type: ${type}`);
     }
@@ -167,6 +170,12 @@ export class ProgressService {
     }
     if (dto.answer.toLowerCase().trim() !== expectedAnswer.toLowerCase().trim()) {
       throw new BadRequestException('Wrong answer');
+    }
+  }
+
+  private validateAr(dto: ValidateStepDto): void {
+    if (!dto.marker_triggered) {
+      throw new BadRequestException('AR marker must be detected before validating this step');
     }
   }
 
@@ -218,6 +227,9 @@ export class ProgressService {
         validation_radius: step.validation_radius,
         validation_type: step.validation_type ?? 'gps',
         coordinates,
+        ar_content: (isCurrent || isCompleted)
+          ? (step.ar_content as Record<string, unknown> | null) ?? null
+          : null,
       };
     });
 

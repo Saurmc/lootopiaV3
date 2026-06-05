@@ -1,113 +1,180 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Animated,
+  Keyboard,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import type { BarcodeScanningResult } from 'expo-camera';
+import ARSection from '../../components/step/ARSection';
+import type { ArContent } from '../../components/step/ARSection';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Location from 'expo-location';
 import { useHuntDetail, useHuntProgress } from '../../hooks/useHunts';
 import { huntService } from '../../services/hunt.service';
-import type { StepDetail } from '../../services/hunt.service';
+import { haversineDistance, formatDistance } from '../../services/hunt.service';
+import type { StepDetail, HuntProgress } from '../../services/hunt.service';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import theme from '../../constants/theme';
 
 type RouteProps = RouteProp<AppStackParamList, 'HuntDetail'>;
 type NavProp = NativeStackNavigationProp<AppStackParamList, 'HuntDetail'>;
 
-const DIFFICULTY_LABELS: Record<string, string> = {
-  easy: 'Facile',
-  medium: 'Moyen',
-  hard: 'Difficile',
-};
+type ValidationState = 'idle' | 'locating' | 'validating' | 'success' | 'error';
 
+const DIFFICULTY_LABELS: Record<string, string> = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' };
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: theme.colors.difficultyEasy,
   medium: theme.colors.difficultyMedium,
   hard: theme.colors.difficultyHard,
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  completed: theme.colors.success,
-  current: theme.colors.primary,
-  locked: theme.colors.textDisabled,
-};
+// ─── Barre de progression (petits rectangles) ─────────────────────────────────
 
-// ─── StepRow ─────────────────────────────────────────────────────────────────
-
-interface StepRowProps {
-  step: StepDetail;
-  onStartStep?: (step: StepDetail) => void;
-}
-
-function StepRow({ step, onStartStep }: StepRowProps) {
-  const iconColor = STATUS_COLORS[step.status] ?? theme.colors.textSecondary;
-  const isCurrent = step.status === 'current';
-  const isLocked = step.status === 'locked';
-
-  const badgeIcon =
-    step.status === 'completed' ? 'checkmark' :
-    step.status === 'current' ? 'play' :
-    'lock-closed';
-
+function StepProgressBar({ steps }: { steps: StepDetail[] }) {
   return (
-    <View style={[styles.stepRow, isCurrent && styles.stepRowCurrent]}>
-      <View style={[styles.stepBadge, { backgroundColor: isLocked ? theme.colors.surfaceElevated : iconColor + '22' }]}>
-        <Ionicons name={badgeIcon} size={16} color={isLocked ? theme.colors.textDisabled : iconColor} />
-      </View>
-
-      <View style={styles.stepInfo}>
-        <Text style={[styles.stepTitle, isLocked && styles.stepTitleLocked]} numberOfLines={1}>
-          {step.title}
-        </Text>
-        {step.description && !isLocked ? (
-          <Text style={styles.stepDesc} numberOfLines={2}>{step.description}</Text>
-        ) : null}
-      </View>
-
-      {isCurrent && onStartStep && (
-        <TouchableOpacity
-          style={styles.startBtn}
-          onPress={() => onStartStep(step)}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.startBtnLabel}>Commencer</Text>
-        </TouchableOpacity>
-      )}
+    <View style={styles.progressBar}>
+      {steps.map((s) => (
+        <View
+          key={s.id}
+          style={[
+            styles.progressRect,
+            s.status === 'completed' && styles.progressRectDone,
+            s.status === 'current' && styles.progressRectCurrent,
+          ]}
+        />
+      ))}
     </View>
   );
 }
 
-// ─── ProgressBar ──────────────────────────────────────────────────────────────
+// ─── Grille des étapes (3 par ligne, bord pointillé autour) ───────────────────
 
-function ProgressBar({ completed, total }: { completed: number; total: number }) {
-  const pct = total > 0 ? completed / total : 0;
+function StepGrid({ steps, currentStepId }: { steps: StepDetail[]; currentStepId?: string }) {
+  return (
+    <View style={styles.gridWrapper}>
+      <View style={styles.grid}>
+        {steps.map((s) => {
+          const isDone = s.status === 'completed';
+          const isCurrent = s.status === 'current';
+          return (
+            <View
+              key={s.id}
+              style={[
+                styles.gridSquare,
+                isDone && styles.gridSquareDone,
+                isCurrent && styles.gridSquareCurrent,
+              ]}
+            >
+              {isDone ? (
+                <Ionicons name="checkmark" size={18} color={theme.colors.success} />
+              ) : (
+                <Text style={[styles.gridSquareText, isCurrent && styles.gridSquareTextCurrent]}>
+                  {s.order}
+                </Text>
+              )}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+// ─── Section caméra ───────────────────────────────────────────────────────────
+// La logique QR est internalisée ici pour éviter les stale closures côté parent.
+
+interface CameraSectionProps {
+  huntId: string;
+  currentStep: StepDetail | null;
+  onValidated: (p: HuntProgress) => Promise<void>;
+  onError: (err: unknown) => void;
+  setValidationState: (s: ValidationState) => void;
+  validationState: ValidationState;
+}
+
+function CameraSection({ huntId, currentStep, onValidated, onError, setValidationState, validationState }: CameraSectionProps) {
+  const [permission, requestPermission] = useCameraPermissions();
+  const [scanned, setScanned] = useState(false);
+  const isQr = currentStep?.validation_type === 'qrcode';
+
+  // Réinitialise le scan quand l'étape change
+  useEffect(() => { setScanned(false); }, [currentStep?.id]);
+
+  const handleScan = async (result: BarcodeScanningResult) => {
+    if (!currentStep || scanned || validationState === 'validating') return;
+    setScanned(true);
+    setValidationState('validating');
+    try {
+      const p = await huntService.validateStep(huntId, currentStep.id, { qr_code: result.data });
+      await onValidated(p);
+    } catch (err) {
+      onError(err);
+      setScanned(false);
+    }
+  };
+
+  if (!permission) {
+    return <View style={styles.cameraBox}><ActivityIndicator color={theme.colors.primary} /></View>;
+  }
+  if (!permission.granted) {
+    return (
+      <TouchableOpacity style={styles.cameraBox} onPress={requestPermission} activeOpacity={0.8}>
+        <Ionicons name="camera-outline" size={40} color="rgba(255,255,255,0.7)" />
+        <Text style={styles.cameraPermText}>Autoriser la caméra</Text>
+      </TouchableOpacity>
+    );
+  }
 
   return (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${Math.round(pct * 100)}%` }]} />
+    <View style={styles.cameraBox}>
+      <CameraView
+        style={StyleSheet.absoluteFillObject}
+        facing="back"
+        onBarcodeScanned={isQr && !scanned ? handleScan : undefined}
+        barcodeScannerSettings={isQr ? { barcodeTypes: ['qr'] } : undefined}
+      />
+      <View style={styles.cameraOverlay}>
+        <View style={styles.cameraFrame}>
+          <View style={[styles.corner, styles.cornerTL]} />
+          <View style={[styles.corner, styles.cornerTR]} />
+          <View style={[styles.corner, styles.cornerBL]} />
+          <View style={[styles.corner, styles.cornerBR]} />
+          <Text style={styles.cameraFrameLabel}>
+            {isQr ? 'Scannez le QR code' : 'Cadrez l\'œuvre'}
+          </Text>
+        </View>
       </View>
-      <Text style={styles.progressLabel}>
-        {completed} / {total} étape{total !== 1 ? 's' : ''} complétée{completed !== 1 ? 's' : ''}
-      </Text>
+      {validationState === 'validating' && (
+        <View style={styles.cameraValidating}>
+          <ActivityIndicator color="#fff" />
+          <Text style={styles.cameraValidatingText}>Validation…</Text>
+        </View>
+      )}
+      {!currentStep && (
+        <View style={styles.cameraOverlay}>
+          <View style={styles.cameraInactiveOverlay}>
+            <Ionicons name="scan-outline" size={36} color="rgba(255,255,255,0.6)" />
+            <Text style={styles.cameraInactiveText}>Rejoignez la chasse pour activer le scan</Text>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
 
 // ─── HuntDetailScreen ─────────────────────────────────────────────────────────
 
-/**
- * HuntDetailScreen — détail d'une chasse avec ses étapes.
- * - Si le joueur n'a pas rejoint : bouton "Rejoindre la chasse"
- * - Si le joueur a rejoint : progression + liste des étapes avec statut
- */
 export default function HuntDetailScreen() {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavProp>();
@@ -116,18 +183,129 @@ export default function HuntDetailScreen() {
 
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [validationState, setValidationState] = useState<ValidationState>('idle');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [answer, setAnswer] = useState('');
+  const [userPos, setUserPos] = useState<{ lat: number; lng: number } | null>(null);
 
   const { data: hunt, isLoading: huntLoading, isError: huntError } = useHuntDetail(huntId);
   const { data: progress, isLoading: progressLoading } = useHuntProgress(huntId);
-
   const isLoading = huntLoading || progressLoading;
+
+  const currentStep = progress?.steps.find((s) => s.status === 'current') ?? null;
+  const completedCount = progress?.steps.filter((s) => s.status === 'completed').length ?? 0;
+
+  // Dernière position GPS pour estimation de distance
+  useEffect(() => {
+    if (currentStep?.validation_type !== 'gps') return;
+    Location.getLastKnownPositionAsync().then((loc) => {
+      if (loc) setUserPos({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+    });
+  }, [currentStep?.id]);
+
+  // Réinitialise l'état de validation quand l'étape change
+  useEffect(() => {
+    setValidationState('idle');
+    setErrorMsg(null);
+    setAnswer('');
+  }, [currentStep?.id]);
+
+  // ── Validation commune ─────────────────────────────────────────────────────
+
+  const extractMsg = (err: unknown) =>
+    (err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? '';
+
+  const onValidated = async (p: HuntProgress) => {
+    setValidationState('success');
+    await queryClient.invalidateQueries({ queryKey: ['hunt', huntId, 'progress'] });
+    setTimeout(() => {
+      if (p.completed_at) {
+        navigation.replace('HuntCompletion', {
+          huntId,
+          totalPoints: p.total_points,
+          stepCount: p.steps.length,
+          startedAt: p.started_at,
+          completedAt: p.completed_at,
+        });
+      } else {
+        setValidationState('idle');
+        setScanned(false);
+      }
+    }, 1200);
+  };
+
+  const onError = (err: unknown) => {
+    const msg = extractMsg(err);
+    setValidationState('error');
+    setErrorMsg(msg || 'Une erreur est survenue. Réessayez.');
+  };
+
+  // ── Validation GPS ─────────────────────────────────────────────────────────
+
+  const handleGpsValidate = async () => {
+    if (!currentStep) return;
+    setValidationState('locating');
+    setErrorMsg(null);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setValidationState('error');
+        setErrorMsg('Permission GPS refusée.');
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const pos = { lat: loc.coords.latitude, lng: loc.coords.longitude };
+      setUserPos(pos);
+      setValidationState('validating');
+      const p = await huntService.validateStep(huntId, currentStep.id, pos);
+      await onValidated(p);
+    } catch (err) {
+      onError(err);
+    }
+  };
+
+  // ── Validation Quiz ────────────────────────────────────────────────────────
+
+  const handleQuizSubmit = async () => {
+    if (!currentStep || !answer.trim()) return;
+    Keyboard.dismiss();
+    setValidationState('validating');
+    setErrorMsg(null);
+    try {
+      const p = await huntService.validateStep(huntId, currentStep.id, { answer: answer.trim() });
+      await onValidated(p);
+    } catch (err) {
+      onError(err);
+    }
+  };
+
+  // ── Validation AR ─────────────────────────────────────────────────────────
+
+  const handleArConfirm = async (qrCode?: string) => {
+    if (!currentStep) return;
+    setValidationState('validating');
+    setErrorMsg(null);
+    try {
+      let payload: Record<string, unknown> = {};
+      if (currentStep.validation_type === 'ar' && !qrCode) {
+        payload = { marker_triggered: true };
+      } else if (qrCode) {
+        payload = { qr_code: qrCode };
+      }
+      const p = await huntService.validateStep(huntId, currentStep.id, payload);
+      await onValidated(p);
+    } catch (err) {
+      onError(err);
+    }
+  };
+
+  // ── Rejoindre ──────────────────────────────────────────────────────────────
 
   const handleJoin = async () => {
     setJoining(true);
     setJoinError(null);
     try {
       await huntService.joinHunt(huntId);
-      // Refetch progress to update the screen
       await queryClient.invalidateQueries({ queryKey: ['hunt', huntId, 'progress'] });
     } catch {
       setJoinError('Impossible de rejoindre la chasse. Réessayez.');
@@ -136,20 +314,7 @@ export default function HuntDetailScreen() {
     }
   };
 
-  // US54/US55 : navigation vers l'écran de validation de l'étape (GPS ou QR)
-  const handleStartStep = (step: StepDetail) => {
-    navigation.navigate('StepValidation', {
-      huntId,
-      stepId: step.id,
-      stepTitle: step.title,
-      stepDescription: step.description,
-      validationType: step.validation_type,
-      validationRadius: step.validation_radius,
-      coordinates: step.coordinates,
-    });
-  };
-
-  // ── États de chargement / erreur ────────────────────────────────────────────
+  // ── États ──────────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -168,115 +333,199 @@ export default function HuntDetailScreen() {
     );
   }
 
-  // ── Données dérivées ─────────────────────────────────────────────────────────
-
   const diffColor = DIFFICULTY_COLORS[hunt.difficulty ?? ''] ?? theme.colors.textSecondary;
   const diffLabel = DIFFICULTY_LABELS[hunt.difficulty ?? ''] ?? hunt.difficulty ?? '—';
-  const completedCount = progress
-    ? progress.steps.filter((s) => s.status === 'completed').length
-    : 0;
+  const steps = progress?.steps ?? [];
 
-  // ── Rendu ────────────────────────────────────────────────────────────────────
+  // ── Instruction selon le type ──────────────────────────────────────────────
+
+  const instructionText = (() => {
+    if (!currentStep) return null;
+    switch (currentStep.validation_type) {
+      case 'qrcode': return 'Scannez le QR code présent sur l\'œuvre pour valider cette étape.';
+      case 'photo':  return 'Cadrez l\'œuvre devant vous, puis prenez la photo pour valider.';
+      case 'quiz':   return 'Répondez à la question pour valider cette étape.';
+      default:       return 'Approchez-vous de l\'emplacement et validez votre position GPS.';
+    }
+  })();
+
+  // ── Bouton valider ─────────────────────────────────────────────────────────
+
+  const isSubmitting = validationState === 'validating' || validationState === 'locating';
+  const isSuccess = validationState === 'success';
+
+  const handleValidate = () => {
+    if (!currentStep) return;
+    if (currentStep.validation_type === 'gps') handleGpsValidate();
+    else if (currentStep.validation_type === 'quiz') handleQuizSubmit();
+    else if (currentStep.validation_type === 'qrcode') {
+      setScanned(false);
+      setValidationState('idle');
+    }
+  };
+
+  // ── Rendu ──────────────────────────────────────────────────────────────────
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* En-tête violet */}
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      scrollEnabled={currentStep?.validation_type !== 'qrcode' || validationState !== 'idle'}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── Bannière violette ── */}
       <View style={styles.header}>
+        {/* Barre de petits rectangles */}
+        {steps.length > 0 && <StepProgressBar steps={steps} />}
+
+        {/* Badge difficulté */}
         <View style={[styles.diffBadge, { backgroundColor: diffColor + '33' }]}>
           <Text style={[styles.diffText, { color: diffColor }]}>{diffLabel}</Text>
         </View>
+
+        {/* Titre */}
         <Text style={styles.title}>{hunt.title}</Text>
 
-        {hunt.location ? (
-          <View style={styles.locationRow}>
-            <Ionicons name="location-outline" size={13} color="rgba(255,255,255,0.7)" />
-            <Text style={styles.location}>{hunt.location}</Text>
+        {/* Étape actuelle + points */}
+        {progress && currentStep && (
+          <View style={styles.stepMeta}>
+            <Text style={styles.stepMetaText}>
+              Étape {currentStep.order} sur {steps.length}
+            </Text>
+            <View style={styles.stepMetaDot} />
+            <Ionicons name="star" size={13} color={theme.colors.points} />
+            <Text style={styles.stepMetaText}>{hunt.points} points</Text>
           </View>
-        ) : null}
+        )}
 
-        {hunt.description ? (
-          <Text style={styles.description}>{hunt.description}</Text>
-        ) : null}
-
-        {/* Méta */}
-        <View style={styles.metaRow}>
-          {hunt.duration ? (
-            <View style={styles.metaChip}>
-              <Ionicons name="time-outline" size={12} color={theme.colors.textInverse} />
-              <Text style={styles.metaChipText}>{hunt.duration} min</Text>
-            </View>
-          ) : null}
-          <View style={styles.metaChip}>
-            <Ionicons name="star" size={12} color={theme.colors.points} />
-            <Text style={styles.metaChipText}>{hunt.points} pts</Text>
+        {/* Terminée */}
+        {progress?.completed_at && (
+          <View style={styles.completedPill}>
+            <Ionicons name="trophy" size={14} color={theme.colors.success} />
+            <Text style={styles.completedPillText}>Chasse terminée !</Text>
           </View>
-          <View style={styles.metaChip}>
-            <Ionicons name="list-outline" size={12} color={theme.colors.textInverse} />
-            <Text style={styles.metaChipText}>{hunt.step_count} étape{hunt.step_count !== 1 ? 's' : ''}</Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Progression (si rejoint) */}
-      {progress && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ma progression</Text>
-          <ProgressBar completed={completedCount} total={progress.steps.length} />
-          {progress.completed_at && (
-            <View style={styles.completedBanner}>
-              <Ionicons name="trophy" size={18} color={theme.colors.success} />
-              <Text style={styles.completedBannerText}>Chasse terminée !</Text>
-            </View>
-          )}
-        </View>
-      )}
-
-      {/* Étapes */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>
-          {progress ? 'Étapes' : `Aperçu des étapes (${hunt.step_count})`}
-        </Text>
-
-        {progress ? (
-          // Étapes avec statut
-          progress.steps.map((step) => (
-            <StepRow key={step.id} step={step} onStartStep={handleStartStep} />
-          ))
-        ) : (
-          // Aperçu sans statut
-          hunt.steps.map((step) => (
-            <View key={step.id} style={styles.stepRowPreview}>
-              <View style={styles.stepBadgePreview}>
-                <Text style={styles.stepBadgePreviewText}>{step.order}</Text>
-              </View>
-              <View style={styles.stepInfo}>
-                <Text style={styles.stepTitle} numberOfLines={1}>{step.title}</Text>
-                {step.description ? (
-                  <Text style={styles.stepDesc} numberOfLines={2}>{step.description}</Text>
-                ) : null}
-              </View>
-            </View>
-          ))
         )}
       </View>
 
-      {/* Bouton Rejoindre (si pas encore rejoint) */}
-      {!progress && (
-        <View style={styles.joinSection}>
-          {joinError && <Text style={styles.joinError}>{joinError}</Text>}
-          <TouchableOpacity
-            style={[styles.joinBtn, joining && styles.joinBtnDisabled]}
-            onPress={handleJoin}
-            disabled={joining}
-            activeOpacity={0.8}
-          >
-            {joining ? (
-              <ActivityIndicator color={theme.colors.textInverse} size="small" />
-            ) : (
-              <Text style={styles.joinBtnLabel}>Rejoindre la chasse</Text>
-            )}
-          </TouchableOpacity>
+      {/* ── Vue caméra — toujours visible ── */}
+      {!progress?.completed_at && (
+        currentStep?.validation_type === 'gps' ? (
+          <View style={styles.gpsBox}>
+            <Ionicons name="navigate-circle" size={48} color={theme.colors.primary} />
+            {userPos && currentStep.coordinates ? (
+              <Text style={styles.gpsDistance}>
+                {formatDistance(haversineDistance(
+                  userPos.lat, userPos.lng,
+                  currentStep.coordinates.lat, currentStep.coordinates.lng,
+                ))}
+              </Text>
+            ) : null}
+            <Text style={styles.gpsLabel}>
+              {userPos && currentStep.coordinates
+                ? `Rayon : ${currentStep.validation_radius} m`
+                : 'Approchez-vous de l\'étape'}
+            </Text>
+          </View>
+        ) : currentStep?.validation_type === 'ar' && currentStep.ar_content ? (
+          /* AR ViroReact — marqueur image + contenu 3D */
+          <View style={styles.arWrapper}>
+            <ARSection
+              arContent={currentStep.ar_content as ArContent}
+              onConfirm={handleArConfirm}
+              validating={validationState === 'validating'}
+              errorMsg={errorMsg}
+            />
+          </View>
+        ) : (
+          /* Caméra QR/Photo — key force le remontage au changement d'étape */
+          <CameraSection
+            key={currentStep?.id ?? 'no-step'}
+            huntId={huntId}
+            currentStep={currentStep}
+            validationState={validationState}
+            setValidationState={setValidationState}
+            onValidated={onValidated}
+            onError={onError}
+          />
+        )
+      )}
+
+      {/* ── Instruction ── */}
+      {instructionText && !progress?.completed_at && (
+        <Text style={styles.instruction}>{instructionText}</Text>
+      )}
+
+      {/* ── Erreur / Succès ── */}
+      {validationState === 'error' && errorMsg && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="warning-outline" size={16} color={theme.colors.error} />
+          <Text style={styles.errorBannerText}>{errorMsg}</Text>
         </View>
+      )}
+      {isSuccess && (
+        <View style={styles.successBanner}>
+          <Ionicons name="checkmark-circle" size={18} color={theme.colors.success} />
+          <Text style={styles.successBannerText}>Étape validée ! Bravo !</Text>
+        </View>
+      )}
+
+      {/* ── Réponse Quiz ── */}
+      {progress && currentStep?.validation_type === 'quiz' && !isSuccess && (
+        <TextInput
+          style={styles.quizInput}
+          placeholder="Votre réponse…"
+          placeholderTextColor={theme.colors.textDisabled}
+          value={answer}
+          onChangeText={setAnswer}
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="done"
+          onSubmitEditing={handleQuizSubmit}
+          editable={!isSubmitting}
+        />
+      )}
+
+      {/* ── Grille des étapes ── */}
+      {steps.length > 0 && (
+        <StepGrid steps={steps} currentStepId={currentStep?.id} />
+      )}
+
+      {/* ── Sans progress : aperçu grille + Rejoindre ── */}
+      {!progress && (
+        <>
+          <StepGrid
+            steps={hunt.steps.map((s) => ({ ...s, status: 'locked' as const, validation_type: '', validation_radius: 0, coordinates: null }))}
+          />
+          <View style={styles.joinSection}>
+            {joinError && <Text style={styles.joinError}>{joinError}</Text>}
+            <TouchableOpacity
+              style={[styles.validateBtn, joining && styles.btnDisabled]}
+              onPress={handleJoin}
+              disabled={joining}
+              activeOpacity={0.85}
+            >
+              {joining
+                ? <ActivityIndicator color={theme.colors.textInverse} size="small" />
+                : <Text style={styles.validateBtnText}>Rejoindre la chasse</Text>}
+            </TouchableOpacity>
+          </View>
+        </>
+      )}
+
+      {/* ── Bouton valider l'étape ── */}
+      {progress && currentStep && !progress.completed_at && !isSuccess && (
+        <TouchableOpacity
+          style={[styles.validateBtn, isSubmitting && styles.btnDisabled]}
+          onPress={handleValidate}
+          disabled={isSubmitting}
+          activeOpacity={0.85}
+        >
+          {isSubmitting
+            ? <ActivityIndicator color={theme.colors.textInverse} size="small" />
+            : <Text style={styles.validateBtnText}>
+                {currentStep.validation_type === 'qrcode' ? 'Scanner à nouveau' : 'Valider la réponse'}
+              </Text>}
+        </TouchableOpacity>
       )}
     </ScrollView>
   );
@@ -284,221 +533,199 @@ export default function HuntDetailScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
+const CORNER = 20;
+const CW = 3;
+
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: theme.spacing.md,
-    backgroundColor: theme.colors.surfaceElevated,
-  },
-  errorText: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.surfaceElevated,
-  },
-  content: {
-    paddingBottom: theme.spacing.xxl,
-  },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: theme.spacing.md, backgroundColor: theme.colors.surfaceElevated },
+  errorText: { ...theme.typography.body, color: theme.colors.textSecondary },
+  container: { flex: 1, backgroundColor: theme.colors.surfaceElevated },
+  content: { paddingBottom: theme.spacing.xxl },
+
+  // ── Header violet ──
   header: {
     backgroundColor: theme.colors.gradientStart,
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.lg,
-    paddingBottom: theme.spacing.xl,
+    paddingBottom: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
+  progressBar: {
+    flexDirection: 'row',
+    gap: 4,
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.xs,
+  },
+  progressRect: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  progressRectDone: { backgroundColor: theme.colors.success },
+  progressRectCurrent: { backgroundColor: theme.colors.primary },
+
   diffBadge: {
     alignSelf: 'flex-start',
+    marginHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.md,
     borderRadius: theme.borderRadius.full,
   },
-  diffText: {
-    ...theme.typography.caption,
-    fontWeight: '600',
-  },
-  title: {
-    ...theme.typography.h2,
-    color: theme.colors.textInverse,
-    lineHeight: 30,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-  },
-  location: {
-    ...theme.typography.bodySmall,
-    color: 'rgba(255,255,255,0.75)',
-  },
-  description: {
-    ...theme.typography.bodySmall,
-    color: 'rgba(255,255,255,0.85)',
-    lineHeight: 20,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: theme.spacing.sm,
-    marginTop: theme.spacing.xs,
-  },
-  metaChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: theme.borderRadius.full,
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.xs,
-  },
-  metaChipText: {
-    ...theme.typography.caption,
-    color: theme.colors.textInverse,
-    fontWeight: '500',
-  },
-  section: {
-    marginTop: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
-  sectionTitle: {
-    ...theme.typography.label,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
-  },
-  progressContainer: {
-    gap: theme.spacing.sm,
-  },
-  progressTrack: {
-    height: 8,
-    backgroundColor: theme.colors.border,
-    borderRadius: theme.borderRadius.full,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: theme.colors.progressFill,
-    borderRadius: theme.borderRadius.full,
-  },
-  progressLabel: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-  },
-  completedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  diffText: { ...theme.typography.caption, fontWeight: '600' },
+  title: { ...theme.typography.h2, color: theme.colors.textInverse, paddingHorizontal: theme.spacing.lg, lineHeight: 30 },
+
+  stepMeta: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, paddingHorizontal: theme.spacing.lg },
+  stepMetaText: { ...theme.typography.bodySmall, color: 'rgba(255,255,255,0.85)', fontWeight: '500' },
+  stepMetaDot: { width: 4, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.5)' },
+
+  completedPill: {
+    flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs,
+    alignSelf: 'flex-start', marginHorizontal: theme.spacing.lg,
     backgroundColor: theme.colors.successLight,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: theme.spacing.md,
-    gap: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.success + '44',
+    borderRadius: theme.borderRadius.full,
+    paddingVertical: theme.spacing.xs, paddingHorizontal: theme.spacing.md,
   },
-  completedBannerText: {
-    ...theme.typography.label,
-    color: theme.colors.success,
-  },
-  stepRow: {
-    flexDirection: 'row',
+  completedPillText: { ...theme.typography.caption, color: theme.colors.success, fontWeight: '700' },
+
+  // ── Caméra ──
+  cameraBox: {
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    height: 220,
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+    backgroundColor: '#111',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  },
+  arWrapper: {
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
     gap: theme.spacing.md,
+  },
+  cameraPermText: { ...theme.typography.bodySmall, color: 'rgba(255,255,255,0.8)', marginTop: theme.spacing.sm },
+  cameraOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.35)' },
+  cameraFrame: { width: 180, height: 140, position: 'relative', justifyContent: 'flex-end', alignItems: 'center', paddingBottom: theme.spacing.sm },
+  corner: { position: 'absolute', width: CORNER, height: CORNER, borderColor: '#fff' },
+  cornerTL: { top: 0, left: 0, borderTopWidth: CW, borderLeftWidth: CW },
+  cornerTR: { top: 0, right: 0, borderTopWidth: CW, borderRightWidth: CW },
+  cornerBL: { bottom: 0, left: 0, borderBottomWidth: CW, borderLeftWidth: CW },
+  cornerBR: { bottom: 0, right: 0, borderBottomWidth: CW, borderRightWidth: CW },
+  cameraFrameLabel: {
+    ...theme.typography.caption, color: '#fff', fontWeight: '600',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: theme.spacing.sm, paddingVertical: 3,
+    borderRadius: theme.borderRadius.sm, overflow: 'hidden',
+  },
+  cameraValidating: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', gap: theme.spacing.sm },
+  cameraValidatingText: { ...theme.typography.bodySmall, color: '#fff' },
+  cameraInactiveOverlay: { justifyContent: 'center', alignItems: 'center', gap: theme.spacing.sm, padding: theme.spacing.lg },
+  cameraInactiveText: { ...theme.typography.caption, color: 'rgba(255,255,255,0.65)', textAlign: 'center' },
+
+  // ── GPS ──
+  gpsBox: {
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    height: 140,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1, borderColor: theme.colors.borderLight,
+    justifyContent: 'center', alignItems: 'center',
+    gap: theme.spacing.xs,
     ...theme.shadows.card,
   },
-  stepRowCurrent: {
+  gpsDistance: { ...theme.typography.h2, color: theme.colors.primary },
+  gpsLabel: { ...theme.typography.caption, color: theme.colors.textSecondary },
+
+  // ── Instruction ──
+  instruction: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+    paddingHorizontal: theme.spacing.xl,
+    marginTop: theme.spacing.sm,
+    lineHeight: 18,
+  },
+
+  // ── Banners ──
+  errorBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md, marginTop: theme.spacing.sm,
+    backgroundColor: theme.colors.errorLight,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    borderWidth: 1, borderColor: theme.colors.error + '44',
+  },
+  errorBannerText: { ...theme.typography.caption, color: theme.colors.error, flex: 1 },
+  successBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: theme.spacing.sm,
+    marginHorizontal: theme.spacing.md, marginTop: theme.spacing.sm,
+    backgroundColor: theme.colors.successLight,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    borderWidth: 1, borderColor: theme.colors.success + '44',
+  },
+  successBannerText: { ...theme.typography.label, color: theme.colors.success },
+
+  // ── Quiz ──
+  quizInput: {
+    ...theme.typography.body,
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.md,
+    borderWidth: 1.5, borderColor: theme.colors.border,
+    paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.md,
+  },
+
+  // ── Grille étapes (pointillés) ──
+  gridWrapper: {
+    marginHorizontal: theme.spacing.md,
+    marginTop: theme.spacing.md,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: theme.colors.textSecondary,
+    borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: theme.spacing.md,
+    justifyContent: 'center',
+  },
+  gridSquare: {
+    width: 104,
+    height: 104,
+    borderRadius: theme.borderRadius.sm,
+    backgroundColor: theme.colors.surfaceElevated,
+    borderWidth: 1, borderColor: theme.colors.border,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  gridSquareDone: {
+    backgroundColor: theme.colors.successLight,
+    borderColor: theme.colors.success + '66',
+  },
+  gridSquareCurrent: {
+    backgroundColor: theme.colors.primaryLight,
     borderColor: theme.colors.primary,
     borderWidth: 2,
   },
-  stepRowPreview: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.borderRadius.md,
-    padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    gap: theme.spacing.md,
-  },
-  stepBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.borderRadius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
-  },
-  stepBadgePreview: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.borderRadius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primaryLight,
-    flexShrink: 0,
-  },
-  stepBadgePreviewText: {
-    ...theme.typography.label,
-    color: theme.colors.primary,
-  },
-  stepInfo: {
-    flex: 1,
-    gap: theme.spacing.xs,
-  },
-  stepTitle: {
-    ...theme.typography.label,
-    color: theme.colors.text,
-  },
-  stepTitleLocked: {
-    color: theme.colors.textDisabled,
-  },
-  stepDesc: {
-    ...theme.typography.caption,
-    color: theme.colors.textSecondary,
-    lineHeight: 16,
-  },
-  startBtn: {
+  gridSquareText: { ...theme.typography.h3, color: theme.colors.textSecondary, fontSize: 18 },
+  gridSquareTextCurrent: { color: theme.colors.primary },
+
+  // ── Rejoindre / Valider ──
+  joinSection: { paddingHorizontal: theme.spacing.lg, marginTop: theme.spacing.md, gap: theme.spacing.sm },
+  joinError: { ...theme.typography.caption, color: theme.colors.error, textAlign: 'center' },
+  validateBtn: {
+    flexDirection: 'row', justifyContent: 'center', alignItems: 'center',
+    marginHorizontal: theme.spacing.md, marginTop: theme.spacing.md,
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.md,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    flexShrink: 0,
-  },
-  startBtnLabel: {
-    color: theme.colors.textInverse,
-    ...theme.typography.caption,
-    fontWeight: '600',
-  },
-  joinSection: {
-    marginTop: theme.spacing.lg,
-    paddingHorizontal: theme.spacing.lg,
-    gap: theme.spacing.md,
-  },
-  joinError: {
-    ...theme.typography.bodySmall,
-    color: theme.colors.error,
-    textAlign: 'center',
-  },
-  joinBtn: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.xl,
+    borderRadius: theme.borderRadius.lg,
     paddingVertical: theme.spacing.md,
-    alignItems: 'center',
     ...theme.shadows.elevated,
   },
-  joinBtnDisabled: {
-    opacity: 0.6,
-  },
-  joinBtnLabel: {
-    color: theme.colors.textInverse,
-    ...theme.typography.body,
-    fontWeight: '700',
-  },
+  validateBtnText: { ...theme.typography.label, color: theme.colors.textInverse, fontSize: 15 },
+  btnDisabled: { opacity: 0.6 },
 });

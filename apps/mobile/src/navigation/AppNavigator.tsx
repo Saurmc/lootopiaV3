@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, SafeAreaView, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store/auth.store';
 import GpsConsentModal from '../components/common/GpsConsentModal';
 import ConvertAccountScreen from '../screens/guest/ConvertAccountScreen';
+import AuthNavigator from './AuthNavigator';
 import MapScreen from '../screens/map/MapScreen';
 import HuntsListScreen from '../screens/hunts/HuntsListScreen';
 import HuntDetailScreen from '../screens/hunts/HuntDetailScreen';
@@ -64,31 +65,74 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 
 /**
  * GuestProfileScreen — affiché dans l'onglet Profil pour les invités.
- * Propose de convertir le compte ou de voir le profil (US59).
+ * Propose de convertir le compte (US59) + toggle localisation GPS.
  */
 function GuestProfileScreen() {
   const [convertVisible, setConvertVisible] = useState(false);
+  const [authVisible, setAuthVisible] = useState(false);
+  const { consentGps, setConsentGps } = useAuthStore();
 
   return (
-    <View style={styles.guestProfile}>
-      <Ionicons name="person-outline" size={56} color={theme.colors.textSecondary} />
-      <Text style={styles.guestProfileTitle}>Mode invité</Text>
-      <Text style={styles.guestProfileSubtitle}>
-        Créez un compte pour sauvegarder votre progression et accéder à toutes les fonctionnalités.
-      </Text>
-      <TouchableOpacity
-        style={styles.convertBtn}
-        onPress={() => setConvertVisible(true)}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.convertBtnLabel}>Créer un compte</Text>
-      </TouchableOpacity>
+    <SafeAreaView style={styles.guestProfileContainer}>
+      <ScrollView contentContainerStyle={styles.guestProfile} showsVerticalScrollIndicator={false}>
+        <Ionicons name="person-outline" size={56} color={theme.colors.textSecondary} />
+        <Text style={styles.guestProfileTitle}>Mode invité</Text>
+        <Text style={styles.guestProfileSubtitle}>
+          Créez un compte pour sauvegarder votre progression et accéder à toutes les fonctionnalités.
+        </Text>
+        <TouchableOpacity
+          style={styles.convertBtn}
+          onPress={() => setAuthVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.convertBtnLabel}>Se connecter</Text>
+        </TouchableOpacity>
 
-      <ConvertAccountScreen
-        visible={convertVisible}
-        onClose={() => setConvertVisible(false)}
-      />
-    </View>
+        <TouchableOpacity
+          style={styles.convertBtnOutline}
+          onPress={() => setConvertVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.convertBtnOutlineLabel}>Créer un compte</Text>
+        </TouchableOpacity>
+
+        {/* Paramètre localisation */}
+        <View style={styles.guestSettingsCard}>
+          <Text style={styles.guestSettingsTitle}>Paramètres</Text>
+          <View style={styles.guestToggleRow}>
+            <View style={styles.guestToggleLeft}>
+              <Ionicons name="location-outline" size={18} color={theme.colors.primary} />
+              <View>
+                <Text style={styles.guestToggleLabel}>Localisation GPS</Text>
+                <Text style={styles.guestToggleSub}>
+                  Nécessaire pour valider les étapes de chasse
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={consentGps === true}
+              onValueChange={setConsentGps}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
+              thumbColor={consentGps === true ? theme.colors.primary : theme.colors.textSecondary}
+            />
+          </View>
+        </View>
+
+        {/* Modal login/register — se ferme automatiquement après connexion */}
+        <Modal
+          visible={authVisible}
+          animationType="slide"
+          onRequestClose={() => setAuthVisible(false)}
+        >
+          <AuthNavigator onDismiss={() => setAuthVisible(false)} />
+        </Modal>
+
+        <ConvertAccountScreen
+          visible={convertVisible}
+          onClose={() => setConvertVisible(false)}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -126,27 +170,27 @@ export type AppStackParamList = {
 const Tab = createBottomTabNavigator<AppTabParamList>();
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
-/** Bannière ambre persistante pour les joueurs invités. */
-function GuestBanner() {
-  return (
-    <View style={styles.guestBanner}>
-      <Text style={styles.guestBannerText}>
-        Mode invité — Créez un compte pour sauvegarder votre progression
-      </Text>
-    </View>
-  );
-}
-
 /**
- * TabsRoot — tabs + bannière invité + modal GPS.
+ * TabsRoot — tabs + popup invité au lancement + modal GPS.
  * Séparé pour éviter de re-rendre le NativeStack entier quand l'état change.
  */
 function TabsRoot() {
-  const { isGuest, pendingGpsConsent, setConsentGps } = useAuthStore();
+  const { isAuthenticated, isGuest, pendingGpsConsent, setConsentGps } = useAuthStore();
+  const guestAlertShown = useRef(false);
+
+  useEffect(() => {
+    if (isGuest && !guestAlertShown.current) {
+      guestAlertShown.current = true;
+      Alert.alert(
+        'Mode invité',
+        'Votre progression ne sera pas sauvegardée si vous changez d\'appareil. Créez un compte depuis l\'onglet Profil pour ne rien perdre.',
+        [{ text: 'Compris', style: 'default' }],
+      );
+    }
+  }, [isGuest]);
 
   return (
     <View style={styles.root}>
-      {isGuest && <GuestBanner />}
 
       <Tab.Navigator
         tabBar={(props) => <CustomTabBar {...props} />}
@@ -164,7 +208,7 @@ function TabsRoot() {
         />
         <Tab.Screen
           name="Profile"
-          component={isGuest ? GuestProfileScreen : ProfileScreen}
+          component={isAuthenticated && !isGuest ? ProfileScreen : AuthNavigator}
           options={{
             tabBarLabel: 'Profil',
             tabBarIcon: ({ focused, color }) => (
@@ -274,26 +318,56 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: theme.colors.surface,
   },
-  guestBanner: {
-    backgroundColor: theme.colors.warningLight,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  guestBannerText: {
-    ...theme.typography.caption,
-    color: theme.colors.text,
-    textAlign: 'center',
-    fontWeight: '500',
+  guestProfileContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
   },
   guestProfile: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.xl,
-    backgroundColor: theme.colors.surface,
+    paddingVertical: theme.spacing.xxl,
     gap: theme.spacing.md,
+  },
+  guestSettingsCard: {
+    width: '100%',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
+    ...theme.shadows.card,
+    marginTop: theme.spacing.sm,
+  },
+  guestSettingsTitle: {
+    ...theme.typography.caption,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  guestToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+  },
+  guestToggleLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  guestToggleLabel: {
+    ...theme.typography.label,
+    color: theme.colors.text,
+  },
+  guestToggleSub: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   guestProfileTitle: {
     ...theme.typography.h3,
@@ -314,6 +388,18 @@ const styles = StyleSheet.create({
   },
   convertBtnLabel: {
     color: theme.colors.textInverse,
+    ...theme.typography.label,
+    fontSize: 15,
+  },
+  convertBtnOutline: {
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.xl,
+    paddingVertical: 13,
+    paddingHorizontal: theme.spacing.xl,
+  },
+  convertBtnOutlineLabel: {
+    color: theme.colors.primary,
     ...theme.typography.label,
     fontSize: 15,
   },

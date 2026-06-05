@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import Button from '../../components/common/Button';
@@ -13,7 +14,11 @@ import { useAuth } from '../../hooks/useAuth';
 import { extractApiError } from '../../utils/error.utils';
 import theme from '../../constants/theme';
 
-export default function RegisterScreen() {
+interface RegisterScreenProps {
+  onBack?: () => void;
+}
+
+export default function RegisterScreen({ onBack }: RegisterScreenProps) {
   const { register } = useAuth();
 
   const [pseudo, setPseudo] = useState('');
@@ -130,6 +135,15 @@ export default function RegisterScreen() {
             onPress={handleRegister}
             style={styles.button}
           />
+
+          {onBack && (
+            <View style={styles.backRow}>
+              <Text style={styles.backText}>Déjà un compte ? </Text>
+              <TouchableOpacity onPress={onBack} activeOpacity={0.7}>
+                <Text style={styles.backLink}>Se connecter</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -177,5 +191,20 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: theme.spacing.md,
+  },
+  backRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: theme.spacing.sm,
+  },
+  backText: {
+    ...theme.typography.bodySmall,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  backLink: {
+    ...theme.typography.bodySmall,
+    color: theme.colors.primary,
+    fontWeight: '700',
   },
 });
