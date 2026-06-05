@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Image,
   Keyboard,
   ScrollView,
   StyleSheet,
@@ -23,7 +24,7 @@ import * as Location from 'expo-location';
 import { useHuntDetail, useHuntProgress } from '../../hooks/useHunts';
 import { huntService } from '../../services/hunt.service';
 import { haversineDistance, formatDistance } from '../../services/hunt.service';
-import type { StepDetail, HuntProgress } from '../../services/hunt.service';
+import type { StepDetail, StepStatus, HuntProgress } from '../../services/hunt.service';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import theme from '../../constants/theme';
 
@@ -60,13 +61,29 @@ function StepProgressBar({ steps }: { steps: StepDetail[] }) {
 
 // ─── Grille des étapes (3 par ligne, bord pointillé autour) ───────────────────
 
-function StepGrid({ steps, currentStepId }: { steps: StepDetail[]; currentStepId?: string }) {
+type GridStep = {
+  id: string;
+  order: number;
+  status: StepStatus | 'locked';
+  ar_content?: unknown | null;
+};
+
+function getArtworkThumb(ar_content: unknown): string | null {
+  if (!ar_content || typeof ar_content !== 'object') return null;
+  const ac = ar_content as Record<string, unknown>;
+  if (ac.type !== 'ar-3d-spatial') return null;
+  const img = ac.marker_image ?? ac.artwork_image;
+  return typeof img === 'string' ? img : null;
+}
+
+function StepGrid({ steps, currentStepId }: { steps: GridStep[]; currentStepId?: string }) {
   return (
     <View style={styles.gridWrapper}>
       <View style={styles.grid}>
         {steps.map((s) => {
           const isDone = s.status === 'completed';
           const isCurrent = s.status === 'current';
+          const thumb = getArtworkThumb(s.ar_content);
           return (
             <View
               key={s.id}
@@ -76,7 +93,21 @@ function StepGrid({ steps, currentStepId }: { steps: StepDetail[]; currentStepId
                 isCurrent && styles.gridSquareCurrent,
               ]}
             >
-              {isDone ? (
+              {thumb ? (
+                <>
+                  <Image source={{ uri: thumb }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+                  {isDone && (
+                    <View style={styles.gridThumbOverlay}>
+                      <Ionicons name="checkmark-circle" size={30} color="#fff" />
+                    </View>
+                  )}
+                  {!isDone && isCurrent && (
+                    <View style={styles.gridThumbBadge}>
+                      <Text style={styles.gridThumbBadgeText}>En cours</Text>
+                    </View>
+                  )}
+                </>
+              ) : isDone ? (
                 <Ionicons name="checkmark" size={18} color={theme.colors.success} />
               ) : (
                 <Text style={[styles.gridSquareText, isCurrent && styles.gridSquareTextCurrent]}>
@@ -229,7 +260,6 @@ export default function HuntDetailScreen() {
         });
       } else {
         setValidationState('idle');
-        setScanned(false);
       }
     }, 1200);
   };
@@ -359,7 +389,6 @@ export default function HuntDetailScreen() {
     if (currentStep.validation_type === 'gps') handleGpsValidate();
     else if (currentStep.validation_type === 'quiz') handleQuizSubmit();
     else if (currentStep.validation_type === 'qrcode') {
-      setScanned(false);
       setValidationState('idle');
     }
   };
@@ -494,7 +523,7 @@ export default function HuntDetailScreen() {
       {!progress && (
         <>
           <StepGrid
-            steps={hunt.steps.map((s) => ({ ...s, status: 'locked' as const, validation_type: '', validation_radius: 0, coordinates: null }))}
+            steps={hunt.steps.map((s) => ({ ...s, status: 'locked' as const }))}
           />
           <View style={styles.joinSection}>
             {joinError && <Text style={styles.joinError}>{joinError}</Text>}
@@ -702,6 +731,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surfaceElevated,
     borderWidth: 1, borderColor: theme.colors.border,
     justifyContent: 'center', alignItems: 'center',
+    overflow: 'hidden',
   },
   gridSquareDone: {
     backgroundColor: theme.colors.successLight,
@@ -714,6 +744,17 @@ const styles = StyleSheet.create({
   },
   gridSquareText: { ...theme.typography.h3, color: theme.colors.textSecondary, fontSize: 18 },
   gridSquareTextCurrent: { color: theme.colors.primary },
+  gridThumbOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center', alignItems: 'center',
+  },
+  gridThumbBadge: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(99,102,241,0.85)',
+    paddingVertical: 3, alignItems: 'center',
+  },
+  gridThumbBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
 
   // ── Rejoindre / Valider ──
   joinSection: { paddingHorizontal: theme.spacing.lg, marginTop: theme.spacing.md, gap: theme.spacing.sm },

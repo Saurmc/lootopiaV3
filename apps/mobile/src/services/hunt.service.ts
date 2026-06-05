@@ -72,6 +72,7 @@ export interface HuntDetail {
     order: number;
     title: string;
     description: string | null;
+    ar_content: unknown | null;
   }>;
 }
 
