@@ -3,6 +3,7 @@ import {
   Animated,
   Dimensions,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,9 +13,15 @@ import { Ionicons } from '@expo/vector-icons';
 import type { RouteProp } from '@react-navigation/native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useQueryClient } from '@tanstack/react-query';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useHuntDetail } from '../../hooks/useHunts';
+import { useBadges } from '../../hooks/useProfile';
+import { useAuthStore } from '../../store/auth.store';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import theme from '../../constants/theme';
+
+const GUEST_COMPLETED_KEY = 'guest_completed_hunts';
 
 type RouteProps = RouteProp<AppStackParamList, 'HuntCompletion'>;
 type NavProp = NativeStackNavigationProp<AppStackParamList, 'HuntCompletion'>;
@@ -28,20 +35,21 @@ const CONFETTI_COLORS = [
 
 const PIECE_COUNT = 22;
 
-// ─── Confetti ────────────────────────────────────────────────────────────────
+interface BadgeDef { type: string; icon: string; name: string }
+const BADGE_CATALOG: BadgeDef[] = [
+  { type: 'first_hunt',      icon: '🏁', name: 'Première chasse' },
+  { type: 'hunt_completed',  icon: '🏆', name: 'Chasseur' },
+  { type: 'explorer',        icon: '🗺', name: 'Explorateur' },
+  { type: 'collector',       icon: '💎', name: 'Collectionneur' },
+  { type: 'speedrunner',     icon: '⚡', name: 'Speedrunner' },
+  { type: 'legend',          icon: '🌟', name: 'Légende' },
+];
 
-interface PieceConfig {
-  x: number;
-  size: number;
-  color: string;
-  delay: number;
-  duration: number;
-  rotate: number;
-}
+// ─── Confetti ─────────────────────────────────────────────────────────────────
 
-function randomBetween(a: number, b: number) {
-  return a + Math.random() * (b - a);
-}
+interface PieceConfig { x: number; size: number; color: string; delay: number; duration: number; rotate: number }
+
+function randomBetween(a: number, b: number) { return a + Math.random() * (b - a); }
 
 function buildPieces(): PieceConfig[] {
   return Array.from({ length: PIECE_COUNT }, () => ({
@@ -56,50 +64,23 @@ function buildPieces(): PieceConfig[] {
 
 function ConfettiPiece({ cfg }: { cfg: PieceConfig }) {
   const anim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
         Animated.delay(cfg.delay),
-        Animated.timing(anim, {
-          toValue: 1,
-          duration: cfg.duration,
-          useNativeDriver: true,
-        }),
+        Animated.timing(anim, { toValue: 1, duration: cfg.duration, useNativeDriver: true }),
         Animated.timing(anim, { toValue: 0, duration: 0, useNativeDriver: true }),
       ]),
     );
     loop.start();
     return () => loop.stop();
   }, []);
-
-  const translateY = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-20, SCREEN_H + 20],
-  });
-  const rotate = anim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [`${cfg.rotate}deg`, `${cfg.rotate + 360}deg`],
-  });
-  const opacity = anim.interpolate({
-    inputRange: [0, 0.85, 1],
-    outputRange: [1, 1, 0],
-  });
-
+  const translateY = anim.interpolate({ inputRange: [0, 1], outputRange: [-20, SCREEN_H + 20] });
+  const rotate = anim.interpolate({ inputRange: [0, 1], outputRange: [`${cfg.rotate}deg`, `${cfg.rotate + 360}deg`] });
+  const opacity = anim.interpolate({ inputRange: [0, 0.85, 1], outputRange: [1, 1, 0] });
   return (
     <Animated.View
-      style={[
-        styles.confettiPiece,
-        {
-          left: cfg.x,
-          width: cfg.size,
-          height: cfg.size,
-          backgroundColor: cfg.color,
-          borderRadius: cfg.size / 4,
-          opacity,
-          transform: [{ translateY }, { rotate }],
-        },
-      ]}
+      style={[styles.confettiPiece, { left: cfg.x, width: cfg.size, height: cfg.size, backgroundColor: cfg.color, borderRadius: cfg.size / 4, opacity, transform: [{ translateY }, { rotate }] }]}
     />
   );
 }
@@ -108,29 +89,17 @@ function Confetti() {
   const pieces = useRef(buildPieces()).current;
   return (
     <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-      {pieces.map((cfg, i) => (
-        <ConfettiPiece key={i} cfg={cfg} />
-      ))}
+      {pieces.map((cfg, i) => <ConfettiPiece key={i} cfg={cfg} />)}
     </View>
   );
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
 
-function StatCard({
-  iconName,
-  iconColor,
-  label,
-  value,
-}: {
-  iconName: React.ComponentProps<typeof Ionicons>['name'];
-  iconColor: string;
-  label: string;
-  value: string;
-}) {
+function StatCard({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <View style={styles.statCard}>
-      <Ionicons name={iconName} size={22} color={iconColor} />
+      <Text style={styles.statIcon}>{icon}</Text>
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -139,91 +108,146 @@ function StatCard({
 
 // ─── HuntCompletionScreen ─────────────────────────────────────────────────────
 
-/**
- * HuntCompletionScreen — affiché après avoir complété toutes les étapes d'une chasse.
- * Montre les confettis, le trophée, le titre et les statistiques de la chasse.
- */
 export default function HuntCompletionScreen() {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavProp>();
   const { huntId, totalPoints, stepCount, startedAt, completedAt } = route.params;
 
+  const queryClient = useQueryClient();
+  const isGuest = useAuthStore((s) => s.isGuest);
+
   const { data: hunt } = useHuntDetail(huntId);
+  const { data: allBadges = [] } = useBadges();
 
-  // Durée en minutes
-  const durationMin = Math.max(
-    1,
-    Math.round(
-      (new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 60_000,
-    ),
-  );
-  const durationLabel =
-    durationMin < 60
-      ? `${durationMin} min`
-      : `${Math.floor(durationMin / 60)}h ${durationMin % 60}min`;
+  // Invalide les caches profil dès l'arrivée sur cet écran
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: ['me', 'stats'] });
+    queryClient.invalidateQueries({ queryKey: ['me', 'badges'] });
+    queryClient.invalidateQueries({ queryKey: ['me', 'profile'] });
+  }, []);
 
-  // Animation d'entrée du trophée
+  // Badges gagnés à la complétion (earned dans les 2 minutes autour de completedAt)
+  const completedTs = new Date(completedAt).getTime();
+  const newBadges = allBadges.filter((b) => {
+    const diff = Math.abs(new Date(b.earned_at).getTime() - completedTs);
+    return diff < 120_000;
+  });
+
+  // Durée
+  const durationMin = Math.max(1, Math.round((completedTs - new Date(startedAt).getTime()) / 60_000));
+  const durationLabel = durationMin < 60 ? `${durationMin} min` : `${Math.floor(durationMin / 60)}h ${durationMin % 60}min`;
+
+  // Sauvegarde locale pour les invités (fallback si compte supprimé)
+  const saveGuestProgress = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(GUEST_COMPLETED_KEY);
+      const existing: unknown[] = raw ? JSON.parse(raw) : [];
+      const entry = { huntId, totalPoints, stepCount, completedAt, savedAt: new Date().toISOString() };
+      await AsyncStorage.setItem(GUEST_COMPLETED_KEY, JSON.stringify([...existing, entry]));
+    } catch { /* silencieux */ }
+  };
+
+  // Invalide les caches et navigue (commun aux deux boutons)
+  const saveAndGo = async (then: () => void) => {
+    if (isGuest) await saveGuestProgress();
+    queryClient.invalidateQueries({ queryKey: ['me', 'stats'] });
+    queryClient.invalidateQueries({ queryKey: ['me', 'badges'] });
+    then();
+  };
+
+  // Animation trophée
   const trophyScale = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    Animated.spring(trophyScale, {
-      toValue: 1,
-      bounciness: 12,
-      speed: 6,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(trophyScale, { toValue: 1, bounciness: 12, speed: 6, useNativeDriver: true }).start();
   }, []);
 
   return (
     <SafeAreaView style={styles.container}>
       <Confetti />
 
-      <View style={styles.content}>
-        {/* Trophée animé */}
-        <Animated.Text style={[styles.trophy, { transform: [{ scale: trophyScale }] }]}>
-          🏆
-        </Animated.Text>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Trophée */}
+        <Animated.Text style={[styles.trophy, { transform: [{ scale: trophyScale }] }]}>🏆</Animated.Text>
 
-        {/* Titre */}
+        {/* Titres */}
         <Text style={styles.congratsTitle}>Félicitations !</Text>
-        <Text style={styles.congratsSub}>Tu as terminé la chasse</Text>
-        {hunt && (
-          <Text style={styles.huntTitle} numberOfLines={2}>{hunt.title}</Text>
-        )}
+        <Text style={styles.congratsSub}>Chasse terminée avec succès</Text>
 
-        {/* Badge 100% complète */}
+        {/* 100% Complété */}
         <View style={styles.completeBadge}>
-          <Ionicons name="checkmark-circle" size={16} color={theme.colors.success} />
-          <Text style={styles.completeBadgeText}>100% Complète</Text>
+          <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
+          <Text style={styles.completeBadgeText}>100% Complété</Text>
         </View>
+
+        {/* Encadré chasse */}
+        {hunt && (
+          <View style={styles.huntCard}>
+            <Text style={styles.huntCardTitle} numberOfLines={2}>{hunt.title}</Text>
+            {hunt.location ? (
+              <View style={styles.huntCardLocation}>
+                <Ionicons name="location-outline" size={13} color={theme.colors.textSecondary} />
+                <Text style={styles.huntCardLocationText} numberOfLines={1}>{hunt.location}</Text>
+              </View>
+            ) : null}
+          </View>
+        )}
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatCard iconName="time-outline" iconColor={theme.colors.textInverse} label="Durée" value={durationLabel} />
-          <StatCard iconName="star" iconColor={theme.colors.points} label="Points" value={`${totalPoints}`} />
-          <StatCard iconName="list-outline" iconColor={theme.colors.textInverse} label="Étapes" value={`${stepCount}`} />
+          <StatCard icon="⏱" label="Durée" value={durationLabel} />
+          <StatCard icon="⭐" label="Points" value={`${totalPoints}`} />
+          <StatCard icon="✅" label="Étapes" value={`${stepCount}/${stepCount}`} />
+        </View>
+
+        {/* Récompenses débloquées */}
+        <View style={styles.rewardsBox}>
+          <View style={styles.rewardsHeader}>
+            <Text style={styles.rewardsIcon}>🔥</Text>
+            <Text style={styles.rewardsTitle}>Récompenses débloquées</Text>
+          </View>
+
+          {newBadges.length === 0 && (
+            <View style={styles.rewardChip}>
+              <Text style={styles.rewardChipText}>🏆 Chasseur</Text>
+            </View>
+          )}
+          {newBadges.map((b) => {
+            const def = BADGE_CATALOG.find((d) => d.type === b.badge_type);
+            return (
+              <View key={b.id} style={styles.rewardChip}>
+                <Text style={styles.rewardChipText}>{def?.icon ?? '🎖'} {def?.name ?? b.badge_type}</Text>
+              </View>
+            );
+          })}
+
+          <View style={[styles.rewardChip, styles.rewardChipXp]}>
+            <Text style={[styles.rewardChipText, styles.rewardChipXpText]}>+ {totalPoints} XP</Text>
+          </View>
         </View>
 
         {/* Boutons */}
         <TouchableOpacity
           style={styles.primaryBtn}
-          onPress={() => navigation.popToTop()}
+          onPress={() => saveAndGo(() => navigation.popToTop())}
           activeOpacity={0.8}
         >
           <Ionicons name="map-outline" size={18} color={theme.colors.textInverse} />
-          <Text style={styles.primaryBtnLabel}>Retour à la carte</Text>
+          <Text style={styles.primaryBtnLabel}>
+            {isGuest ? 'Sauvegarder en local' : 'Sauvegarder ma progression'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryBtn}
-          onPress={() => {
-            // Navigate to Hunts list tab
+          onPress={() => saveAndGo(() => {
             navigation.popToTop();
-          }}
+            navigation.navigate('HuntDetail', { huntId });
+          })}
           activeOpacity={0.8}
         >
-          <Text style={styles.secondaryBtnLabel}>Voir d'autres chasses</Text>
+          <Text style={styles.secondaryBtnLabel}>Voir les détails</Text>
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -231,81 +255,92 @@ export default function HuntCompletionScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.background,
-  },
+  container: { flex: 1, backgroundColor: theme.colors.background },
   content: {
-    flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
     paddingHorizontal: theme.spacing.xl,
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.xxl,
     gap: theme.spacing.md,
   },
-  confettiPiece: {
-    position: 'absolute',
-    top: 0,
-  },
-  trophy: {
-    fontSize: 88,
-    marginBottom: theme.spacing.xs,
-  },
-  congratsTitle: {
-    ...theme.typography.h1,
-    color: theme.colors.textInverse,
-    textAlign: 'center',
-  },
-  congratsSub: {
-    ...theme.typography.body,
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-  },
-  huntTitle: {
-    ...theme.typography.h3,
-    color: theme.colors.points,
-    textAlign: 'center',
-    lineHeight: 26,
-  },
+  confettiPiece: { position: 'absolute', top: 0 },
+
+  trophy: { fontSize: 80, marginBottom: theme.spacing.xs },
+
+  congratsTitle: { ...theme.typography.h1, color: theme.colors.textInverse, textAlign: 'center' },
+  congratsSub: { ...theme.typography.body, color: 'rgba(255,255,255,0.7)', textAlign: 'center' },
+
   completeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
     backgroundColor: theme.colors.successLight,
     borderRadius: theme.borderRadius.full,
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 8,
+    paddingHorizontal: theme.spacing.lg,
   },
-  completeBadgeText: {
-    ...theme.typography.label,
-    color: theme.colors.success,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    gap: theme.spacing.md,
-    marginTop: theme.spacing.sm,
-    marginBottom: theme.spacing.sm,
-  },
-  statCard: {
-    flex: 1,
+  completeBadgeText: { ...theme.typography.body, color: theme.colors.success, fontWeight: '700' },
+
+  huntCard: {
+    width: '100%',
     backgroundColor: 'rgba(255,255,255,0.12)',
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: theme.spacing.md,
+    borderRadius: theme.borderRadius.xl,
+    paddingVertical: theme.spacing.lg,
+    paddingHorizontal: theme.spacing.xl,
     alignItems: 'center',
     gap: theme.spacing.xs,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.18)',
   },
-  statValue: {
-    ...theme.typography.h3,
-    color: theme.colors.textInverse,
+  huntCardTitle: { ...theme.typography.h3, color: theme.colors.textInverse, textAlign: 'center', fontWeight: '700' },
+  huntCardLocation: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  huntCardLocationText: { ...theme.typography.caption, color: 'rgba(255,255,255,0.6)' },
+
+  statsRow: { flexDirection: 'row', gap: theme.spacing.sm, width: '100%' },
+  statCard: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: theme.borderRadius.xl,
+    paddingVertical: theme.spacing.lg,
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.18)',
   },
+  statIcon: { fontSize: 20 },
+  statValue: { ...theme.typography.h3, color: theme.colors.textInverse },
   statLabel: {
-    ...theme.typography.caption,
-    color: 'rgba(255,255,255,0.6)',
-    fontWeight: '500',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.55)',
+    fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    textAlign: 'center',
   },
+
+  rewardsBox: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: theme.borderRadius.xl,
+    padding: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
+  },
+  rewardsHeader: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs, marginBottom: 4 },
+  rewardsIcon: { fontSize: 18 },
+  rewardsTitle: { ...theme.typography.label, color: theme.colors.textInverse, fontWeight: '700' },
+  rewardChip: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: theme.borderRadius.full,
+    paddingVertical: 10,
+    paddingHorizontal: theme.spacing.lg,
+    alignItems: 'center',
+  },
+  rewardChipText: { ...theme.typography.label, color: theme.colors.textInverse, fontWeight: '600' },
+  rewardChipXp: { backgroundColor: `${theme.colors.points}22`, borderWidth: 1, borderColor: `${theme.colors.points}55` },
+  rewardChipXpText: { color: theme.colors.points },
+
   primaryBtn: {
     width: '100%',
     flexDirection: 'row',
@@ -318,11 +353,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     ...theme.shadows.elevated,
   },
-  primaryBtnLabel: {
-    color: theme.colors.textInverse,
-    ...theme.typography.body,
-    fontWeight: '700',
-  },
+  primaryBtnLabel: { color: theme.colors.textInverse, ...theme.typography.body, fontWeight: '700' },
   secondaryBtn: {
     width: '100%',
     paddingVertical: 13,
@@ -331,8 +362,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.25)',
   },
-  secondaryBtnLabel: {
-    ...theme.typography.label,
-    color: 'rgba(255,255,255,0.75)',
-  },
+  secondaryBtnLabel: { ...theme.typography.label, color: 'rgba(255,255,255,0.75)' },
 });

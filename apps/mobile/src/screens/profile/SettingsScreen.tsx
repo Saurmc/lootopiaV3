@@ -64,13 +64,13 @@ export default function SettingsScreen() {
     const asset = result.assets[0];
     setAvatarUploading(true);
     try {
-      const uploadedUrl = await profileService.uploadAvatar(
+      const { key, presignedUrl } = await profileService.uploadAvatar(
         asset.uri,
         asset.mimeType ?? 'image/jpeg',
       );
-      setAvatarUri(uploadedUrl);
+      setAvatarUri(presignedUrl);
       updateProfile(
-        { avatar_url: uploadedUrl },
+        { avatar_url: key },
         { onError: () => Alert.alert('Erreur', "Impossible de mettre à jour l'avatar.") },
       );
     } catch {

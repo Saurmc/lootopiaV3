@@ -246,7 +246,7 @@ export default function HuntDetailScreen() {
         navigation.replace('HuntCompletion', {
           huntId,
           totalPoints: p.total_points,
-          stepCount: p.steps.length,
+          stepCount: steps.length,
           startedAt: p.started_at,
           completedAt: p.completed_at,
         });
