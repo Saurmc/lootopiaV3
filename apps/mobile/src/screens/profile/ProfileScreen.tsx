@@ -141,6 +141,12 @@ function getBadgeMeta(type: string) {
   return BADGE_META[type] ?? { label: type, icon: 'ribbon' as IoniconName, color: theme.colors.gradientStart };
 }
 
+function chunkBadges<T>(arr: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) result.push(arr.slice(i, i + size));
+  return result;
+}
+
 // ─── BadgeCard ────────────────────────────────────────────────────────────────
 
 function BadgeCard({ badge_type }: { badge_type: string }) {
@@ -305,8 +311,15 @@ export default function ProfileScreen() {
           {badgesExpanded && (
             badges.length > 0 ? (
               <View style={styles.badgeGrid}>
-                {badges.map((b) => (
-                  <BadgeCard key={b.id} badge_type={b.badge_type} />
+                {chunkBadges(badges, 3).map((row, rowIdx) => (
+                  <View key={rowIdx} style={styles.badgeRow}>
+                    {row.map((b) => (
+                      <BadgeCard key={b.id} badge_type={b.badge_type} />
+                    ))}
+                    {row.length < 3 && Array.from({ length: 3 - row.length }).map((_, i) => (
+                      <View key={`ph-${i}`} style={styles.badgeCardPlaceholder} />
+                    ))}
+                  </View>
                 ))}
               </View>
             ) : (
@@ -713,15 +726,16 @@ const styles = StyleSheet.create({
   },
 
   badgeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: theme.spacing.sm,
     padding: theme.spacing.md,
     paddingTop: 0,
+    gap: theme.spacing.sm,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
   },
   badgeCard: {
-    width: '31.5%',
+    flex: 1,
     alignItems: 'center',
     gap: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
@@ -731,6 +745,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.borderLight,
     ...theme.shadows.card,
+  },
+  badgeCardPlaceholder: {
+    flex: 1,
   },
   badgeIconBox: {
     width: 52,
