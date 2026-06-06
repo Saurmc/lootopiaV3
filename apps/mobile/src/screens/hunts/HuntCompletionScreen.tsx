@@ -225,28 +225,60 @@ export default function HuntCompletionScreen() {
           </View>
         </View>
 
-        {/* Boutons */}
-        <TouchableOpacity
-          style={styles.primaryBtn}
-          onPress={() => saveAndGo(() => navigation.popToTop())}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="map-outline" size={18} color={theme.colors.textInverse} />
-          <Text style={styles.primaryBtnLabel}>
-            {isGuest ? 'Sauvegarder en local' : 'Sauvegarder ma progression'}
-          </Text>
-        </TouchableOpacity>
+        {/* Boutons — invité */}
+        {isGuest ? (
+          <>
+            <View style={styles.guestBanner}>
+              <Ionicons name="information-circle-outline" size={18} color={theme.colors.points} />
+              <Text style={styles.guestBannerText}>
+                Créez un compte pour conserver votre progression et vos badges définitivement.
+              </Text>
+            </View>
 
-        <TouchableOpacity
-          style={styles.secondaryBtn}
-          onPress={() => saveAndGo(() => {
-            navigation.popToTop();
-            navigation.navigate('HuntDetail', { huntId });
-          })}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.secondaryBtnLabel}>Voir les détails</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={() => saveAndGo(() => {
+                navigation.popToTop();
+                navigation.navigate('Profile' as any);
+              })}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="person-add-outline" size={18} color={theme.colors.textInverse} />
+              <Text style={styles.primaryBtnLabel}>Créer un compte</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => saveAndGo(() => navigation.popToTop())}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.secondaryBtnLabel}>Continuer sans compte</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          /* Boutons — utilisateur connecté */
+          <>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={() => saveAndGo(() => navigation.popToTop())}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="map-outline" size={18} color={theme.colors.textInverse} />
+              <Text style={styles.primaryBtnLabel}>Sauvegarder ma progression</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => saveAndGo(() => {
+                navigation.popToTop();
+                navigation.navigate('HuntDetail', { huntId });
+              })}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.secondaryBtnLabel}>Voir les détails</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -341,6 +373,23 @@ const styles = StyleSheet.create({
   rewardChipXp: { backgroundColor: `${theme.colors.points}22`, borderWidth: 1, borderColor: `${theme.colors.points}55` },
   rewardChipXpText: { color: theme.colors.points },
 
+  guestBanner: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: theme.spacing.sm,
+    backgroundColor: `${theme.colors.points}1A`,
+    borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: `${theme.colors.points}44`,
+  },
+  guestBannerText: {
+    flex: 1,
+    ...theme.typography.bodySmall,
+    color: 'rgba(255,255,255,0.85)',
+    lineHeight: 18,
+  },
   primaryBtn: {
     width: '100%',
     flexDirection: 'row',
