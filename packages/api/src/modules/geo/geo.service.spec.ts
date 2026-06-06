@@ -45,4 +45,36 @@ describe('GeoService', () => {
     const result = await service.findHuntsNearby(0, 0, 100);
     expect(result).toEqual([]);
   });
+
+  describe('isWithinRadius', () => {
+    const stepLocation = { type: 'Point', coordinates: [-1.69373, 48.089] };
+
+    it('should return true when player is within radius', async () => {
+      dataSource.query.mockResolvedValue([{ within: true }]);
+      const result = await service.isWithinRadius(48.089, -1.69373, stepLocation, 50);
+      expect(result).toBe(true);
+    });
+
+    it('should return false when player is outside radius', async () => {
+      dataSource.query.mockResolvedValue([{ within: false }]);
+      const result = await service.isWithinRadius(48.0, -1.6, stepLocation, 50);
+      expect(result).toBe(false);
+    });
+
+    it('should use ST_GeomFromGeoJSON and pass correct parameters', async () => {
+      dataSource.query.mockResolvedValue([{ within: true }]);
+      await service.isWithinRadius(48.089, -1.69373, stepLocation, 50);
+
+      expect(dataSource.query).toHaveBeenCalledWith(
+        expect.stringContaining('ST_GeomFromGeoJSON($1)'),
+        [JSON.stringify(stepLocation), 48.089, -1.69373, 50],
+      );
+    });
+
+    it('should return false when query returns empty rows', async () => {
+      dataSource.query.mockResolvedValue([]);
+      const result = await service.isWithinRadius(48.089, -1.69373, stepLocation, 50);
+      expect(result).toBe(false);
+    });
+  });
 });

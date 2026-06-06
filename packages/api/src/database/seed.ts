@@ -222,12 +222,12 @@ async function seed() {
       partner_id: partner1.id,
       title: 'Les secrets de saint-jacques',
       description: 'Parcourez ce musée fictif et scannez chaque tableau pour révéler son secret en réalité augmentée. Quatre œuvres majeures vous attendent.',
-      location: 'Paris 4e — Tour Saint-Jacques',
+      location: '278 rue de Nantes, Saint-Jacques-de-la-Lande',
       difficulty: 'medium',
       duration: 60,
       points: 200,
       is_active: true,
-      lng: 2.3490, lat: 48.8573,
+      lng: -1.69373, lat: 48.08900,
     },
   ];
 
@@ -259,6 +259,7 @@ async function seed() {
     title: string;
     description: string;
     validation_radius: number;
+    validation_type?: string;
     ar_content: Record<string, unknown> | null;
     lng: number;
     lat: number;
@@ -298,49 +299,53 @@ async function seed() {
       hunt_id: saintjacques.id, order: 1,
       title: 'La Jeune Fille à la Perle',
       description: 'Pointez votre caméra sur ce tableau de Vermeer pour révéler son secret en RA.',
-      validation_radius: 30,
+      validation_radius: 50,
+      validation_type: 'ar',
       ar_content: {
         type: 'ar-3d-spatial',
         marker_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/300px-1665_Girl_with_a_Pearl_Earring.jpg',
         artwork_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/300px-1665_Girl_with_a_Pearl_Earring.jpg',
       },
-      lng: 2.3490, lat: 48.8573,
+      lng: -1.69373, lat: 48.08900,
     },
     {
       hunt_id: saintjacques.id, order: 2,
       title: 'La Nuit Étoilée',
       description: 'Retrouvez ce chef-d\'œuvre de Van Gogh et scannez-le pour voir les étoiles s\'animer.',
-      validation_radius: 30,
+      validation_radius: 50,
+      validation_type: 'ar',
       ar_content: {
         type: 'ar-3d-spatial',
         marker_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/300px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg',
         artwork_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/300px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg',
       },
-      lng: 2.3495, lat: 48.8570,
+      lng: -1.69390, lat: 48.08920,
     },
     {
       hunt_id: saintjacques.id, order: 3,
       title: 'La Ronde de Nuit',
       description: 'Découvrez le mystère derrière cette toile monumentale de Rembrandt.',
-      validation_radius: 30,
+      validation_radius: 50,
+      validation_type: 'ar',
       ar_content: {
         type: 'ar-3d-spatial',
         marker_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Night_Watch_-_HD.jpg/300px-The_Night_Watch_-_HD.jpg',
         artwork_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Night_Watch_-_HD.jpg/300px-The_Night_Watch_-_HD.jpg',
       },
-      lng: 2.3485, lat: 48.8575,
+      lng: -1.69355, lat: 48.08880,
     },
     {
       hunt_id: saintjacques.id, order: 4,
       title: 'Les Nymphéas',
       description: 'Laissez Monet vous emmener dans son jardin d\'eau en réalité augmentée.',
-      validation_radius: 30,
+      validation_radius: 50,
+      validation_type: 'ar',
       ar_content: {
         type: 'ar-3d-spatial',
         marker_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg/300px-Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg',
         artwork_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg/300px-Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg',
       },
-      lng: 2.3492, lat: 48.8568,
+      lng: -1.69410, lat: 48.08910,
     },
   ];
 

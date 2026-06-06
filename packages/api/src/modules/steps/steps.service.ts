@@ -4,12 +4,14 @@ import { HuntsRepository } from '../hunts/hunts.repository';
 import { StepEntity } from './entities/step.entity';
 import { CreateStepDto } from './dto/create-step.dto';
 import { UpdateStepDto } from './dto/update-step.dto';
+import { StorageService } from '../files/storage.service';
 
 @Injectable()
 export class StepsService {
   constructor(
     private readonly stepsRepository: StepsRepository,
     private readonly huntsRepository: HuntsRepository,
+    private readonly storageService: StorageService,
   ) {}
 
   private buildLocation(lat?: number, lng?: number): object | null {
@@ -21,20 +23,23 @@ export class StepsService {
 
   private async assertHuntOwnership(huntId: string, partnerId: string): Promise<void> {
     const hunt = await this.huntsRepository.findById(huntId);
-    if (!hunt) {
-      throw new NotFoundException(`Hunt ${huntId} not found`);
-    }
-    if (hunt.partner_id !== partnerId) {
-      throw new NotFoundException(`Hunt ${huntId} not found`);
-    }
+    if (!hunt) throw new NotFoundException(`Hunt ${huntId} not found`);
+    if (hunt.partner_id !== partnerId) throw new NotFoundException(`Hunt ${huntId} not found`);
+  }
+
+  private async resolveStep(step: StepEntity): Promise<StepEntity> {
+    if (!step.ar_content) return step;
+    return {
+      ...step,
+      ar_content: await this.storageService.rewriteArContentUrls(step.ar_content),
+    };
   }
 
   async findByHunt(huntId: string): Promise<StepEntity[]> {
     const hunt = await this.huntsRepository.findById(huntId);
-    if (!hunt) {
-      throw new NotFoundException(`Hunt ${huntId} not found`);
-    }
-    return this.stepsRepository.findByHuntId(huntId);
+    if (!hunt) throw new NotFoundException(`Hunt ${huntId} not found`);
+    const steps = await this.stepsRepository.findByHuntId(huntId);
+    return Promise.all(steps.map((s) => this.resolveStep(s)));
   }
 
   async createStep(
@@ -82,11 +87,7 @@ export class StepsService {
     return this.stepsRepository.save(updates);
   }
 
-  async deleteStep(
-    huntId: string,
-    stepId: string,
-    partnerId: string,
-  ): Promise<void> {
+  async deleteStep(huntId: string, stepId: string, partnerId: string): Promise<void> {
     await this.assertHuntOwnership(huntId, partnerId);
 
     const step = await this.stepsRepository.findById(stepId);

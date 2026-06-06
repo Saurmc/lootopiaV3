@@ -6,6 +6,7 @@ import { UsersRepository } from '../users/users.repository';
 import { StepsRepository } from '../steps/steps.repository';
 import { GeoService } from '../geo/geo.service';
 import { BadgesService } from '../badges/badges.service';
+import { StorageService } from '../files/storage.service';
 import { ProgressEntity } from './entities/progress.entity';
 import { HuntEntity } from '../hunts/entities/hunt.entity';
 import { StepEntity } from '../steps/entities/step.entity';
@@ -124,7 +125,13 @@ describe('ProgressService', () => {
       checkAndAwardHuntBadges: jest.fn(),
     } as unknown as jest.Mocked<BadgesService>;
 
-    service = new ProgressService(progressRepo, huntsRepo, usersRepo, stepsRepo, geoService, badgesService);
+    const storageService = {
+      upload: jest.fn(),
+      getPresignedUrl: jest.fn(),
+      rewriteArContentUrls: jest.fn().mockImplementation((ac) => Promise.resolve(ac)),
+    } as unknown as jest.Mocked<StorageService>;
+
+    service = new ProgressService(progressRepo, huntsRepo, usersRepo, stepsRepo, geoService, badgesService, storageService);
   });
 
   describe('joinHunt', () => {
@@ -139,7 +146,7 @@ describe('ProgressService', () => {
         expect.objectContaining({
           user_id: 'user-uuid',
           hunt_id: 'hunt-uuid',
-          current_step: 0,
+          current_step: 1,
           completed_steps: [],
           total_points: 0,
         }),

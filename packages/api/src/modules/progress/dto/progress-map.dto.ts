@@ -7,12 +7,11 @@ export class StepMapDto {
   description: string | null;
   status: StepStatus;
   validation_radius: number;
-  // Type de validation exposé pour que le mobile sache quelle UI afficher
   validation_type: string;
-  // Coordonnées exposées uniquement pour les étapes complétées et l'étape courante
-  // Étapes verrouillées n'exposent pas leur position (RGPD + gameplay)
   coordinates: { lat: number; lng: number } | null;
-  // Contenu AR exposé pour les étapes courantes/complétées (marqueur image, modèle 3D…)
+  // Vignette visuelle toujours exposée (tous statuts) pour l'affichage dans la grille
+  thumbnail: string | null;
+  // Contenu AR complet exposé uniquement pour les étapes courantes/complétées
   ar_content: Record<string, unknown> | null;
 }
 

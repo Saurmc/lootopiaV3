@@ -65,16 +65,8 @@ type GridStep = {
   id: string;
   order: number;
   status: StepStatus | 'locked';
-  ar_content?: unknown | null;
+  thumbnail?: string | null;
 };
-
-function getArtworkThumb(ar_content: unknown): string | null {
-  if (!ar_content || typeof ar_content !== 'object') return null;
-  const ac = ar_content as Record<string, unknown>;
-  if (ac.type !== 'ar-3d-spatial') return null;
-  const img = ac.marker_image ?? ac.artwork_image;
-  return typeof img === 'string' ? img : null;
-}
 
 function StepGrid({ steps, currentStepId }: { steps: GridStep[]; currentStepId?: string }) {
   return (
@@ -83,7 +75,7 @@ function StepGrid({ steps, currentStepId }: { steps: GridStep[]; currentStepId?:
         {steps.map((s) => {
           const isDone = s.status === 'completed';
           const isCurrent = s.status === 'current';
-          const thumb = getArtworkThumb(s.ar_content);
+          const thumb = s.thumbnail ?? null;
           return (
             <View
               key={s.id}

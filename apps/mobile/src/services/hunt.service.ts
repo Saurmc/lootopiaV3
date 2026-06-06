@@ -44,6 +44,7 @@ export interface StepDetail {
   validation_type: string;
   validation_radius: number;
   coordinates: { lat: number; lng: number } | null;
+  thumbnail: string | null;
   ar_content: unknown | null;
 }
 
@@ -72,6 +73,7 @@ export interface HuntDetail {
     order: number;
     title: string;
     description: string | null;
+    thumbnail: string | null;
     ar_content: unknown | null;
   }>;
 }
