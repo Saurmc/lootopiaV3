@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Image,
+  Keyboard,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -72,7 +74,9 @@ export default function MapScreen() {
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [selectedHunt, setSelectedHunt] = useState<HuntListItem | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchFocused, setSearchFocused] = useState(false);
   const [cityName, setCityName] = useState<string | null>(null);
+  const searchRef = useRef<TextInput>(null);
 
   const { data: hunts = [] } = useHuntsOnMap();
   const { data: history = [] } = useHuntHistory();
@@ -82,12 +86,37 @@ export default function MapScreen() {
     [history],
   );
 
-  // Filtre les marqueurs par recherche
+  // Filtre les marqueurs par recherche (titre + lieu)
   const visibleHunts = useMemo(() => {
     if (!searchQuery.trim()) return hunts;
     const q = searchQuery.toLowerCase();
-    return hunts.filter((h) => h.title.toLowerCase().includes(q));
+    return hunts.filter(
+      (h) => h.title.toLowerCase().includes(q) || (h.location ?? '').toLowerCase().includes(q),
+    );
   }, [hunts, searchQuery]);
+
+  const MAX_RESULTS = 5;
+  const showResults = searchFocused && searchQuery.trim().length > 0;
+
+  function selectSearchResult(hunt: HuntListItem) {
+    Keyboard.dismiss();
+    setSearchQuery('');
+    setSearchFocused(false);
+    setSelectedHunt(hunt);
+    if (hunt.lat != null && hunt.lng != null) {
+      cameraRef.current?.setCamera({
+        centerCoordinate: [hunt.lng, hunt.lat],
+        zoomLevel: 16,
+        animationDuration: 600,
+      });
+    }
+  }
+
+  function clearSearch() {
+    setSearchQuery('');
+    setSearchFocused(false);
+    Keyboard.dismiss();
+  }
 
   // Nom de ville via IP geolocation — aucune permission GPS requise
   useEffect(() => {
@@ -243,17 +272,27 @@ export default function MapScreen() {
 
         {/* Ligne 2 : Search bar + Hamburger */}
         <View style={styles.searchRow} pointerEvents="box-none">
-          <View style={styles.searchBarWrapper}>
+          <View style={[styles.searchBarWrapper, searchFocused && styles.searchBarFocused]}>
             <Ionicons name="search-outline" size={15} color={theme.colors.textSecondary} />
             <TextInput
+              ref={searchRef}
               style={styles.searchInput}
               placeholder="Rechercher une chasse…"
               placeholderTextColor={theme.colors.textDisabled}
               value={searchQuery}
               onChangeText={setSearchQuery}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
               returnKeyType="search"
-              clearButtonMode="while-editing"
+              onSubmitEditing={() => {
+                if (visibleHunts.length > 0) selectSearchResult(visibleHunts[0]);
+              }}
             />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <Ionicons name="close-circle" size={16} color={theme.colors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
           <TouchableOpacity
             style={styles.hamburgerBtn}
@@ -263,6 +302,56 @@ export default function MapScreen() {
             <Ionicons name="menu" size={24} color={theme.colors.textInverse} />
           </TouchableOpacity>
         </View>
+
+        {/* Panneau de résultats de recherche */}
+        {showResults && (
+          <View style={styles.resultsPanel} pointerEvents="box-none">
+            {visibleHunts.length === 0 ? (
+              <View style={styles.resultEmpty}>
+                <Text style={styles.resultEmptyText}>Aucune chasse trouvée</Text>
+              </View>
+            ) : (
+              <ScrollView
+                keyboardShouldPersistTaps="always"
+                showsVerticalScrollIndicator={false}
+                style={{ maxHeight: MAX_RESULTS * 64 }}
+              >
+                {visibleHunts.slice(0, MAX_RESULTS).map((hunt) => (
+                  <TouchableOpacity
+                    key={hunt.id}
+                    style={styles.resultItem}
+                    onPress={() => selectSearchResult(hunt)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.resultIconBox}>
+                      <Ionicons name="map-outline" size={16} color={theme.colors.primary} />
+                    </View>
+                    <View style={styles.resultText}>
+                      <Text style={styles.resultTitle} numberOfLines={1}>{hunt.title}</Text>
+                      {hunt.location ? (
+                        <Text style={styles.resultLocation} numberOfLines={1}>{hunt.location}</Text>
+                      ) : null}
+                    </View>
+                    <Ionicons name="chevron-forward" size={14} color={theme.colors.textDisabled} />
+                  </TouchableOpacity>
+                ))}
+                {visibleHunts.length > MAX_RESULTS && (
+                  <TouchableOpacity
+                    style={styles.resultMore}
+                    onPress={() => {
+                      clearSearch();
+                      navigation.navigate('HuntsList');
+                    }}
+                  >
+                    <Text style={styles.resultMoreText}>
+                      Voir les {visibleHunts.length - MAX_RESULTS} autres résultats →
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+            )}
+          </View>
+        )}
 
         {/* Bannière permission refusée */}
         {permissionDenied && (
@@ -383,6 +472,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.full,
     paddingHorizontal: theme.spacing.md,
     height: 42,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  searchBarFocused: {
+    backgroundColor: '#fff',
+    borderColor: theme.colors.primary,
   },
   searchInput: {
     flex: 1,
@@ -399,6 +494,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...theme.shadows.card,
   },
+
+  // ── Results panel ──
+  resultsPanel: {
+    backgroundColor: '#fff',
+    borderRadius: theme.borderRadius.lg,
+    overflow: 'hidden',
+    ...theme.shadows.elevated,
+  },
+  resultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    gap: theme.spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.borderLight,
+  },
+  resultIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: `${theme.colors.primary}18`,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  resultText: { flex: 1 },
+  resultTitle: { ...theme.typography.body, fontWeight: '600', color: theme.colors.text },
+  resultLocation: { ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 1 },
+  resultEmpty: {
+    padding: theme.spacing.md,
+    alignItems: 'center',
+  },
+  resultEmptyText: { ...theme.typography.bodySmall, color: theme.colors.textSecondary },
+  resultMore: {
+    padding: theme.spacing.sm,
+    alignItems: 'center',
+    backgroundColor: theme.colors.surfaceElevated,
+  },
+  resultMoreText: { ...theme.typography.caption, color: theme.colors.primary, fontWeight: '600' },
 
   // ── Permission banner (inside overlay) ──
   permissionBanner: {
