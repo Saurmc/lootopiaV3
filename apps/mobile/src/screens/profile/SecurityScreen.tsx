@@ -47,7 +47,7 @@ export default function SecurityScreen() {
 
     setPwdLoading(true);
     try {
-      await profileService.changePassword(currentPwd, newPwd);
+      await profileService.changePassword(currentPwd, newPwd, confirmPwd);
       Alert.alert('Succès', 'Mot de passe modifié avec succès.');
       setCurrentPwd('');
       setNewPwd('');

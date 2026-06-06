@@ -127,15 +127,15 @@ async function seed() {
 
   const [admin, partner1, partner2, alice, bob, charlie, diana, eve, frank] =
     await userRepo.save([
-      { email: SEED_EMAILS.admin,    password_hash: adminHash,   role: 'ADMIN'   as any, consent_gps: true },
-      { email: SEED_EMAILS.partner1, password_hash: partnerHash, role: 'PARTNER' as any, consent_gps: true },
-      { email: SEED_EMAILS.partner2, password_hash: partnerHash, role: 'PARTNER' as any, consent_gps: true },
-      { email: SEED_EMAILS.alice,    password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: true },
-      { email: SEED_EMAILS.bob,      password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: true },
-      { email: SEED_EMAILS.charlie,  password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: false },
-      { email: SEED_EMAILS.diana,    password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: true },
-      { email: SEED_EMAILS.eve,      password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: true },
-      { email: SEED_EMAILS.frank,    password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: true },
+      { email: SEED_EMAILS.admin,    password_hash: adminHash,   role: 'ADMIN'   as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.partner1, password_hash: partnerHash, role: 'PARTNER' as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.partner2, password_hash: partnerHash, role: 'PARTNER' as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.alice,    password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.bob,      password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.charlie,  password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: false },
+      { email: SEED_EMAILS.diana,    password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.eve,      password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.frank,    password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: true },
     ]);
 
   console.log(`  → ${9} utilisateurs créés.`);

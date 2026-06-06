@@ -67,8 +67,12 @@ export const profileService = {
   },
 
   /** PATCH /me/password */
-  changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
-    await api.patch('/me/password', { current_password: currentPassword, new_password: newPassword });
+  changePassword: async (currentPassword: string, newPassword: string, newPasswordConfirm: string): Promise<void> => {
+    await api.patch('/me/password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password_confirm: newPasswordConfirm,
+    });
   },
 
   /** DELETE /me */
