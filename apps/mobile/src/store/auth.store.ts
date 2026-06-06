@@ -78,7 +78,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   _setToken: async (token: string, isGuest = false) => {
-    await AsyncStorage.setItem(TOKEN_KEY, token);
+    const [, consentRaw] = await Promise.all([
+      AsyncStorage.setItem(TOKEN_KEY, token),
+      AsyncStorage.getItem(CONSENT_GPS_KEY),
+    ]);
     const payload = decodeJwtPayload(token);
     const guestFromPayload =
       typeof payload.is_guest === 'boolean' ? payload.is_guest : isGuest;
@@ -93,6 +96,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: true,
       isGuest: guestFromPayload,
       isLoading: false,
+      consentGps: consentRaw !== null ? consentRaw === 'true' : null,
     });
   },
 
