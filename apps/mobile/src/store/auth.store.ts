@@ -139,8 +139,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       token: null,
       isAuthenticated: false,
       isGuest: false,
-      consentGps: null,
       pendingGpsConsent: false,
+      // consentGps intentionally not reset — it's a device-level preference
     });
   },
 }));
