@@ -124,6 +124,7 @@ export default function HuntCompletionScreen() {
     queryClient.invalidateQueries({ queryKey: ['me', 'stats'] });
     queryClient.invalidateQueries({ queryKey: ['me', 'badges'] });
     queryClient.invalidateQueries({ queryKey: ['me', 'profile'] });
+    queryClient.invalidateQueries({ queryKey: ['hunts', 'history'] });
   }, []);
 
   // Badges gagnés à la complétion (earned dans les 2 minutes autour de completedAt)
@@ -152,6 +153,7 @@ export default function HuntCompletionScreen() {
     if (isGuest) await saveGuestProgress();
     queryClient.invalidateQueries({ queryKey: ['me', 'stats'] });
     queryClient.invalidateQueries({ queryKey: ['me', 'badges'] });
+    queryClient.invalidateQueries({ queryKey: ['hunts', 'history'] });
     then();
   };
 

@@ -109,7 +109,13 @@ export class ProgressService {
     if (isHuntComplete) {
       const allProgress = await this.progressRepository.findAllByUser(userId);
       const completedCount = allProgress.filter((p) => p.completed_at !== null).length;
-      await this.badgesService.checkAndAwardHuntBadges(userId, completedCount);
+      const durationMs = new Date().getTime() - progress.started_at.getTime();
+      await this.badgesService.checkAndAwardHuntBadges(
+        userId,
+        completedCount,
+        newCompletedSteps.length,
+        durationMs,
+      );
     }
 
     return saved;
