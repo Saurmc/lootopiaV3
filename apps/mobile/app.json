@@ -10,7 +10,8 @@
         {
           "cameraPermission": "Autoriser l'accès à la caméra pour scanner les QR codes des étapes de chasse."
         }
-      ]
+      ],
+      "@maplibre/maplibre-react-native"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -22,7 +23,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.mobile"
+      "bundleIdentifier": "com.thomas.lootopiaV3"
     },
     "android": {
       "adaptiveIcon": {
@@ -38,7 +39,7 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.anonymous.mobile"
+      "package": "com.thomas.lootopiaV3"
     },
     "web": {
       "favicon": "./assets/favicon.png"
