@@ -9,6 +9,10 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "dev": "echo Run workspace-specific dev scripts: npm run dev -w <workspace>",
-    "lint": "npm run lint --workspaces --if-present"
+    "lint": "npm run lint --workspaces --if-present",
+    "postinstall": "patch-package"
+  },
+  "devDependencies": {
+    "patch-package": "^8.0.1"
   }
 }
