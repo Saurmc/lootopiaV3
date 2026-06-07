@@ -5,6 +5,7 @@ import { UsersService } from '../users/users.service';
 import { UserEntity } from '../users/entities/user.entity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { StorageService } from '../files/storage.service';
 
 export interface HuntHistoryItem {
   hunt_id: string;
@@ -48,6 +49,7 @@ export class ProfileService {
     private readonly progressRepository: ProgressRepository,
     private readonly badgesService: BadgesService,
     private readonly usersService: UsersService,
+    private readonly storageService: StorageService,
   ) {}
 
   async getProfile(userId: string): Promise<PlayerProfile> {
@@ -55,11 +57,14 @@ export class ProfileService {
     if (!user) {
       throw new Error('User not found');
     }
+    const avatarUrl = user.avatar_url
+      ? await this.storageService.getPresignedUrl(user.avatar_url)
+      : null;
     return {
       id: user.id,
       email: user.email,
       pseudo: user.pseudo,
-      avatar_url: user.avatar_url,
+      avatar_url: avatarUrl,
       role: user.role,
       is_guest: user.is_guest,
       consent_gps: user.consent_gps,
@@ -72,11 +77,14 @@ export class ProfileService {
       pseudo: dto.pseudo,
       avatar_url: dto.avatar_url,
     });
+    const avatarUrl = updated.avatar_url
+      ? await this.storageService.getPresignedUrl(updated.avatar_url)
+      : null;
     return {
       id: updated.id,
       email: updated.email,
       pseudo: updated.pseudo,
-      avatar_url: updated.avatar_url,
+      avatar_url: avatarUrl,
       role: updated.role,
       is_guest: updated.is_guest,
       consent_gps: updated.consent_gps,

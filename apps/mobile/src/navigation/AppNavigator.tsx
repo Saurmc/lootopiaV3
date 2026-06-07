@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, SafeAreaView, ScrollView, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../store/auth.store';
 import GpsConsentModal from '../components/common/GpsConsentModal';
 import ConvertAccountScreen from '../screens/guest/ConvertAccountScreen';
+import AuthNavigator from './AuthNavigator';
 import MapScreen from '../screens/map/MapScreen';
 import HuntsListScreen from '../screens/hunts/HuntsListScreen';
 import HuntDetailScreen from '../screens/hunts/HuntDetailScreen';
@@ -14,46 +18,133 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 import BadgesScreen from '../screens/profile/BadgesScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
 import SecurityScreen from '../screens/profile/SecurityScreen';
+import theme from '../constants/theme';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+/** Tab bar entièrement custom — focus détecté via state.index (100% fiable) */
+function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
+
+  return (
+    <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom - theme.spacing.lg, 0) }]}>
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const isFocused = state.index === index;
+        const color = isFocused ? theme.colors.tabBarActive : theme.colors.tabBarInactive;
+        const label = typeof options.tabBarLabel === 'string'
+          ? options.tabBarLabel
+          : (options.title ?? route.name);
+
+        const onPress = () => {
+          const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        return (
+          <TouchableOpacity
+            key={route.key}
+            onPress={onPress}
+            style={styles.tabItem}
+            activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isFocused }}
+          >
+            <View style={[styles.tabPill, isFocused && styles.tabPillActive]}>
+              {options.tabBarIcon?.({ focused: isFocused, color, size: 22 })}
+              <Text style={[styles.tabLabel, { color }]}>{label}</Text>
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
 
 /**
  * GuestProfileScreen — affiché dans l'onglet Profil pour les invités.
- * Propose de convertir le compte ou de voir le profil (US59).
+ * Propose de convertir le compte (US59) + toggle localisation GPS.
  */
 function GuestProfileScreen() {
   const [convertVisible, setConvertVisible] = useState(false);
+  const [authVisible, setAuthVisible] = useState(false);
+  const { consentGps, setConsentGps } = useAuthStore();
 
   return (
-    <View style={styles.guestProfile}>
-      <Text style={styles.guestProfileIcon}>👤</Text>
-      <Text style={styles.guestProfileTitle}>Mode invité</Text>
-      <Text style={styles.guestProfileSubtitle}>
-        Créez un compte pour sauvegarder votre progression et accéder à toutes les fonctionnalités.
-      </Text>
-      <TouchableOpacity
-        style={styles.convertBtn}
-        onPress={() => setConvertVisible(true)}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.convertBtnLabel}>Créer un compte</Text>
-      </TouchableOpacity>
+    <SafeAreaView style={styles.guestProfileContainer}>
+      <ScrollView contentContainerStyle={styles.guestProfile} showsVerticalScrollIndicator={false}>
+        <Ionicons name="person-outline" size={56} color={theme.colors.textSecondary} />
+        <Text style={styles.guestProfileTitle}>Mode invité</Text>
+        <Text style={styles.guestProfileSubtitle}>
+          Créez un compte pour sauvegarder votre progression et accéder à toutes les fonctionnalités.
+        </Text>
+        <TouchableOpacity
+          style={styles.convertBtn}
+          onPress={() => setAuthVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.convertBtnLabel}>Se connecter</Text>
+        </TouchableOpacity>
 
-      <ConvertAccountScreen
-        visible={convertVisible}
-        onClose={() => setConvertVisible(false)}
-      />
-    </View>
+        <TouchableOpacity
+          style={styles.convertBtnOutline}
+          onPress={() => setConvertVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.convertBtnOutlineLabel}>Créer un compte</Text>
+        </TouchableOpacity>
+
+        {/* Paramètre localisation */}
+        <View style={styles.guestSettingsCard}>
+          <Text style={styles.guestSettingsTitle}>Paramètres</Text>
+          <View style={styles.guestToggleRow}>
+            <View style={styles.guestToggleLeft}>
+              <Ionicons name="location-outline" size={18} color={theme.colors.primary} />
+              <View>
+                <Text style={styles.guestToggleLabel}>Localisation GPS</Text>
+                <Text style={styles.guestToggleSub}>
+                  Nécessaire pour valider les étapes de chasse
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={consentGps === true}
+              onValueChange={setConsentGps}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
+              thumbColor={consentGps === true ? theme.colors.primary : theme.colors.textSecondary}
+            />
+          </View>
+        </View>
+
+        {/* Modal login/register — se ferme automatiquement après connexion */}
+        <Modal
+          visible={authVisible}
+          animationType="slide"
+          onRequestClose={() => setAuthVisible(false)}
+        >
+          <AuthNavigator onDismiss={() => setAuthVisible(false)} />
+        </Modal>
+
+        <ConvertAccountScreen
+          visible={convertVisible}
+          onClose={() => setConvertVisible(false)}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 
 export type AppTabParamList = {
   Map: undefined;
-  Hunts: undefined;
   Profile: undefined;
 };
 
 export type AppStackParamList = {
   Tabs: undefined;
+  HuntsList: undefined;
   BadgesHistory: undefined;
   Settings: undefined;
   Security: undefined;
@@ -80,68 +171,50 @@ export type AppStackParamList = {
 const Tab = createBottomTabNavigator<AppTabParamList>();
 const Stack = createNativeStackNavigator<AppStackParamList>();
 
-/** Bannière ambre persistante pour les joueurs invités. */
-function GuestBanner() {
-  return (
-    <View style={styles.guestBanner}>
-      <Text style={styles.guestBannerText}>
-        Mode invité — Créez un compte pour sauvegarder votre progression
-      </Text>
-    </View>
-  );
-}
-
 /**
- * TabsRoot — tabs + bannière invité + modal GPS.
+ * TabsRoot — tabs + popup invité au lancement + modal GPS.
  * Séparé pour éviter de re-rendre le NativeStack entier quand l'état change.
  */
 function TabsRoot() {
-  const { isGuest, pendingGpsConsent, setConsentGps } = useAuthStore();
+  const { isAuthenticated, isGuest, pendingGpsConsent, setConsentGps } = useAuthStore();
+  const guestAlertShown = useRef(false);
+
+  useEffect(() => {
+    if (isGuest && !guestAlertShown.current) {
+      guestAlertShown.current = true;
+      Alert.alert(
+        'Mode invité',
+        'Votre progression ne sera pas sauvegardée si vous changez d\'appareil. Créez un compte depuis l\'onglet Profil pour ne rien perdre.',
+        [{ text: 'Compris', style: 'default' }],
+      );
+    }
+  }, [isGuest]);
 
   return (
     <View style={styles.root}>
-      {isGuest && <GuestBanner />}
 
       <Tab.Navigator
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: '#3B82F6',
-          tabBarInactiveTintColor: '#6B7280',
-          tabBarStyle: {
-            borderTopWidth: 1,
-            borderTopColor: '#E5E7EB',
-            backgroundColor: '#fff',
-            height: 60,
-            paddingBottom: 8,
-          },
-          tabBarLabelStyle: {
-            fontSize: 12,
-            fontWeight: '500',
-          },
-        }}
+        tabBar={(props) => <CustomTabBar {...props} />}
+        screenOptions={{ headerShown: false }}
       >
         <Tab.Screen
           name="Map"
           component={MapScreen}
           options={{
             tabBarLabel: 'Carte',
-            tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🗺</Text>,
-          }}
-        />
-        <Tab.Screen
-          name="Hunts"
-          component={HuntsListScreen}
-          options={{
-            tabBarLabel: 'Chasses',
-            tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🔍</Text>,
+            tabBarIcon: ({ focused, color }) => (
+              <Ionicons name={focused ? 'map' : 'map-outline'} size={22} color={color} />
+            ),
           }}
         />
         <Tab.Screen
           name="Profile"
-          component={isGuest ? GuestProfileScreen : ProfileScreen}
+          component={isAuthenticated && !isGuest ? ProfileScreen : AuthNavigator}
           options={{
             tabBarLabel: 'Profil',
-            tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>👤</Text>,
+            tabBarIcon: ({ focused, color }) => (
+              <Ionicons name={focused ? 'person' : 'person-outline'} size={22} color={color} />
+            ),
           }}
         />
       </Tab.Navigator>
@@ -155,6 +228,13 @@ function TabsRoot() {
   );
 }
 
+const sharedHeaderOptions = {
+  headerStyle: { backgroundColor: theme.navigation.headerBackground },
+  headerTintColor: theme.colors.textInverse,
+  headerTitleStyle: { ...theme.typography.label, color: theme.colors.textInverse },
+  headerBackTitle: 'Retour',
+};
+
 /**
  * AppNavigator — NativeStack racine englobant les onglets + HuntDetailScreen.
  * Permet la navigation vers HuntDetail depuis n'importe quel onglet.
@@ -164,59 +244,34 @@ export default function AppNavigator() {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Tabs" component={TabsRoot} />
       <Stack.Screen
+        name="HuntsList"
+        component={HuntsListScreen}
+        options={{ headerShown: true, title: 'Chasses disponibles', ...sharedHeaderOptions }}
+      />
+      <Stack.Screen
         name="BadgesHistory"
         component={BadgesScreen}
-        options={{
-          headerShown: true,
-          title: 'Badges et historique',
-          headerBackTitle: 'Retour',
-          headerTintColor: '#1D4ED8',
-          headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
-        }}
+        options={{ headerShown: true, title: 'Badges et historique', ...sharedHeaderOptions }}
       />
       <Stack.Screen
         name="Settings"
         component={SettingsScreen}
-        options={{
-          headerShown: true,
-          title: 'Paramètres',
-          headerBackTitle: 'Retour',
-          headerTintColor: '#1D4ED8',
-          headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
-        }}
+        options={{ headerShown: true, title: 'Paramètres', ...sharedHeaderOptions }}
       />
       <Stack.Screen
         name="Security"
         component={SecurityScreen}
-        options={{
-          headerShown: true,
-          title: 'Sécurité',
-          headerBackTitle: 'Retour',
-          headerTintColor: '#1D4ED8',
-          headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
-        }}
+        options={{ headerShown: true, title: 'Sécurité', ...sharedHeaderOptions }}
       />
       <Stack.Screen
         name="HuntDetail"
         component={HuntDetailScreen}
-        options={{
-          headerShown: true,
-          title: 'Détail de la chasse',
-          headerBackTitle: 'Retour',
-          headerTintColor: '#1D4ED8',
-          headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
-        }}
+        options={{ headerShown: true, title: 'Détail de la chasse', ...sharedHeaderOptions }}
       />
       <Stack.Screen
         name="StepValidation"
         component={StepValidationScreen}
-        options={{
-          headerShown: true,
-          title: 'Valider l\'étape',
-          headerBackTitle: 'Retour',
-          headerTintColor: '#1D4ED8',
-          headerTitleStyle: { fontSize: 16, fontWeight: '600', color: '#111827' },
-        }}
+        options={{ headerShown: true, title: "Valider l'étape", ...sharedHeaderOptions }}
       />
       <Stack.Screen
         name="HuntCompletion"
@@ -231,55 +286,122 @@ export default function AppNavigator() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#F9FAFB',
+  tabBar: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 72,
+    backgroundColor: theme.colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.borderLight,
+    paddingTop: theme.spacing.xs,
   },
-  guestBanner: {
-    backgroundColor: '#FEF3C7',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#FDE68A',
+  tabItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  guestBannerText: {
+  tabPill: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.sm + 2,
+    borderRadius: theme.borderRadius.md,
+    minWidth: 100,
+    gap: 2,
+  },
+  tabPillActive: {
+    backgroundColor: 'rgba(251,136,117,0.10)',
+  },
+  tabLabel: {
     fontSize: 12,
-    color: '#92400E',
-    textAlign: 'center',
     fontWeight: '500',
   },
-  guestProfile: {
+  root: {
     flex: 1,
+    backgroundColor: theme.colors.surface,
+  },
+  guestProfileContainer: {
+    flex: 1,
+    backgroundColor: theme.colors.surface,
+  },
+  guestProfile: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    backgroundColor: '#F9FAFB',
-    gap: 12,
+    paddingHorizontal: theme.spacing.xl,
+    paddingVertical: theme.spacing.xxl,
+    gap: theme.spacing.md,
   },
-  guestProfileIcon: {
-    fontSize: 56,
+  guestSettingsCard: {
+    width: '100%',
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.borderRadius.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.borderLight,
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
+    ...theme.shadows.card,
+    marginTop: theme.spacing.sm,
+  },
+  guestSettingsTitle: {
+    ...theme.typography.caption,
+    fontWeight: '700',
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  guestToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.md,
+  },
+  guestToggleLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  guestToggleLabel: {
+    ...theme.typography.label,
+    color: theme.colors.text,
+  },
+  guestToggleSub: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    marginTop: 2,
   },
   guestProfileTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
+    ...theme.typography.h3,
+    color: theme.colors.text,
   },
   guestProfileSubtitle: {
-    fontSize: 14,
-    color: '#6B7280',
+    ...theme.typography.bodySmall,
+    color: theme.colors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
   convertBtn: {
-    marginTop: 8,
-    backgroundColor: '#3B82F6',
-    borderRadius: 10,
+    marginTop: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.xl,
     paddingVertical: 13,
-    paddingHorizontal: 32,
+    paddingHorizontal: theme.spacing.xl,
   },
   convertBtnLabel: {
-    color: '#fff',
+    color: theme.colors.textInverse,
+    ...theme.typography.label,
     fontSize: 15,
-    fontWeight: '600',
+  },
+  convertBtnOutline: {
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.xl,
+    paddingVertical: 13,
+    paddingHorizontal: theme.spacing.xl,
+  },
+  convertBtnOutlineLabel: {
+    color: theme.colors.primary,
+    ...theme.typography.label,
+    fontSize: 15,
   },
 });

@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import type { HuntListItem } from '../../services/hunt.service';
 import { formatDistance } from '../../services/hunt.service';
+import theme from '../../constants/theme';
 
 interface Props {
   hunt: HuntListItem | null;
@@ -24,14 +26,13 @@ const DIFFICULTY_LABELS: Record<string, string> = {
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  easy: '#22C55E',
-  medium: '#F97316',
-  hard: '#EF4444',
+  easy: theme.colors.difficultyEasy,
+  medium: theme.colors.difficultyMedium,
+  hard: theme.colors.difficultyHard,
 };
 
 /**
  * HuntBottomSheet — panneau glissant affiché au tap d'un marqueur de chasse.
- * Contient : titre, description, difficulté, distance, bouton "Rejoindre".
  */
 export default function HuntBottomSheet({ hunt, userLat, userLng, onClose, onJoin }: Props) {
   const translateY = useRef(new Animated.Value(300)).current;
@@ -46,7 +47,7 @@ export default function HuntBottomSheet({ hunt, userLat, userLng, onClose, onJoi
 
   if (!hunt) return null;
 
-  const diffColor = DIFFICULTY_COLORS[hunt.difficulty ?? ''] ?? '#6B7280';
+  const diffColor = DIFFICULTY_COLORS[hunt.difficulty ?? ''] ?? theme.colors.textSecondary;
   const diffLabel = DIFFICULTY_LABELS[hunt.difficulty ?? ''] ?? hunt.difficulty ?? '—';
 
   const distance =
@@ -69,47 +70,63 @@ export default function HuntBottomSheet({ hunt, userLat, userLng, onClose, onJoi
 
   return (
     <>
-      {/* Fond semi-transparent pour fermer */}
       <TouchableOpacity style={styles.backdrop} onPress={onClose} activeOpacity={1} />
 
       <Animated.View style={[styles.sheet, { transform: [{ translateY }] }]}>
         {/* Handle */}
         <View style={styles.handle} />
 
-        {/* Header */}
+        {/* Header : badge difficulté + fermer */}
         <View style={styles.header}>
-          <View style={styles.diffBadge}>
+          <View style={[styles.diffBadge, { backgroundColor: diffColor + '22' }]}>
             <Text style={[styles.diffText, { color: diffColor }]}>{diffLabel}</Text>
           </View>
-          <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}>
-            <Text style={styles.closeIcon}>✕</Text>
+          <TouchableOpacity
+            onPress={onClose}
+            hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}
+            style={styles.closeBtn}
+          >
+            <Ionicons name="close" size={18} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {/* Titre */}
-        <Text style={styles.title} numberOfLines={2}>{hunt.title}</Text>
+        {/* Icône + Titre */}
+        <View style={styles.titleRow}>
+          <View style={styles.huntIconBox}>
+            <Ionicons name="compass" size={22} color={theme.colors.textInverse} />
+          </View>
+          <Text style={styles.title} numberOfLines={2}>{hunt.title}</Text>
+        </View>
+
+        {/* Localisation */}
+        {hunt.location ? (
+          <View style={styles.locationRow}>
+            <Ionicons name="location-outline" size={13} color={theme.colors.textSecondary} />
+            <Text style={styles.locationText} numberOfLines={1}>{hunt.location}</Text>
+          </View>
+        ) : null}
 
         {/* Description */}
         {hunt.description ? (
-          <Text style={styles.description} numberOfLines={3}>{hunt.description}</Text>
+          <Text style={styles.description} numberOfLines={2}>{hunt.description}</Text>
         ) : null}
 
         {/* Méta */}
         <View style={styles.meta}>
           {distance && (
             <View style={styles.metaItem}>
-              <Text style={styles.metaIcon}>📍</Text>
+              <Ionicons name="map-outline" size={13} color={theme.colors.textSecondary} />
               <Text style={styles.metaText}>{distance}</Text>
             </View>
           )}
           {hunt.duration ? (
             <View style={styles.metaItem}>
-              <Text style={styles.metaIcon}>⏱</Text>
+              <Ionicons name="time-outline" size={13} color={theme.colors.textSecondary} />
               <Text style={styles.metaText}>{hunt.duration} min</Text>
             </View>
           ) : null}
           <View style={styles.metaItem}>
-            <Text style={styles.metaIcon}>⭐</Text>
+            <Ionicons name="star" size={13} color={theme.colors.points} />
             <Text style={styles.metaText}>{hunt.points} pts</Text>
           </View>
         </View>
@@ -118,9 +135,10 @@ export default function HuntBottomSheet({ hunt, userLat, userLng, onClose, onJoi
         <TouchableOpacity
           style={styles.joinBtn}
           onPress={() => onJoin(hunt)}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
         >
-          <Text style={styles.joinBtnLabel}>Rejoindre</Text>
+          <Ionicons name="play" size={16} color={theme.colors.textInverse} />
+          <Text style={styles.joinBtnLabel}>Rejoindre la chasse</Text>
         </TouchableOpacity>
       </Animated.View>
     </>
@@ -136,85 +154,114 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingHorizontal: 20,
-    paddingBottom: 32,
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.borderRadius.xl,
+    borderTopRightRadius: theme.borderRadius.xl,
+    paddingHorizontal: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxl,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 12,
   },
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
+    backgroundColor: theme.colors.border,
+    borderRadius: theme.borderRadius.full,
     alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 16,
+    marginTop: theme.spacing.md,
+    marginBottom: theme.spacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: theme.spacing.md,
   },
   diffBadge: {
-    paddingVertical: 3,
-    paddingHorizontal: 10,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.borderRadius.full,
   },
   diffText: {
-    fontSize: 12,
-    fontWeight: '600',
+    ...theme.typography.caption,
+    fontWeight: '700',
   },
-  closeIcon: {
-    fontSize: 16,
-    color: '#9CA3AF',
+  closeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.surfaceElevated,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
+  },
+  huntIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: theme.borderRadius.md,
+    backgroundColor: theme.colors.huntIconBackground,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 6,
+    flex: 1,
+    ...theme.typography.h3,
+    color: theme.colors.text,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.sm,
+  },
+  locationText: {
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
+    flex: 1,
   },
   description: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 19,
-    marginBottom: 12,
+    ...theme.typography.bodySmall,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+    marginBottom: theme.spacing.md,
   },
   meta: {
     flexDirection: 'row',
-    gap: 16,
-    marginBottom: 20,
+    gap: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-  },
-  metaIcon: {
-    fontSize: 14,
+    gap: theme.spacing.xs,
   },
   metaText: {
-    fontSize: 13,
-    color: '#374151',
+    ...theme.typography.caption,
+    color: theme.colors.textSecondary,
     fontWeight: '500',
   },
   joinBtn: {
-    backgroundColor: '#1D4ED8',
-    borderRadius: 12,
-    paddingVertical: 14,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.lg,
+    paddingVertical: theme.spacing.md,
+    ...theme.shadows.elevated,
   },
   joinBtnLabel: {
-    color: '#fff',
+    ...theme.typography.label,
+    color: theme.colors.textInverse,
     fontSize: 15,
-    fontWeight: '700',
   },
 });

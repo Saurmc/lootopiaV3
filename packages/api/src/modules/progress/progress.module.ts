@@ -9,6 +9,7 @@ import { UsersModule } from '../users/users.module';
 import { StepsModule } from '../steps/steps.module';
 import { GeoModule } from '../geo/geo.module';
 import { BadgesModule } from '../badges/badges.module';
+import { FilesModule } from '../files/files.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { BadgesModule } from '../badges/badges.module';
     StepsModule,
     GeoModule,
     BadgesModule,
+    FilesModule,
   ],
   controllers: [ProgressController],
   providers: [ProgressService, ProgressRepository],

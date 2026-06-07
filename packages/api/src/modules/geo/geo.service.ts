@@ -35,7 +35,7 @@ export class GeoService {
   ): Promise<boolean> {
     const rows = await this.dataSource.query(
       `SELECT ST_DWithin(
-        $1::geography,
+        ST_GeomFromGeoJSON($1)::geography,
         ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
         $4
       ) AS within`,

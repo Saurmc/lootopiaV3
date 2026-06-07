@@ -26,6 +26,7 @@ export class UsersService {
     email: string,
     passwordHash: string,
     role: Role = Role.PLAYER,
+    pseudo?: string,
   ): Promise<UserEntity> {
     const existing = await this.usersRepository.findByEmail(email);
     if (existing) {
@@ -36,6 +37,7 @@ export class UsersService {
       password_hash: passwordHash,
       role,
       is_guest: false,
+      ...(pseudo ? { pseudo } : {}),
     });
   }
 

@@ -6,19 +6,28 @@ import {
   TextInputProps,
   View,
 } from 'react-native';
+import theme from '../../constants/theme';
 
 interface InputProps extends TextInputProps {
   label?: string;
   error?: string;
+  variant?: 'light' | 'dark';
 }
 
-export default function Input({ label, error, style, ...rest }: InputProps) {
+export default function Input({ label, error, style, variant = 'light', ...rest }: InputProps) {
+  const isDark = variant === 'dark';
+
   return (
     <View style={styles.container}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label && <Text style={[styles.label, isDark && styles.labelDark]}>{label}</Text>}
       <TextInput
-        style={[styles.input, error ? styles.inputError : undefined, style]}
-        placeholderTextColor="#9CA3AF"
+        style={[
+          styles.input,
+          isDark ? styles.inputDark : styles.inputLight,
+          error ? styles.inputError : undefined,
+          style,
+        ]}
+        placeholderTextColor={isDark ? 'rgba(255,255,255,0.5)' : theme.colors.textDisabled}
         autoCapitalize="none"
         {...rest}
       />
@@ -29,30 +38,39 @@ export default function Input({ label, error, style, ...rest }: InputProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 12,
+    marginBottom: theme.spacing.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 6,
+    ...theme.typography.label,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  labelDark: {
+    color: theme.colors.textInverse,
   },
   input: {
-    height: 50,
+    height: 52,
     borderWidth: 1.5,
-    borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    fontSize: 16,
-    color: '#111827',
-    backgroundColor: '#fff',
+    borderRadius: theme.borderRadius.md,
+    paddingHorizontal: theme.spacing.md,
+    ...theme.typography.body,
+  },
+  inputLight: {
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    color: theme.colors.text,
+  },
+  inputDark: {
+    borderColor: theme.colors.inputBorder,
+    backgroundColor: theme.colors.inputBackground,
+    color: theme.colors.textInverse,
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: theme.colors.error,
   },
   error: {
-    fontSize: 12,
-    color: '#EF4444',
-    marginTop: 4,
+    ...theme.typography.caption,
+    color: theme.colors.error,
+    marginTop: theme.spacing.xs,
   },
 });

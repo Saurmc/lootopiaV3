@@ -44,7 +44,8 @@ export interface StepDetail {
   validation_type: string;
   validation_radius: number;
   coordinates: { lat: number; lng: number } | null;
-  ar_content: Record<string, unknown> | null;
+  thumbnail: string | null;
+  ar_content: unknown | null;
 }
 
 export interface HuntProgress {
@@ -72,6 +73,8 @@ export interface HuntDetail {
     order: number;
     title: string;
     description: string | null;
+    thumbnail: string | null;
+    ar_content: unknown | null;
   }>;
 }
 
@@ -234,7 +237,7 @@ export const huntService = {
   validateStep: async (
     huntId: string,
     stepId: string,
-    payload: { lat: number; lng: number } | { qr_code: string } | { answer: string } | { file_url: string },
+    payload: { lat: number; lng: number } | { qr_code: string } | { answer: string } | { file_url: string } | { marker_triggered: boolean } | Record<string, unknown>,
   ): Promise<HuntProgress> => {
     const res = await api.post<HuntProgress>(`/hunts/${huntId}/steps/${stepId}/validate`, payload);
     return res.data;

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -6,45 +6,124 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useCameraPermissions } from 'expo-camera';
-import * as FileSystem from 'expo-file-system';
 import {
-  ViroARSceneNavigator,
   ViroARScene,
+  ViroARSceneNavigator,
   ViroARImageMarker,
-  ViroARObjectMarker,
   ViroARTrackingTargets,
   ViroAmbientLight,
   ViroAnimations,
   ViroMaterials,
   ViroNode,
   ViroBox,
-  ViroImage,
   ViroText,
   Viro3DObject,
 } from '@reactvision/react-viro';
 import type { ArContent3DSpatial } from '@lootopia/shared';
+import { API_BASE_URL } from '../../constants/api.constants';
 
-// ─── Matériaux statiques ─────────────────────────────────────────────────────
+function resolveUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+}
+
+// ─── Matériaux & animations — enregistrés une seule fois au niveau module ─────
 
 try {
   ViroMaterials.createMaterials({
+    goldFrame:  { diffuseColor: '#FFD700', lightingModel: 'Constant' },
     glowDisc:   { diffuseColor: 'rgba(255,215,0,0.30)', lightingModel: 'Constant' },
-    shadowDisc: { diffuseColor: 'rgba(0,0,0,0.45)',     lightingModel: 'Constant' },
+    shadowDisc: { diffuseColor: 'rgba(0,0,0,0.35)',     lightingModel: 'Constant' },
   });
 } catch (_) {}
 
 try {
   ViroAnimations.registerAnimations({
-    floatUp:     { properties: { positionY: '+=0.022' }, duration: 1500, easing: 'EaseInEaseOut' },
-    floatDown:   { properties: { positionY: '-=0.022' }, duration: 1500, easing: 'EaseInEaseOut' },
-    float:       [['floatUp'], ['floatDown']],
-    rotateModel: { properties: { rotateY: '+=360' }, duration: 6000 },
-    pulseUp:     { properties: { scaleX: 1.08, scaleY: 1.08, scaleZ: 1.08 }, duration: 800, easing: 'EaseInEaseOut' },
-    pulseDown:   { properties: { scaleX: 1.00, scaleY: 1.00, scaleZ: 1.00 }, duration: 800, easing: 'EaseInEaseOut' },
-    pulse:       [['pulseUp'], ['pulseDown']],
+    scaleIn:   { properties: { scaleX: 1, scaleY: 1, scaleZ: 1 }, duration: 700, easing: 'Bounce' },
+    floatUp:   { properties: { positionY: '+=0.025' }, duration: 1400, easing: 'EaseInEaseOut' },
+    floatDown: { properties: { positionY: '-=0.025' }, duration: 1400, easing: 'EaseInEaseOut' },
+    float:     [['floatUp'], ['floatDown']],
   });
 } catch (_) {}
+
+// ─── Scène AR — composant stable au niveau module (JAMAIS inline) ─────────────
+// viroAppProps shape: { artworkImage: string; modelUrl?: string; onMarkerFound: () => void }
+
+const ARTWORK_MAT = 'artworkDisplay';
+
+function ARScene(props: any) {
+  const { artworkImage, modelUrl, onMarkerFound } =
+    (props.sceneNavigator?.viroAppProps ?? {}) as {
+      artworkImage: string;
+      modelUrl?: string;
+      onMarkerFound?: () => void;
+    };
+
+  const [detected, setDetected] = useState(false);
+
+  const handleAnchorFound = () => {
+    if (detected) return;
+    setDetected(true);
+    onMarkerFound?.();
+  };
+
+  return (
+    <ViroARScene>
+      <ViroAmbientLight color="#FFFFFF" intensity={1200} />
+
+      <ViroARImageMarker target="markerTarget" onAnchorFound={handleAnchorFound}>
+        {modelUrl ? (
+          <Viro3DObject
+            source={{ uri: modelUrl }}
+            position={[0, 0.05, 0]}
+            scale={[0.1, 0.1, 0.1]}
+            type="OBJ"
+          />
+        ) : detected ? (
+          /* Monté seulement quand détecté — scaleIn (bounce) puis float en boucle */
+          <ViroNode
+            scale={[0.001, 0.001, 0.001]}
+            animation={{ name: 'scaleIn', run: true, loop: false }}
+          >
+            {/* Disque de lueur au sol */}
+            <ViroBox
+              width={0.24}
+              height={0.003}
+              length={0.24}
+              position={[0, 0.001, 0]}
+              materials={['glowDisc']}
+            />
+
+            {/* Tableau flottant — rotation -90° X pour que la face pointe vers le haut (+Y)
+                afin d'être visible depuis la caméra regardant vers le bas (marker à plat) */}
+            <ViroNode
+              position={[0, 0.05, 0]}
+              rotation={[-90, 0, 0]}
+              animation={{ name: 'float', run: true, loop: true }}
+            >
+              {/* L'œuvre — face +Z pivotée vers +Y (visible depuis le dessus) */}
+              <ViroBox
+                width={0.155}
+                height={0.205}
+                length={0.002}
+                position={[0, 0, 0]}
+                materials={[ARTWORK_MAT]}
+              />
+              {/* Label visible depuis le dessus */}
+              <ViroText
+                text="Oeuvre devoilee !"
+                scale={[0.045, 0.045, 0.045]}
+                position={[0, 0.120, 0]}
+                style={arTextStyle}
+              />
+            </ViroNode>
+          </ViroNode>
+        ) : null}
+      </ViroARImageMarker>
+    </ViroARScene>
+  );
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,254 +133,58 @@ interface ViroARPhaseProps {
   isValidating: boolean;
 }
 
-interface ARSceneProps {
-  mode: 'image' | 'object';
-  localImageUri: string;
-  localModelUri?: string;
-  modelType: 'GLTF' | 'OBJ' | 'VRX';
-  onMarkerFound: () => void;
-}
-
-// ─── Contenu commun (3D model ou image 2D) ────────────────────────────────────
-
-function ARContent({ localImageUri, localModelUri, modelType }: Omit<ARSceneProps, 'mode' | 'onMarkerFound'>) {
-  if (localModelUri) {
-    console.log('[AR] Rendering Viro3DObject, uri=', localModelUri, 'type=', modelType);
-    return (
-      <ViroNode>
-        <ViroBox width={0.30} height={0.003} length={0.30}
-          position={[0.008, 0.001, -0.008]} materials={['shadowDisc']} />
-        <ViroBox width={0.26} height={0.001} length={0.26}
-          position={[0, 0.0005, 0]} materials={['glowDisc']} />
-        <ViroNode position={[0, 0.12, 0]}
-          animation={{ name: 'rotateModel', run: true, loop: true }}>
-          <Viro3DObject
-            source={{ uri: localModelUri }}
-            scale={[0.20, 0.20, 0.20]}
-            type={modelType}
-            onLoadStart={() => console.log('[AR] 3D model load start')}
-            onLoadEnd={() => console.log('[AR] 3D model load end')}
-            onError={(e: any) => console.error('[AR] 3D model error', e)}
-          />
-        </ViroNode>
-      </ViroNode>
-    );
-  }
-  return (
-    <ViroNode>
-      <ViroBox width={0.26} height={0.003} length={0.10}
-        position={[0.007, 0.001, -0.007]} materials={['shadowDisc']} />
-      <ViroBox width={0.22} height={0.001} length={0.08}
-        position={[0, 0.0005, 0]} materials={['glowDisc']} />
-      <ViroNode position={[0, 0.16, 0]}
-        animation={{ name: 'float', run: true, loop: true }}
-        transformBehaviors={['billboard']}>
-        <ViroImage source={{ uri: localImageUri }} width={0.18} height={0.24} />
-      </ViroNode>
-    </ViroNode>
-  );
-}
-
-// ─── Scène AR ─────────────────────────────────────────────────────────────────
-
-function ARScene({ mode, localImageUri, localModelUri, modelType, onMarkerFound }: ARSceneProps) {
-  return (
-    <ViroARScene>
-      <ViroAmbientLight color="#FFFFFF" intensity={800} />
-
-      {mode === 'object' ? (
-        // Détection d'objet 3D physique (statue…) via .arobject
-        <ViroARObjectMarker target="objectTarget" onAnchorFound={onMarkerFound}>
-          <ViroNode animation={{ name: 'pulse', run: true, loop: true }}>
-            <ViroText
-              text="Œuvre détectée !"
-              scale={[0.06, 0.06, 0.06]}
-              position={[0, 0.15, 0]}
-              transformBehaviors={['billboard']}
-              style={arTextStyle}
-            />
-            <ARContent
-              localImageUri={localImageUri}
-              localModelUri={localModelUri}
-              modelType={modelType}
-            />
-          </ViroNode>
-        </ViroARObjectMarker>
-      ) : (
-        // Détection d'image 2D (peinture, affiche…) via image marker
-        <ViroARImageMarker target="markerTarget" onAnchorFound={onMarkerFound}>
-          <ARContent
-            localImageUri={localImageUri}
-            localModelUri={localModelUri}
-            modelType={modelType}
-          />
-        </ViroARImageMarker>
-      )}
-    </ViroARScene>
-  );
-}
-
-const arTextStyle = {
-  fontFamily: 'Arial',
-  fontSize: 18,
-  color: '#FFD700',
-  fontWeight: '700' as const,
-  textAlign: 'center' as const,
-};
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function resolveModelType(url: string, explicit?: 'GLTF' | 'OBJ' | 'VRX'): 'GLTF' | 'OBJ' | 'VRX' {
-  if (explicit) return explicit;
-  const ext = url.split('.').pop()?.split('?')[0].toLowerCase();
-  if (ext === 'glb' || ext === 'gltf') return 'GLTF';
-  if (ext === 'vrx') return 'VRX';
-  return 'OBJ';
-}
-
-async function downloadToCache(remoteUrl: string, cacheKey: string): Promise<string> {
-  const ext = remoteUrl.split('.').pop()?.split('?')[0] ?? 'bin';
-  const dest = `${FileSystem.cacheDirectory}${cacheKey}.${ext}`;
-  const info = await FileSystem.getInfoAsync(dest);
-  if (!info.exists) {
-    await FileSystem.downloadAsync(remoteUrl, dest);
-  }
-  return dest; // file:// URI
-}
-
-async function downloadAsDataUri(remoteUrl: string, cacheKey: string): Promise<string> {
-  const ext = (remoteUrl.split('.').pop()?.split('?')[0] ?? 'png').toLowerCase();
-  const mime = (ext === 'jpg' || ext === 'jpeg') ? 'image/jpeg' : 'image/png';
-  const dest = `${FileSystem.cacheDirectory}${cacheKey}.${ext}`;
-  const info = await FileSystem.getInfoAsync(dest);
-  if (!info.exists) {
-    await FileSystem.downloadAsync(remoteUrl, dest);
-  }
-  const b64 = await FileSystem.readAsStringAsync(dest, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-  return `data:${mime};base64,${b64}`;
-}
-
 // ─── Composant principal ──────────────────────────────────────────────────────
 
 export default function ViroARPhase({ arContent, onConfirm, isValidating }: ViroARPhaseProps) {
-  const [permission, requestPermission] = useCameraPermissions();
   const [markerDetected, setMarkerDetected] = useState(false);
-  const [ready, setReady] = useState(false);
-  const [localImageUri, setLocalImageUri] = useState<string | null>(null);
-  const [localModelUri, setLocalModelUri] = useState<string | undefined>(undefined);
-  const [modelType, setModelType] = useState<'GLTF' | 'OBJ' | 'VRX'>('GLTF');
+  const [targetReady, setTargetReady] = useState(false);
 
-  const mode: 'image' | 'object' = arContent.object_scan ? 'object' : 'image';
+  const markerUrl  = resolveUrl(arContent.marker_image);
+  const artworkUrl = resolveUrl(arContent.artwork_image ?? arContent.marker_image);
+
+  // Ref stable pour éviter de recréer viroAppProps à chaque render
+  const onMarkerFoundRef = useRef(() => setMarkerDetected(true));
 
   useEffect(() => {
-    let cancelled = false;
-
-    const prepare = async () => {
-      // Image marqueur (fallback ou affichage 2D) → data-URI
-      const imgUrl = arContent.marker_image ?? arContent.object_scan ?? '';
+    setTargetReady(false);
+    ViroARTrackingTargets.createTargets({
+      markerTarget: {
+        source: { uri: markerUrl },
+        orientation: 'Up',
+        physicalWidth: 0.2,
+      },
+    });
+    // Pré-enregistre le material artwork avant de monter la scène pour éviter
+    // que ViroBox rende en jaune (couleur par défaut Viro = material manquant)
+    if (artworkUrl) {
       try {
-        const imgUri = await downloadAsDataUri(imgUrl, 'ar_artwork');
-        if (!cancelled) setLocalImageUri(imgUri);
-      } catch {
-        if (!cancelled) setLocalImageUri(imgUrl);
-      }
-
-      // Modèle 3D optionnel → file:// local
-      if (arContent.model_url) {
-        try {
-          console.log('[AR] downloading model from', arContent.model_url);
-          const modelUri = await downloadToCache(arContent.model_url, 'ar_model');
-          console.log('[AR] model cached at', modelUri);
-          if (!cancelled) {
-            setLocalModelUri(modelUri);
-            setModelType(resolveModelType(arContent.model_url, arContent.model_type));
-          }
-        } catch (e) {
-          console.error('[AR] model download failed:', e);
-          if (!cancelled) {
-            setLocalModelUri(arContent.model_url);
-            setModelType(resolveModelType(arContent.model_url, arContent.model_type));
-          }
-        }
-      }
-
-      // Enregistrement de la cible de tracking
-      if (arContent.object_scan) {
-        // Mode objet 3D : fichier .arobject téléchargé en local
-        try {
-          const localScan = await downloadToCache(arContent.object_scan, 'ar_scan');
-          ViroARTrackingTargets.createTargets({
-            objectTarget: {
-              source: { uri: localScan },
-              type: 'Object',
-            },
-          });
-        } catch {
-          ViroARTrackingTargets.createTargets({
-            objectTarget: {
-              source: { uri: arContent.object_scan },
-              type: 'Object',
-            },
-          });
-        }
-      } else if (arContent.marker_image) {
-        // Mode image 2D : marqueur plat
-        ViroARTrackingTargets.createTargets({
-          markerTarget: {
-            source: { uri: arContent.marker_image },
-            orientation: 'Up',
-            physicalWidth: 0.2,
+        ViroMaterials.createMaterials({
+          [ARTWORK_MAT]: {
+            diffuseTexture: { uri: artworkUrl },
+            lightingModel: 'Constant',
           },
         });
-      }
-
-      if (!cancelled) setReady(true);
-    };
-
-    prepare();
-    return () => { cancelled = true; };
-  }, [arContent.marker_image, arContent.object_scan, arContent.model_url]);
-
-  if (!permission) {
-    return <View style={componentStyles.placeholder}><ActivityIndicator color="#3B82F6" /></View>;
-  }
-
-  if (!permission.granted) {
-    return (
-      <View style={componentStyles.permissionBox}>
-        <Text style={componentStyles.permissionIcon}>📷</Text>
-        <Text style={componentStyles.permissionTitle}>Accès caméra requis</Text>
-        <Text style={componentStyles.permissionText}>
-          Pour cette étape de réalité augmentée, autorisez l'accès à votre caméra.
-        </Text>
-        <TouchableOpacity style={componentStyles.btn} onPress={requestPermission} activeOpacity={0.8}>
-          <Text style={componentStyles.btnLabel}>Autoriser la caméra</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
+      } catch (_) {}
+    }
+    // Délai suffisant pour que Viro enregistre cible + material avant de monter la scène
+    const t = setTimeout(() => setTargetReady(true), 600);
+    return () => clearTimeout(t);
+  }, [arContent.marker_image, artworkUrl]);
 
   const isDisabled = !markerDetected || isValidating;
 
   return (
     <>
       <View style={[componentStyles.cameraContainer, markerDetected && componentStyles.cameraDetected]}>
-        {(ready && localImageUri) ? (
+        {targetReady ? (
           <ViroARSceneNavigator
             autofocus
-            initialScene={{
-              scene: () => (
-                <ARScene
-                  mode={mode}
-                  localImageUri={localImageUri}
-                  localModelUri={localModelUri}
-                  modelType={modelType}
-                  onMarkerFound={() => setMarkerDetected(true)}
-                />
-              ),
+            viroAppProps={{
+              artworkImage: artworkUrl,
+              modelUrl: arContent.model_url ? resolveUrl(arContent.model_url) : undefined,
+              onMarkerFound: onMarkerFoundRef.current,
             }}
+            initialScene={{ scene: ARScene }}
             style={StyleSheet.absoluteFillObject}
           />
         ) : (
@@ -315,13 +198,9 @@ export default function ViroARPhase({ arContent, onConfirm, isValidating }: Viro
             <Text style={componentStyles.detectedBadgeText}>Œuvre reconnue ✅</Text>
           </View>
         )}
-        {!markerDetected && ready && (
+        {!markerDetected && targetReady && (
           <View style={componentStyles.hint}>
-            <Text style={componentStyles.hintText}>
-              {mode === 'object'
-                ? 'Pointez la caméra sur la statue / sculpture'
-                : 'Pointez la caméra sur l\'œuvre d\'art'}
-            </Text>
+            <Text style={componentStyles.hintText}>Pointez la caméra sur l'œuvre d'art</Text>
           </View>
         )}
       </View>
@@ -336,7 +215,7 @@ export default function ViroARPhase({ arContent, onConfirm, isValidating }: Viro
           <ActivityIndicator color="#fff" size="small" />
         ) : (
           <Text style={componentStyles.btnLabel}>
-            {markerDetected ? '✔️ Valider l\'étape' : '⏳ En attente de l\'œuvre…'}
+            {markerDetected ? "✔️ Valider l'étape" : "⏳ Pointez sur l'œuvre…"}
           </Text>
         )}
       </TouchableOpacity>
@@ -344,25 +223,28 @@ export default function ViroARPhase({ arContent, onConfirm, isValidating }: Viro
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Styles ViroText (objet JS, pas StyleSheet) ───────────────────────────────
+
+const arTextStyle = {
+  fontFamily: 'Arial',
+  fontSize: 20,
+  color: '#FFD700',
+  fontWeight: '600' as const,
+  textAlignVertical: 'center' as const,
+  textAlign: 'center' as const,
+};
+
+// ─── Styles RN ────────────────────────────────────────────────────────────────
 
 const componentStyles = StyleSheet.create({
-  placeholder: {
-    width: '100%', height: 320,
-    justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#E5E7EB', borderRadius: 16,
-  },
-  permissionBox: {
-    backgroundColor: '#fff', borderRadius: 14, padding: 20,
-    alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#E5E7EB',
-  },
-  permissionIcon: { fontSize: 40 },
-  permissionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  permissionText: { fontSize: 13, color: '#6B7280', textAlign: 'center', lineHeight: 19 },
   cameraContainer: {
-    width: '100%', height: 320, borderRadius: 16,
-    overflow: 'hidden', backgroundColor: '#000',
-    borderWidth: 3, borderColor: 'transparent',
+    width: '100%',
+    height: 320,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#000',
+    borderWidth: 3,
+    borderColor: 'transparent',
   },
   cameraDetected: { borderColor: '#22C55E' },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },

@@ -14,6 +14,13 @@ export type ArContent3DSpatial = {
 };
 export type ArContent = ArContent2DOverlay | ArContentQROverlay | ArContent3DSpatial | null;
 
+export interface ArContent3DSpatial {
+  type: 'ar-3d-spatial';
+  marker_image: string;
+  artwork_image?: string;
+  model_url?: string;
+}
+
 export interface Step {
   id: string;
   huntId: string;

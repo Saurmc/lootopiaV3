@@ -29,7 +29,7 @@ export class ValidateStepDto {
   @IsOptional()
   file_url?: string;
 
-  // --- AR 3D Spatial ---
+  // --- AR (marqueur image détecté par ViroARImageMarker) ---
   @IsBoolean()
   @IsOptional()
   marker_triggered?: boolean;
