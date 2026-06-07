@@ -1,4 +1,5 @@
 import { api } from './api';
+import { API_BASE_URL } from '../constants/api.constants';
 
 export interface PlayerBadge {
   id: string;
@@ -54,9 +55,24 @@ export const profileService = {
     return res.data;
   },
 
+  /** POST /files/upload — upload avatar, retourne { key, presignedUrl } */
+  uploadAvatar: async (localUri: string, mimeType: string): Promise<{ key: string; presignedUrl: string }> => {
+    const form = new FormData();
+    const filename = localUri.split('/').pop() ?? 'avatar.jpg';
+    form.append('file', { uri: localUri, name: filename, type: mimeType } as unknown as Blob);
+    const res = await api.post<{ key: string; presignedUrl: string }>('/files/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return { key: res.data.key, presignedUrl: res.data.presignedUrl };
+  },
+
   /** PATCH /me/password */
-  changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
-    await api.patch('/me/password', { current_password: currentPassword, new_password: newPassword });
+  changePassword: async (currentPassword: string, newPassword: string, newPasswordConfirm: string): Promise<void> => {
+    await api.patch('/me/password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password_confirm: newPasswordConfirm,
+    });
   },
 
   /** DELETE /me */

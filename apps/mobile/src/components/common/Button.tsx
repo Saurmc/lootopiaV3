@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   TouchableOpacityProps,
 } from 'react-native';
+import theme from '../../constants/theme';
 
 interface ButtonProps extends TouchableOpacityProps {
   label: string;
@@ -31,7 +32,7 @@ export default function Button({
       {...rest}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#fff' : '#3B82F6'} />
+        <ActivityIndicator color={variant === 'primary' ? theme.colors.textInverse : theme.colors.primary} />
       ) : (
         <Text style={[styles.label, styles[`${variant}Label`]]}>{label}</Text>
       )}
@@ -41,19 +42,19 @@ export default function Button({
 
 const styles = StyleSheet.create({
   base: {
-    height: 50,
-    borderRadius: 10,
+    height: 52,
+    borderRadius: theme.borderRadius.xl,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: theme.spacing.lg,
   },
   primary: {
-    backgroundColor: '#3B82F6',
+    backgroundColor: theme.colors.primary,
   },
   secondary: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#3B82F6',
+    borderColor: theme.colors.primary,
   },
   ghost: {
     backgroundColor: 'transparent',
@@ -62,16 +63,17 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   label: {
+    ...theme.typography.label,
     fontSize: 16,
     fontWeight: '600',
   },
   primaryLabel: {
-    color: '#fff',
+    color: theme.colors.textInverse,
   },
   secondaryLabel: {
-    color: '#3B82F6',
+    color: theme.colors.primary,
   },
   ghostLabel: {
-    color: '#6B7280',
+    color: theme.colors.textSecondary,
   },
 });

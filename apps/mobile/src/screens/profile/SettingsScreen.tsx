@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
@@ -13,19 +14,21 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../navigation/AppNavigator';
 import { useProfile, useUpdateProfile } from '../../hooks/useProfile';
+import { profileService } from '../../services/profile.service';
 import { useAuthStore } from '../../store/auth.store';
+import theme from '../../constants/theme';
 
 type SettingsNavProp = NativeStackNavigationProp<AppStackParamList, 'Settings'>;
 
-// ─── SettingsScreen ───────────────────────────────────────────────────────────
-
 /**
  * SettingsScreen — US61
- * Permet de modifier le pseudo, l'URL d'avatar et le consentement GPS.
+ * Permet de modifier le pseudo, l'avatar (galerie photo) et le consentement GPS.
  */
 export default function SettingsScreen() {
   const navigation = useNavigation<SettingsNavProp>();
@@ -34,62 +37,128 @@ export default function SettingsScreen() {
   const { consentGps, setConsentGps } = useAuthStore();
 
   const [pseudo, setPseudo] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState('');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
-  // Initialise les champs dès que le profil est chargé
   useEffect(() => {
     if (profile) {
       setPseudo(profile.pseudo ?? '');
-      setAvatarUrl(profile.avatar_url ?? '');
+      setAvatarUri(profile.avatar_url ?? null);
     }
   }, [profile]);
 
-  function handleSave() {
-    const payload: { pseudo?: string; avatar_url?: string } = {};
-
-    const trimmedPseudo = pseudo.trim();
-    const trimmedAvatar = avatarUrl.trim();
-
-    if (trimmedPseudo !== (profile?.pseudo ?? '')) {
-      payload.pseudo = trimmedPseudo || undefined;
-    }
-    if (trimmedAvatar !== (profile?.avatar_url ?? '')) {
-      payload.avatar_url = trimmedAvatar || undefined;
-    }
-
-    if (Object.keys(payload).length === 0) {
-      Alert.alert('Aucune modification', 'Aucun champ n\'a été modifié.');
+  async function handlePickAvatar() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== 'granted') {
+      Alert.alert('Permission refusée', "L'accès à la galerie est nécessaire pour changer l'avatar.");
       return;
     }
-
-    updateProfile(payload, {
-      onSuccess: () => Alert.alert('Succès', 'Profil mis à jour.'),
-      onError: () => Alert.alert('Erreur', 'La mise à jour a échoué. Vérifiez les champs saisis.'),
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
     });
+    if (result.canceled || !result.assets[0]) return;
+
+    const asset = result.assets[0];
+    setAvatarUploading(true);
+    try {
+      const { key, presignedUrl } = await profileService.uploadAvatar(
+        asset.uri,
+        asset.mimeType ?? 'image/jpeg',
+      );
+      setAvatarUri(presignedUrl);
+      updateProfile(
+        { avatar_url: key },
+        { onError: () => Alert.alert('Erreur', "Impossible de mettre à jour l'avatar.") },
+      );
+    } catch {
+      Alert.alert('Erreur', "L'upload a échoué. Vérifiez votre connexion.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
+
+  function handleRemoveAvatar() {
+    Alert.alert('Supprimer l\'avatar', 'Confirmer la suppression ?', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer', style: 'destructive',
+        onPress: () => {
+          setAvatarUri(null);
+          updateProfile({ avatar_url: undefined });
+        },
+      },
+    ]);
+  }
+
+  function handleSavePseudo() {
+    const trimmed = pseudo.trim();
+    if (trimmed === (profile?.pseudo ?? '')) {
+      Alert.alert('Aucune modification', 'Le pseudo n\'a pas changé.');
+      return;
+    }
+    updateProfile(
+      { pseudo: trimmed || undefined },
+      {
+        onSuccess: () => Alert.alert('Succès', 'Pseudo mis à jour.'),
+        onError: () => Alert.alert('Erreur', 'La mise à jour a échoué.'),
+      },
+    );
   }
 
   if (isLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#3B82F6" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
 
+  const displayInitials = (profile?.pseudo ?? profile?.email ?? '?').slice(0, 2).toUpperCase();
+
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          contentContainerStyle={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* ── Profil ── */}
-          <Text style={styles.sectionTitle}>Profil</Text>
+      <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
+          {/* ── Avatar ── */}
+          <Text style={styles.sectionTitle}>Avatar</Text>
+          <View style={styles.avatarSection}>
+            <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8} disabled={avatarUploading}>
+              <View style={styles.avatarWrapper}>
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                ) : (
+                  <View style={styles.avatarPlaceholder}>
+                    <Text style={styles.avatarInitials}>{displayInitials}</Text>
+                  </View>
+                )}
+                <View style={styles.avatarEditBadge}>
+                  {avatarUploading
+                    ? <ActivityIndicator size="small" color={theme.colors.textInverse} />
+                    : <Ionicons name="camera" size={14} color={theme.colors.textInverse} />
+                  }
+                </View>
+              </View>
+            </TouchableOpacity>
+
+            <View style={styles.avatarInfo}>
+              <Text style={styles.avatarInfoTitle}>Photo de profil</Text>
+              <Text style={styles.avatarInfoSub}>
+                {avatarUploading ? 'Upload en cours…' : 'Touchez la photo pour choisir depuis la galerie'}
+              </Text>
+              {avatarUri && !avatarUploading && (
+                <TouchableOpacity onPress={handleRemoveAvatar}>
+                  <Text style={styles.avatarRemove}>Supprimer</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          {/* ── Pseudo ── */}
+          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>Pseudo</Text>
           <View style={styles.card}>
             <View style={styles.fieldRow}>
               <Text style={styles.label}>Pseudo</Text>
@@ -98,46 +167,27 @@ export default function SettingsScreen() {
                 value={pseudo}
                 onChangeText={setPseudo}
                 placeholder="Votre pseudo"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.colors.textDisabled}
                 maxLength={50}
                 autoCapitalize="none"
                 autoCorrect={false}
-              />
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.fieldRow}>
-              <Text style={styles.label}>Avatar (URL)</Text>
-              <TextInput
-                style={styles.input}
-                value={avatarUrl}
-                onChangeText={setAvatarUrl}
-                placeholder="https://..."
-                placeholderTextColor="#9CA3AF"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
               />
             </View>
           </View>
 
           <TouchableOpacity
             style={[styles.saveBtn, isPending && styles.saveBtnDisabled]}
-            onPress={handleSave}
+            onPress={handleSavePseudo}
             activeOpacity={0.8}
             disabled={isPending}
           >
-            {isPending ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.saveBtnText}>Enregistrer les modifications</Text>
-            )}
+            {isPending
+              ? <ActivityIndicator color={theme.colors.textInverse} size="small" />
+              : <Text style={styles.saveBtnText}>Enregistrer</Text>}
           </TouchableOpacity>
 
           {/* ── Confidentialité ── */}
           <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>Confidentialité</Text>
-
           <View style={styles.card}>
             <View style={styles.toggleRow}>
               <View style={styles.toggleLeft}>
@@ -148,45 +198,29 @@ export default function SettingsScreen() {
               </View>
               <Switch
                 value={consentGps === true}
-                onValueChange={(val) => setConsentGps(val)}
-                trackColor={{ false: '#E5E7EB', true: '#BFDBFE' }}
-                thumbColor={consentGps === true ? '#3B82F6' : '#9CA3AF'}
+                onValueChange={setConsentGps}
+                trackColor={{ false: theme.colors.border, true: theme.colors.primaryLight }}
+                thumbColor={consentGps === true ? theme.colors.primary : theme.colors.textSecondary}
               />
             </View>
           </View>
 
           {/* ── Sécurité ── */}
           <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>Sécurité</Text>
-
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => navigation.navigate('Security')}
-            activeOpacity={0.75}
-          >
+          <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Security')} activeOpacity={0.75}>
             <View style={styles.navRow}>
+              <Ionicons name="lock-closed-outline" size={18} color={theme.colors.textSecondary} />
               <Text style={styles.navRowText}>Mot de passe et suppression du compte</Text>
-              <Text style={styles.navRowChevron}>›</Text>
+              <Ionicons name="chevron-forward" size={16} color={theme.colors.textSecondary} />
             </View>
           </TouchableOpacity>
 
-          {/* Informations compte */}
           {profile && (
             <View style={styles.infoCard}>
-              <Text style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Email : </Text>
-                {profile.email ?? '—'}
-              </Text>
-              <Text style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Rôle : </Text>
-                {profile.role}
-              </Text>
+              <Text style={styles.infoRow}><Text style={styles.infoLabel}>Email : </Text>{profile.email ?? '—'}</Text>
               <Text style={styles.infoRow}>
                 <Text style={styles.infoLabel}>Membre depuis : </Text>
-                {new Date(profile.created_at).toLocaleDateString('fr-FR', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
+                {new Date(profile.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
               </Text>
             </View>
           )}
@@ -196,77 +230,54 @@ export default function SettingsScreen() {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  container: { flex: 1, backgroundColor: theme.colors.surfaceElevated },
   flex: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 40, gap: 12 },
+  content: { paddingHorizontal: theme.spacing.md, paddingTop: theme.spacing.md, paddingBottom: theme.spacing.xxl, gap: theme.spacing.sm },
 
-  sectionTitle: { fontSize: 13, fontWeight: '700', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.5 },
-  sectionTitleTop: { marginTop: 8 },
+  sectionTitle: { ...theme.typography.caption, fontWeight: '700', color: theme.colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionTitleTop: { marginTop: theme.spacing.sm },
 
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    overflow: 'hidden',
+  avatarSection: {
+    flexDirection: 'row', alignItems: 'center', gap: theme.spacing.md,
+    backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.lg,
+    padding: theme.spacing.md, borderWidth: 1, borderColor: theme.colors.borderLight,
+    ...theme.shadows.card,
   },
+  avatarWrapper: { position: 'relative' },
+  avatarImage: { width: 72, height: 72, borderRadius: theme.borderRadius.full, borderWidth: 2, borderColor: theme.colors.border },
+  avatarPlaceholder: { width: 72, height: 72, borderRadius: theme.borderRadius.full, backgroundColor: theme.colors.gradientStart, justifyContent: 'center', alignItems: 'center' },
+  avatarInitials: { ...theme.typography.h3, color: theme.colors.textInverse },
+  avatarEditBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 26, height: 26, borderRadius: theme.borderRadius.full,
+    backgroundColor: theme.colors.primary, justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: theme.colors.surface,
+  },
+  avatarInfo: { flex: 1, gap: theme.spacing.xs },
+  avatarInfoTitle: { ...theme.typography.label, color: theme.colors.text },
+  avatarInfoSub: { ...theme.typography.caption, color: theme.colors.textSecondary, lineHeight: 16 },
+  avatarRemove: { ...theme.typography.caption, color: theme.colors.error, fontWeight: '600', marginTop: 2 },
 
-  fieldRow: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 4,
-  },
-  label: { fontSize: 12, fontWeight: '600', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 0.3 },
-  input: {
-    fontSize: 15,
-    color: '#111827',
-    paddingVertical: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  divider: { height: 1, backgroundColor: '#F3F4F6' },
+  card: { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.lg, borderWidth: 1, borderColor: theme.colors.borderLight, overflow: 'hidden', ...theme.shadows.card },
+  fieldRow: { paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.md, gap: 4 },
+  label: { ...theme.typography.caption, fontWeight: '600', color: theme.colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.3 },
+  input: { ...theme.typography.body, color: theme.colors.text, paddingVertical: theme.spacing.xs, borderBottomWidth: 1, borderBottomColor: theme.colors.borderLight },
 
-  saveBtn: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
+  saveBtn: { backgroundColor: theme.colors.primary, borderRadius: theme.borderRadius.xl, paddingVertical: theme.spacing.md, alignItems: 'center' },
   saveBtnDisabled: { opacity: 0.6 },
-  saveBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  saveBtnText: { ...theme.typography.label, color: theme.colors.textInverse, fontSize: 15 },
 
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-  },
+  toggleRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.md, gap: theme.spacing.md },
   toggleLeft: { flex: 1, gap: 3 },
-  toggleLabel: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  toggleSub: { fontSize: 12, color: '#6B7280', lineHeight: 17 },
+  toggleLabel: { ...theme.typography.body, fontWeight: '600', color: theme.colors.text },
+  toggleSub: { ...theme.typography.caption, color: theme.colors.textSecondary, lineHeight: 17 },
 
-  navRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  navRowText: { flex: 1, fontSize: 15, fontWeight: '500', color: '#111827' },
-  navRowChevron: { fontSize: 20, color: '#9CA3AF' },
+  navRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.md, gap: theme.spacing.sm },
+  navRowText: { flex: 1, ...theme.typography.body, fontWeight: '500', color: theme.colors.text },
 
-  infoCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    padding: 16,
-    gap: 6,
-  },
-  infoRow: { fontSize: 13, color: '#374151' },
-  infoLabel: { fontWeight: '600', color: '#111827' },
+  infoCard: { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.lg, borderWidth: 1, borderColor: theme.colors.borderLight, padding: theme.spacing.md, gap: theme.spacing.sm },
+  infoRow: { ...theme.typography.bodySmall, color: theme.colors.textSecondary },
+  infoLabel: { fontWeight: '600', color: theme.colors.text },
 });

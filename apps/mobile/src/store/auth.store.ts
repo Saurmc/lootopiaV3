@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as SecureStore from 'expo-secure-store';
 import { authService } from '../services/auth.service';
 import { TOKEN_KEY } from '../services/api';
 
@@ -33,7 +32,7 @@ interface AuthState {
 
   initialize: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, pseudo: string) => Promise<void>;
   loginAsGuest: () => Promise<void>;
   convertAccount: (email: string, password: string) => Promise<void>;
   setConsentGps: (consent: boolean) => Promise<void>;
@@ -64,7 +63,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialize: async () => {
     try {
       const [token, consentRaw] = await Promise.all([
-        SecureStore.getItemAsync(TOKEN_KEY),
+        AsyncStorage.getItem(TOKEN_KEY),
         AsyncStorage.getItem(CONSENT_GPS_KEY),
       ]);
       if (token) {
@@ -79,7 +78,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   _setToken: async (token: string, isGuest = false) => {
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
+    const [, consentRaw] = await Promise.all([
+      AsyncStorage.setItem(TOKEN_KEY, token),
+      AsyncStorage.getItem(CONSENT_GPS_KEY),
+    ]);
     const payload = decodeJwtPayload(token);
     const guestFromPayload =
       typeof payload.is_guest === 'boolean' ? payload.is_guest : isGuest;
@@ -94,6 +96,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: true,
       isGuest: guestFromPayload,
       isLoading: false,
+      consentGps: consentRaw !== null ? consentRaw === 'true' : null,
     });
   },
 
@@ -102,8 +105,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await get()._setToken(access_token, false);
   },
 
-  register: async (email: string, password: string) => {
-    const { access_token } = await authService.register(email, password);
+  register: async (email: string, password: string, pseudo: string) => {
+    const { access_token } = await authService.register(email, password, pseudo);
     await get()._setToken(access_token, false);
   },
 
@@ -130,14 +133,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
+    await AsyncStorage.removeItem(TOKEN_KEY);
     set({
       user: null,
       token: null,
       isAuthenticated: false,
       isGuest: false,
-      consentGps: null,
       pendingGpsConsent: false,
+      // consentGps intentionally not reset — it's a device-level preference
     });
   },
 }));

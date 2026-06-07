@@ -80,6 +80,7 @@ const SEED_HUNT_TITLES = [
   'Chasse aux Papillons',
   'Les Oiseaux Cachés',
   'Trail de la Dombes',
+  'Les secrets de saint-jacques',
 ];
 
 // ─── Seed principal ───────────────────────────────────────────────────────────
@@ -126,15 +127,15 @@ async function seed() {
 
   const [admin, partner1, partner2, alice, bob, charlie, diana, eve, frank] =
     await userRepo.save([
-      { email: SEED_EMAILS.admin,    password_hash: adminHash,   role: 'ADMIN'   as any, consent_gps: true },
-      { email: SEED_EMAILS.partner1, password_hash: partnerHash, role: 'PARTNER' as any, consent_gps: true },
-      { email: SEED_EMAILS.partner2, password_hash: partnerHash, role: 'PARTNER' as any, consent_gps: true },
-      { email: SEED_EMAILS.alice,    password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: true },
-      { email: SEED_EMAILS.bob,      password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: true },
-      { email: SEED_EMAILS.charlie,  password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: false },
-      { email: SEED_EMAILS.diana,    password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: true },
-      { email: SEED_EMAILS.eve,      password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: true },
-      { email: SEED_EMAILS.frank,    password_hash: playerHash,  role: 'PLAYER'  as any, consent_gps: true },
+      { email: SEED_EMAILS.admin,    password_hash: adminHash,   role: 'ADMIN'   as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.partner1, password_hash: partnerHash, role: 'PARTNER' as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.partner2, password_hash: partnerHash, role: 'PARTNER' as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.alice,    password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.bob,      password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.charlie,  password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: false },
+      { email: SEED_EMAILS.diana,    password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.eve,      password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: true },
+      { email: SEED_EMAILS.frank,    password_hash: playerHash,  role: 'PLAYER'  as any, is_guest: false, consent_gps: true },
     ]);
 
   console.log(`  → ${9} utilisateurs créés.`);
@@ -216,6 +217,18 @@ async function seed() {
       is_active: false, // Brouillon
       lng: 5.0250, lat: 45.9800,
     },
+    // Partner 1 — chasse AR test (plusieurs œuvres à scanner)
+    {
+      partner_id: partner1.id,
+      title: 'Les secrets de saint-jacques',
+      description: 'Parcourez ce musée fictif et scannez chaque tableau pour révéler son secret en réalité augmentée. Quatre œuvres majeures vous attendent.',
+      location: '278 rue de Nantes, Saint-Jacques-de-la-Lande',
+      difficulty: 'medium',
+      duration: 60,
+      points: 200,
+      is_active: true,
+      lng: -1.69373, lat: 48.08900,
+    },
   ];
 
   // Insertion des chasses (sans coordonnées d'abord)
@@ -234,7 +247,7 @@ async function seed() {
     savedHunts.push(hunt);
   }
 
-  const [louvre, montmartre, catacombes, papillons, oiseaux, dombes] = savedHunts;
+  const [louvre, montmartre, catacombes, papillons, oiseaux, dombes, saintjacques] = savedHunts;
   console.log(`  → ${savedHunts.length} chasses créées.`);
 
   // ── 4. Étapes ─────────────────────────────────────────────────────────────
@@ -246,6 +259,7 @@ async function seed() {
     title: string;
     description: string;
     validation_radius: number;
+    validation_type?: string;
     ar_content: Record<string, unknown> | null;
     lng: number;
     lat: number;
@@ -279,6 +293,60 @@ async function seed() {
     // Trail de la Dombes (2 étapes — brouillon)
     { hunt_id: dombes.id, order: 1, title: 'L\'Étang Principal', description: 'Au bord de l\'étang, identifiez le type de roselière présente sur la rive nord.', validation_radius: 80, ar_content: null, lng: 5.0250, lat: 45.9800 },
     { hunt_id: dombes.id, order: 2, title: 'La Ferme de la Dombes', description: 'Relevez l\'année gravée sur le linteau de la grange ancienne.', validation_radius: 50, ar_content: null, lng: 5.0300, lat: 45.9850 },
+
+    // Les secrets de saint-jacques (4 étapes AR — test réalité augmentée)
+    {
+      hunt_id: saintjacques.id, order: 1,
+      title: 'La Jeune Fille à la Perle',
+      description: 'Pointez votre caméra sur ce tableau de Vermeer pour révéler son secret en RA.',
+      validation_radius: 50,
+      validation_type: 'ar',
+      ar_content: {
+        type: 'ar-3d-spatial',
+        marker_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/300px-1665_Girl_with_a_Pearl_Earring.jpg',
+        artwork_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/1665_Girl_with_a_Pearl_Earring.jpg/300px-1665_Girl_with_a_Pearl_Earring.jpg',
+      },
+      lng: -1.69373, lat: 48.08900,
+    },
+    {
+      hunt_id: saintjacques.id, order: 2,
+      title: 'La Nuit Étoilée',
+      description: 'Retrouvez ce chef-d\'œuvre de Van Gogh et scannez-le pour voir les étoiles s\'animer.',
+      validation_radius: 50,
+      validation_type: 'ar',
+      ar_content: {
+        type: 'ar-3d-spatial',
+        marker_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/300px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg',
+        artwork_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/300px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg',
+      },
+      lng: -1.69390, lat: 48.08920,
+    },
+    {
+      hunt_id: saintjacques.id, order: 3,
+      title: 'La Ronde de Nuit',
+      description: 'Découvrez le mystère derrière cette toile monumentale de Rembrandt.',
+      validation_radius: 50,
+      validation_type: 'ar',
+      ar_content: {
+        type: 'ar-3d-spatial',
+        marker_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Night_Watch_-_HD.jpg/300px-The_Night_Watch_-_HD.jpg',
+        artwork_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5a/The_Night_Watch_-_HD.jpg/300px-The_Night_Watch_-_HD.jpg',
+      },
+      lng: -1.69355, lat: 48.08880,
+    },
+    {
+      hunt_id: saintjacques.id, order: 4,
+      title: 'Les Nymphéas',
+      description: 'Laissez Monet vous emmener dans son jardin d\'eau en réalité augmentée.',
+      validation_radius: 50,
+      validation_type: 'ar',
+      ar_content: {
+        type: 'ar-3d-spatial',
+        marker_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg/300px-Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg',
+        artwork_image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/aa/Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg/300px-Claude_Monet_-_Water_Lilies_-_1906%2C_Ryerson.jpg',
+      },
+      lng: -1.69410, lat: 48.08910,
+    },
   ];
 
   for (const s of stepsData) {

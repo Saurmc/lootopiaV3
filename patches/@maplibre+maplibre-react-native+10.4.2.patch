@@ -1,0 +1,30 @@
+diff --git a/node_modules/@maplibre/maplibre-react-native/lib/commonjs/modules/location/LocationManager.js b/node_modules/@maplibre/maplibre-react-native/lib/commonjs/modules/location/LocationManager.js
+index 02b2d55..16958f1 100644
+--- a/node_modules/@maplibre/maplibre-react-native/lib/commonjs/modules/location/LocationManager.js
++++ b/node_modules/@maplibre/maplibre-react-native/lib/commonjs/modules/location/LocationManager.js
+@@ -84,7 +84,9 @@ class LocationManager {
+   }
+   onUpdate(location) {
+     this._lastKnownLocation = location;
+-    this._listeners.forEach(l => l(location));
++    if (Array.isArray(this._listeners)) {
++      this._listeners.forEach(l => l(location));
++    }
+   }
+ }
+ const locationManager = exports.LocationManager = new LocationManager();
+diff --git a/node_modules/@maplibre/maplibre-react-native/lib/module/modules/location/LocationManager.js b/node_modules/@maplibre/maplibre-react-native/lib/module/modules/location/LocationManager.js
+index 7b65735..8ff73ea 100644
+--- a/node_modules/@maplibre/maplibre-react-native/lib/module/modules/location/LocationManager.js
++++ b/node_modules/@maplibre/maplibre-react-native/lib/module/modules/location/LocationManager.js
+@@ -80,7 +80,9 @@ class LocationManager {
+   }
+   onUpdate(location) {
+     this._lastKnownLocation = location;
+-    this._listeners.forEach(l => l(location));
++    if (Array.isArray(this._listeners)) {
++      this._listeners.forEach(l => l(location));
++    }
+   }
+ }
+ const locationManager = new LocationManager();

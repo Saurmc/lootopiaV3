@@ -5,6 +5,7 @@ import { UsersRepository } from '../users/users.repository';
 import { StepsRepository } from '../steps/steps.repository';
 import { GeoService } from '../geo/geo.service';
 import { BadgesService } from '../badges/badges.service';
+import { StorageService } from '../files/storage.service';
 import { ProgressEntity } from './entities/progress.entity';
 import { ProgressMapDto, StepMapDto, StepStatus } from './dto/progress-map.dto';
 import { ValidateStepDto } from './dto/validate-step.dto';
@@ -19,7 +20,20 @@ export class ProgressService {
     private readonly stepsRepository: StepsRepository,
     private readonly geoService: GeoService,
     private readonly badgesService: BadgesService,
+    private readonly storageService: StorageService,
   ) {}
+
+  private extractThumbnail(ac: Record<string, unknown> | null): string | null {
+    if (!ac) return null;
+    if (ac.type === 'ar-3d-spatial') {
+      const img = ac.marker_image ?? ac.artwork_image;
+      return typeof img === 'string' ? img : null;
+    }
+    if (ac.type === '2d-overlay') {
+      return typeof ac.image === 'string' ? ac.image : null;
+    }
+    return null;
+  }
 
   async joinHunt(userId: string, huntId: string): Promise<ProgressEntity> {
     const hunt = await this.huntsRepository.findById(huntId);
@@ -35,7 +49,7 @@ export class ProgressService {
     return this.progressRepository.save({
       user_id: userId,
       hunt_id: huntId,
-      current_step: 0,
+      current_step: 1,
       completed_steps: [],
       total_points: 0,
     });
@@ -95,7 +109,13 @@ export class ProgressService {
     if (isHuntComplete) {
       const allProgress = await this.progressRepository.findAllByUser(userId);
       const completedCount = allProgress.filter((p) => p.completed_at !== null).length;
-      await this.badgesService.checkAndAwardHuntBadges(userId, completedCount);
+      const durationMs = new Date().getTime() - progress.started_at.getTime();
+      await this.badgesService.checkAndAwardHuntBadges(
+        userId,
+        completedCount,
+        newCompletedSteps.length,
+        durationMs,
+      );
     }
 
     return saved;
@@ -122,7 +142,7 @@ export class ProgressService {
         this.validatePhoto(dto);
         break;
       case 'ar':
-        this.validateAr(step, dto);
+        this.validateAr(dto);
         break;
       default:
         throw new BadRequestException(`Unknown validation type: ${type}`);
@@ -173,25 +193,9 @@ export class ProgressService {
     }
   }
 
-  private validateAr(step: StepEntity, dto: ValidateStepDto): void {
-    const content = step.ar_content as Record<string, unknown> | null;
-    const arType = content?.type as string | undefined;
-
-    if (arType === 'ar-3d-spatial') {
-      if (!dto.marker_triggered) {
-        throw new BadRequestException('Marker must be triggered to validate this step');
-      }
-      return;
-    }
-
-    // qr-overlay: check qr_trigger
-    const qrTrigger = content?.qr_trigger as string | undefined;
-    if (!qrTrigger) return;
-    if (!dto.qr_code) {
-      throw new BadRequestException('QR code required for this AR step');
-    }
-    if (dto.qr_code !== qrTrigger) {
-      throw new BadRequestException('Invalid QR code for this AR step');
+  private validateAr(dto: ValidateStepDto): void {
+    if (!dto.marker_triggered) {
+      throw new BadRequestException('AR marker must be detected before validating this step');
     }
   }
 
@@ -217,35 +221,45 @@ export class ProgressService {
     const user = await this.usersRepository.findById(userId);
     const hasGpsConsent = user?.consent_gps ?? false;
 
-    const steps: StepMapDto[] = (hunt.steps ?? []).map((step) => {
-      const isCompleted = progress.completed_steps.includes(step.order);
-      const isCurrent = step.order === progress.current_step;
+    const steps: StepMapDto[] = await Promise.all(
+      (hunt.steps ?? []).map(async (step) => {
+        const isCompleted = progress.completed_steps.includes(step.order);
+        const isCurrent = step.order === progress.current_step;
 
-      let status: StepStatus = 'locked';
-      if (isCompleted) status = 'completed';
-      else if (isCurrent) status = 'current';
+        let status: StepStatus = 'locked';
+        if (isCompleted) status = 'completed';
+        else if (isCurrent) status = 'current';
 
-      // Coordonnées exposées seulement pour étapes complétées/courantes ET consentement GPS
-      let coordinates: { lat: number; lng: number } | null = null;
-      if ((isCompleted || isCurrent) && hasGpsConsent && step.location) {
-        const loc = step.location as { coordinates?: [number, number] };
-        if (loc.coordinates) {
-          coordinates = { lat: loc.coordinates[1], lng: loc.coordinates[0] };
+        // Coordonnées exposées seulement pour étapes complétées/courantes ET consentement GPS
+        let coordinates: { lat: number; lng: number } | null = null;
+        if ((isCompleted || isCurrent) && hasGpsConsent && step.location) {
+          const loc = step.location as { coordinates?: [number, number] };
+          if (loc.coordinates) {
+            coordinates = { lat: loc.coordinates[1], lng: loc.coordinates[0] };
+          }
         }
-      }
 
-      return {
-        id: step.id,
-        order: step.order,
-        title: step.title,
-        description: step.description,
-        status,
-        validation_radius: step.validation_radius,
-        validation_type: step.validation_type ?? 'gps',
-        coordinates,
-        ar_content: (step.ar_content as Record<string, unknown> | null) ?? null,
-      };
-    });
+        const rawArContent = (step.ar_content as Record<string, unknown> | null) ?? null;
+        const resolvedArContent = rawArContent
+          ? await this.storageService.rewriteArContentUrls(rawArContent)
+          : null;
+
+        const thumbnail = this.extractThumbnail(resolvedArContent);
+
+        return {
+          id: step.id,
+          order: step.order,
+          title: step.title,
+          description: step.description,
+          status,
+          validation_radius: step.validation_radius,
+          validation_type: step.validation_type ?? 'gps',
+          coordinates,
+          thumbnail,
+          ar_content: (isCurrent || isCompleted) ? resolvedArContent : null,
+        };
+      }),
+    );
 
     return {
       progress_id: progress.id,

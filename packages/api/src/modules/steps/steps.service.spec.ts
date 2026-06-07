@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { StepsService } from './steps.service';
 import { StepsRepository } from './steps.repository';
 import { HuntsRepository } from '../hunts/hunts.repository';
+import { StorageService } from '../files/storage.service';
 import { StepEntity } from './entities/step.entity';
 import { HuntEntity } from '../hunts/entities/hunt.entity';
 
@@ -42,6 +43,7 @@ describe('StepsService', () => {
   let service: StepsService;
   let stepsRepo: jest.Mocked<StepsRepository>;
   let huntsRepo: jest.Mocked<HuntsRepository>;
+  let storageService: jest.Mocked<StorageService>;
 
   beforeEach(() => {
     stepsRepo = {
@@ -60,7 +62,13 @@ describe('StepsService', () => {
       deleteById: jest.fn(),
     } as unknown as jest.Mocked<HuntsRepository>;
 
-    service = new StepsService(stepsRepo, huntsRepo);
+    storageService = {
+      upload: jest.fn(),
+      getPresignedUrl: jest.fn(),
+      rewriteArContentUrls: jest.fn().mockImplementation((ac) => Promise.resolve(ac)),
+    } as unknown as jest.Mocked<StorageService>;
+
+    service = new StepsService(stepsRepo, huntsRepo, storageService);
   });
 
   describe('findByHunt', () => {

@@ -7,6 +7,7 @@ import { CreateHuntDto } from './dto/create-hunt.dto';
 import { UpdateHuntDto } from './dto/update-hunt.dto';
 import { ProgressRepository } from '../progress/progress.repository';
 import { HUNT_TEMPLATES, HuntTemplate } from './hunt-templates.constants';
+import { StorageService } from '../files/storage.service';
 
 export interface ParticipantDto {
   user_id: string;
@@ -34,7 +35,20 @@ export class HuntsService {
     private readonly huntsRepository: HuntsRepository,
     private readonly geoService: GeoService,
     private readonly progressRepository: ProgressRepository,
+    private readonly storageService: StorageService,
   ) {}
+
+  private extractThumbnail(ac: Record<string, unknown> | null): string | null {
+    if (!ac) return null;
+    if (ac.type === 'ar-3d-spatial') {
+      const img = ac.marker_image ?? ac.artwork_image;
+      return typeof img === 'string' ? img : null;
+    }
+    if (ac.type === '2d-overlay') {
+      return typeof ac.image === 'string' ? ac.image : null;
+    }
+    return null;
+  }
 
   getTemplates(): HuntTemplate[] {
     return HUNT_TEMPLATES;
@@ -196,13 +210,19 @@ export class HuntsService {
       is_active: hunt.is_active,
       image_url: hunt.image_url ?? null,
       step_count: hunt.steps?.length ?? 0,
-      steps: (hunt.steps ?? []).map((s) => ({
-        id: s.id,
-        order: s.order,
-        title: s.title,
-        description: s.description,
-        validation_radius: s.validation_radius,
-        ar_content: s.ar_content,
+      steps: await Promise.all((hunt.steps ?? []).map(async (s) => {
+        const resolved = s.ar_content
+          ? await this.storageService.rewriteArContentUrls(s.ar_content)
+          : null;
+        return {
+          id: s.id,
+          order: s.order,
+          title: s.title,
+          description: s.description,
+          validation_radius: s.validation_radius,
+          thumbnail: this.extractThumbnail(resolved),
+          ar_content: resolved,
+        };
       })),
       created_at: hunt.created_at,
     };

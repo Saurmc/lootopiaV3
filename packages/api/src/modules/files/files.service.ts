@@ -1,7 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 export interface UploadedFileResult {
-  url: string;
+  key: string;        // minio: object key stored in DB
+  presignedUrl: string; // short-lived URL for immediate display
   filename: string;
   originalname: string;
   mimetype: string;
@@ -20,23 +21,14 @@ export const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
 
 @Injectable()
 export class FilesService {
-  validateFile(file: Express.Multer.File): void {
-    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-      throw new BadRequestException(
-        `Type de fichier non autorisé. Formats acceptés : jpg, png, gif, webp, pdf`,
-      );
-    }
-    if (file.size > MAX_SIZE_BYTES) {
-      throw new BadRequestException(
-        `Fichier trop volumineux. Taille maximale : 10 Mo`,
-      );
-    }
-  }
-
-  buildResult(file: Express.Multer.File): UploadedFileResult {
-    this.validateFile(file);
+  buildResult(
+    file: Express.Multer.File,
+    key: string,
+    presignedUrl: string,
+  ): UploadedFileResult {
     return {
-      url: `/uploads/${file.filename}`,
+      key,
+      presignedUrl,
       filename: file.filename,
       originalname: file.originalname,
       mimetype: file.mimetype,

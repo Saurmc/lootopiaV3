@@ -1,0 +1,31 @@
+diff --git a/node_modules/react-native/.DS_Store b/node_modules/react-native/.DS_Store
+new file mode 100644
+index 0000000..35865fc
+Binary files /dev/null and b/node_modules/react-native/.DS_Store differ
+diff --git a/node_modules/react-native/Libraries/Animated/nodes/AnimatedNode.js b/node_modules/react-native/Libraries/Animated/nodes/AnimatedNode.js
+index 29ca679..30ea265 100644
+--- a/node_modules/react-native/Libraries/Animated/nodes/AnimatedNode.js
++++ b/node_modules/react-native/Libraries/Animated/nodes/AnimatedNode.js
+@@ -8,10 +8,10 @@
+  * @format
+  */
+ 
+-import type {PlatformConfig} from '../AnimatedPlatformConfig';
++import type { PlatformConfig } from '../AnimatedPlatformConfig';
+ 
+-import NativeAnimatedHelper from '../../../src/private/animated/NativeAnimatedHelper';
+ import invariant from 'invariant';
++import NativeAnimatedHelper from '../../../src/private/animated/NativeAnimatedHelper';
+ 
+ type ValueListenerCallback = (state: {value: number, ...}) => mixed;
+ 
+@@ -122,6 +122,9 @@ export default class AnimatedNode {
+ 
+   __callListeners(value: number): void {
+     const event = {value};
++    if (!(this._listeners instanceof Map)) {
++      this._listeners = new Map();
++    }
+     this._listeners.forEach(listener => {
+       listener(event);
+     });

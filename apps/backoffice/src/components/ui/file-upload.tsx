@@ -4,9 +4,10 @@ import { cn } from '@/lib/utils';
 import { filesService, ACCEPTED_TYPES, MAX_SIZE_BYTES } from '@/services/files.service';
 
 interface FileUploadProps {
-  value?: string;           // URL already uploaded
-  onChange: (url: string | null) => void;
-  accept?: string[];        // override ACCEPTED_TYPES
+  value?: string;           // minio: key stored in DB (or legacy http URL)
+  onChange: (key: string | null) => void;
+  uploadContext?: { huntId?: string; stepId?: string };
+  accept?: string[];
   label?: string;
   className?: string;
 }
@@ -14,6 +15,7 @@ interface FileUploadProps {
 export default function FileUpload({
   value,
   onChange,
+  uploadContext,
   accept = ACCEPTED_TYPES,
   label = 'Cliquer ou déposer un fichier',
   className,
@@ -22,8 +24,10 @@ export default function FileUpload({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const isImage = value && !value.endsWith('.pdf');
+  const isPdf = value?.endsWith('.pdf');
+  const isImage = value && !isPdf;
 
   async function handleFile(file: File) {
     setError(null);
@@ -39,12 +43,26 @@ export default function FileUpload({
 
     setIsUploading(true);
     try {
-      const result = await filesService.upload(file);
-      onChange(result.url);
+      const result = await filesService.upload(file, uploadContext);
+      setPreviewUrl(result.presignedUrl);
+      onChange(result.key);
     } catch {
       setError("Échec de l'upload. Veuillez réessayer.");
     } finally {
       setIsUploading(false);
+    }
+  }
+
+  async function resolvePreview(): Promise<string | null> {
+    if (previewUrl) return previewUrl;
+    if (!value) return null;
+    if (value.startsWith('http')) return value;
+    try {
+      const url = await filesService.getPresignedUrl(value);
+      setPreviewUrl(url);
+      return url;
+    } catch {
+      return null;
     }
   }
 
@@ -58,26 +76,21 @@ export default function FileUpload({
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (file) handleFile(file);
-    // reset input so re-selecting the same file triggers onChange
     e.target.value = '';
   }
 
   function handleClear() {
     setError(null);
+    setPreviewUrl(null);
     onChange(null);
   }
 
   return (
     <div className={cn('space-y-2', className)}>
       {value ? (
-        /* Preview */
         <div className="relative rounded-lg border border-gray-200 overflow-hidden">
           {isImage ? (
-            <img
-              src={filesService.getFileUrl(value)}
-              alt="Aperçu"
-              className="w-full max-h-48 object-contain bg-gray-50"
-            />
+            <ImagePreview resolve={resolvePreview} />
           ) : (
             <div className="flex items-center gap-3 p-4 bg-gray-50">
               <FileText className="h-8 w-8 text-gray-400 flex-shrink-0" />
@@ -94,7 +107,6 @@ export default function FileUpload({
           </button>
         </div>
       ) : (
-        /* Drop zone */
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -104,23 +116,17 @@ export default function FileUpload({
           disabled={isUploading}
           className={cn(
             'w-full rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors',
-            dragOver
-              ? 'border-primary bg-primary/5'
-              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
+            dragOver ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
             isUploading && 'opacity-50 cursor-not-allowed',
           )}
         >
-          {isUploading ? (
-            <Loader2 className="mx-auto h-6 w-6 text-gray-400 animate-spin" />
-          ) : (
-            <Upload className="mx-auto h-6 w-6 text-gray-400" />
-          )}
+          {isUploading
+            ? <Loader2 className="mx-auto h-6 w-6 text-gray-400 animate-spin" />
+            : <Upload className="mx-auto h-6 w-6 text-gray-400" />}
           <p className="mt-2 text-sm text-gray-500">
             {isUploading ? 'Upload en cours…' : label}
           </p>
-          <p className="mt-1 text-xs text-gray-400">
-            JPEG, PNG, GIF, WebP, PDF — 10 Mo max
-          </p>
+          <p className="mt-1 text-xs text-gray-400">JPEG, PNG, GIF, WebP, PDF — 10 Mo max</p>
         </button>
       )}
 
@@ -135,4 +141,16 @@ export default function FileUpload({
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
   );
+}
+
+function ImagePreview({ resolve }: { resolve: () => Promise<string | null> }) {
+  const [src, setSrc] = useState<string | null>(null);
+
+  if (!src) {
+    resolve().then((url) => { if (url) setSrc(url); });
+  }
+
+  return src
+    ? <img src={src} alt="Aperçu" className="w-full max-h-48 object-contain bg-gray-50" />
+    : <div className="w-full h-24 bg-gray-100 animate-pulse" />;
 }

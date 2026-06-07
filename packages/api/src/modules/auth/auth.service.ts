@@ -25,9 +25,15 @@ export class AuthService {
     private readonly mailService: MailService,
   ) {}
 
+  // Inscription joueur — supporte pseudo dès l'inscription (mobile)
   async register(dto: RegisterDto): Promise<{ access_token: string }> {
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
-    const user = await this.usersService.createUser(dto.email, passwordHash, Role.PLAYER);
+    const user = await this.usersService.createUser(
+      dto.email,
+      passwordHash,
+      dto.role ?? Role.PLAYER,
+      dto.pseudo,
+    );
     const token = this.jwtService.sign(
       { sub: user.id, role: user.role },
       { expiresIn: JWT_EXPIRES_IN },
@@ -35,6 +41,7 @@ export class AuthService {
     return { access_token: token };
   }
 
+  // Inscription partenaire via token d'invitation (US03)
   async registerPartner(dto: RegisterPartnerDto): Promise<{ access_token: string }> {
     const invitation = await this.invitationsService.validateToken(dto.token);
     const passwordHash = await bcrypt.hash(dto.password, BCRYPT_ROUNDS);
@@ -58,6 +65,7 @@ export class AuthService {
     if (!valid) {
       throw new UnauthorizedException('Invalid credentials');
     }
+    // Modération admin : bloque la connexion si le compte partenaire est suspendu
     if (user.is_blocked) {
       throw new UnauthorizedException('Account suspended. Contact an administrator.');
     }
@@ -68,10 +76,6 @@ export class AuthService {
     return { access_token: token };
   }
 
-  /**
-   * Connexion / création d'un compte invité via device_token.
-   * Idempotent : le même device_token retourne toujours le même compte + un nouveau JWT.
-   */
   async loginAsGuest(dto: GuestLoginDto): Promise<{ access_token: string; is_new: boolean }> {
     const existing = await this.usersService.findByDeviceToken(dto.device_token);
     const user = await this.usersService.findOrCreateGuest(
@@ -85,10 +89,6 @@ export class AuthService {
     return { access_token: token, is_new: !existing };
   }
 
-  /**
-   * Convertit un compte invité en compte complet.
-   * Retourne un nouveau JWT avec les mêmes sub/role.
-   */
   async convertAccount(
     userId: string,
     dto: ConvertAccountDto,

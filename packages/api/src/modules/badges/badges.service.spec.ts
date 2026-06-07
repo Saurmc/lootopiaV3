@@ -70,22 +70,23 @@ describe('BadgesService', () => {
   });
 
   describe('checkAndAwardHuntBadges', () => {
+    const ONE_HOUR_MS = 60 * 60 * 1000;
+
     it('should award hunt_completed badge on any hunt completion', async () => {
       repo.findByUserAndType.mockResolvedValue(null);
-      repo.save.mockResolvedValue(mockBadge(BadgeType.HUNT_COMPLETED));
+      repo.save.mockImplementation(async (b) => mockBadge(b.badge_type));
 
-      await service.checkAndAwardHuntBadges('user-uuid', 2);
+      await service.checkAndAwardHuntBadges('user-uuid', 2, 1, ONE_HOUR_MS + 1);
 
-      expect(repo.save).toHaveBeenCalledWith(
-        expect.objectContaining({ badge_type: BadgeType.HUNT_COMPLETED }),
-      );
+      const calls = repo.save.mock.calls.map((c) => c[0].badge_type);
+      expect(calls).toContain(BadgeType.HUNT_COMPLETED);
     });
 
     it('should award first_hunt badge on first hunt completion', async () => {
       repo.findByUserAndType.mockResolvedValue(null);
-      repo.save.mockResolvedValue(mockBadge(BadgeType.FIRST_HUNT));
+      repo.save.mockImplementation(async (b) => mockBadge(b.badge_type));
 
-      await service.checkAndAwardHuntBadges('user-uuid', 1);
+      await service.checkAndAwardHuntBadges('user-uuid', 1, 1, ONE_HOUR_MS + 1);
 
       const calls = repo.save.mock.calls.map((c) => c[0].badge_type);
       expect(calls).toContain(BadgeType.HUNT_COMPLETED);
@@ -94,12 +95,72 @@ describe('BadgesService', () => {
 
     it('should not award first_hunt badge on subsequent completions', async () => {
       repo.findByUserAndType.mockResolvedValue(null);
-      repo.save.mockResolvedValue(mockBadge(BadgeType.HUNT_COMPLETED));
+      repo.save.mockImplementation(async (b) => mockBadge(b.badge_type));
 
-      await service.checkAndAwardHuntBadges('user-uuid', 3);
+      await service.checkAndAwardHuntBadges('user-uuid', 3, 1, ONE_HOUR_MS + 1);
 
       const calls = repo.save.mock.calls.map((c) => c[0].badge_type);
       expect(calls).not.toContain(BadgeType.FIRST_HUNT);
+    });
+
+    it('should award explorer badge when hunt has >= 3 steps', async () => {
+      repo.findByUserAndType.mockResolvedValue(null);
+      repo.save.mockImplementation(async (b) => mockBadge(b.badge_type));
+
+      await service.checkAndAwardHuntBadges('user-uuid', 1, 3, ONE_HOUR_MS + 1);
+
+      const calls = repo.save.mock.calls.map((c) => c[0].badge_type);
+      expect(calls).toContain(BadgeType.EXPLORER);
+    });
+
+    it('should not award explorer badge when hunt has < 3 steps', async () => {
+      repo.findByUserAndType.mockResolvedValue(null);
+      repo.save.mockImplementation(async (b) => mockBadge(b.badge_type));
+
+      await service.checkAndAwardHuntBadges('user-uuid', 1, 2, ONE_HOUR_MS + 1);
+
+      const calls = repo.save.mock.calls.map((c) => c[0].badge_type);
+      expect(calls).not.toContain(BadgeType.EXPLORER);
+    });
+
+    it('should award speedrunner badge when completed under 1 hour', async () => {
+      repo.findByUserAndType.mockResolvedValue(null);
+      repo.save.mockImplementation(async (b) => mockBadge(b.badge_type));
+
+      await service.checkAndAwardHuntBadges('user-uuid', 1, 1, 30 * 60 * 1000);
+
+      const calls = repo.save.mock.calls.map((c) => c[0].badge_type);
+      expect(calls).toContain(BadgeType.SPEEDRUNNER);
+    });
+
+    it('should not award speedrunner badge when took more than 1 hour', async () => {
+      repo.findByUserAndType.mockResolvedValue(null);
+      repo.save.mockImplementation(async (b) => mockBadge(b.badge_type));
+
+      await service.checkAndAwardHuntBadges('user-uuid', 1, 1, ONE_HOUR_MS + 1);
+
+      const calls = repo.save.mock.calls.map((c) => c[0].badge_type);
+      expect(calls).not.toContain(BadgeType.SPEEDRUNNER);
+    });
+
+    it('should award collector badge when >= 3 hunts completed', async () => {
+      repo.findByUserAndType.mockResolvedValue(null);
+      repo.save.mockImplementation(async (b) => mockBadge(b.badge_type));
+
+      await service.checkAndAwardHuntBadges('user-uuid', 3, 1, ONE_HOUR_MS + 1);
+
+      const calls = repo.save.mock.calls.map((c) => c[0].badge_type);
+      expect(calls).toContain(BadgeType.COLLECTOR);
+    });
+
+    it('should award legend badge when >= 5 hunts completed', async () => {
+      repo.findByUserAndType.mockResolvedValue(null);
+      repo.save.mockImplementation(async (b) => mockBadge(b.badge_type));
+
+      await service.checkAndAwardHuntBadges('user-uuid', 5, 1, ONE_HOUR_MS + 1);
+
+      const calls = repo.save.mock.calls.map((c) => c[0].badge_type);
+      expect(calls).toContain(BadgeType.LEGEND);
     });
   });
 });

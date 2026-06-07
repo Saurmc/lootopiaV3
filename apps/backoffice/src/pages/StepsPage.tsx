@@ -280,6 +280,8 @@ export default function StepsPage() {
             defaultValues={stepDialog !== 'create' && stepDialog ? stepDtoToFormValues(stepDialog) : undefined}
             isLoading={createStep.isPending || updateStep.isPending}
             submitLabel={stepDialog === 'create' ? "Créer l'étape" : 'Enregistrer'}
+            huntId={huntId}
+            stepId={stepDialog !== 'create' && stepDialog ? (stepDialog as StepDto).id : undefined}
             onSubmit={(payload) => {
               if (stepDialog === 'create') return createStep.mutateAsync(payload);
               return updateStep.mutateAsync({ stepId: (stepDialog as StepDto).id, payload });
