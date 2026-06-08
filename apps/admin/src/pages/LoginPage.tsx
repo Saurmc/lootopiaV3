@@ -25,10 +25,14 @@ export default function LoginPage() {
     try {
       await login(values.email, values.password);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : '';
-      setServerError(
-        msg.includes('administrators') ? t('login.errorAdmin') : t('login.errorCredentials'),
-      );
+      const msg = (err instanceof Error ? err.message : '').toLowerCase();
+      if (msg === 'not_admin') {
+        setServerError(t('login.errorAdmin'));
+      } else if (msg.includes('suspend')) {
+        setServerError(t('login.errorSuspended'));
+      } else {
+        setServerError(t('login.errorCredentials'));
+      }
     }
   };
 

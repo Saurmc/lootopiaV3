@@ -20,6 +20,7 @@
     "submitting": "Signing in…",
     "errorCredentials": "Invalid credentials.",
     "errorAdmin": "Access restricted to administrators.",
+    "errorSuspended": "Your account has been suspended. Contact an administrator.",
     "emailRequired": "Email is required.",
     "emailInvalid": "Invalid email.",
     "passwordRequired": "Password is required.",

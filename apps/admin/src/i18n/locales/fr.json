@@ -20,6 +20,7 @@
     "submitting": "Connexion…",
     "errorCredentials": "Identifiants invalides.",
     "errorAdmin": "Accès réservé aux administrateurs.",
+    "errorSuspended": "Votre compte a été suspendu. Contactez un administrateur.",
     "emailRequired": "L'email est requis.",
     "emailInvalid": "Email invalide.",
     "passwordRequired": "Le mot de passe est requis.",

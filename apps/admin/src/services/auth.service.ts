@@ -25,19 +25,32 @@ function decodeJwt(token: string): JwtPayload {
   return JSON.parse(jsonPayload) as JwtPayload;
 }
 
+function extractApiMessage(err: unknown): string {
+  const apiMsg = (err as { response?: { data?: { message?: string | string[] } } })
+    ?.response?.data?.message;
+  if (Array.isArray(apiMsg)) return apiMsg[0] ?? '';
+  return apiMsg ?? '';
+}
+
 export const authService = {
   login: async (
     email: string,
     password: string,
   ): Promise<{ token: string; user: AuthUser }> => {
-    const { data } = await api.post<LoginResponse>('/auth/login', { email, password });
-    const decoded = decodeJwt(data.access_token);
-    if (decoded.role !== Role.ADMIN) {
-      throw new Error('Accès réservé aux administrateurs.');
+    try {
+      const { data } = await api.post<LoginResponse>('/auth/login', { email, password });
+      const decoded = decodeJwt(data.access_token);
+      if (decoded.role !== Role.ADMIN) {
+        throw new Error('not_admin');
+      }
+      return {
+        token: data.access_token,
+        user: { id: decoded.sub, role: decoded.role, email },
+      };
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'not_admin') throw err;
+      const apiMsg = extractApiMessage(err);
+      throw new Error(apiMsg || 'Invalid credentials');
     }
-    return {
-      token: data.access_token,
-      user: { id: decoded.sub, role: decoded.role, email },
-    };
   },
 };

@@ -37,16 +37,28 @@ function decodeJwt(token: string): JwtPayload {
   return JSON.parse(jsonPayload) as JwtPayload;
 }
 
+function extractApiMessage(err: unknown): string {
+  const apiMsg = (err as { response?: { data?: { message?: string | string[] } } })
+    ?.response?.data?.message;
+  if (Array.isArray(apiMsg)) return apiMsg[0] ?? '';
+  return apiMsg ?? '';
+}
+
 export const authService = {
   login: async (payload: LoginPayload): Promise<{ token: string; user: AuthUser }> => {
-    const { data } = await api.post<LoginResponse>('/auth/login', payload);
-    const decoded = decodeJwt(data.access_token);
-    const user: AuthUser = {
-      id: decoded.sub,
-      role: decoded.role,
-      email: payload.email,
-    };
-    return { token: data.access_token, user };
+    try {
+      const { data } = await api.post<LoginResponse>('/auth/login', payload);
+      const decoded = decodeJwt(data.access_token);
+      const user: AuthUser = {
+        id: decoded.sub,
+        role: decoded.role,
+        email: payload.email,
+      };
+      return { token: data.access_token, user };
+    } catch (err: unknown) {
+      const apiMsg = extractApiMessage(err);
+      throw new Error(apiMsg || 'Invalid credentials');
+    }
   },
 
   registerPartner: async (payload: RegisterPartnerPayload): Promise<void> => {
