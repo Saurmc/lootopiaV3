@@ -1,0 +1,324 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "success": "Success",
+    "error": "Error",
+    "loading": "Loading…",
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+    "min": "min",
+    "pts": "pts",
+    "close": "Close"
+  },
+  "auth": {
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "emailRequired": "Email is required.",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "passwordRequired": "Password is required.",
+    "passwordMin": "At least 8 characters.",
+    "login": "Log in",
+    "loginFailed": "Incorrect email or password.",
+    "continueGuest": "Continue without account",
+    "noAccount": "No account yet? ",
+    "createAccount": "Sign up",
+    "alreadyAccount": "Already have an account? ",
+    "gpsTitle": "GPS Location",
+    "gpsDesc": "Enable location to validate GPS steps and find hunts near you.",
+    "gpsEnabled": "Location enabled",
+    "gpsDisabled": "Location disabled"
+  },
+  "register": {
+    "title": "Lootopia",
+    "subtitle": "Create an account",
+    "pseudo": "Username",
+    "pseudoPlaceholder": "Your username",
+    "pseudoRequired": "Username is required.",
+    "pseudoMin": "At least 2 characters.",
+    "emailRequired": "Email is required.",
+    "confirmPassword": "Confirm password",
+    "confirmRequired": "Please confirm your password.",
+    "confirmMismatch": "Passwords do not match.",
+    "emailUsed": "This email is already in use.",
+    "submit": "Create my account"
+  },
+  "convert": {
+    "title": "Create an account",
+    "subtitle": "Your progress is saved — only an email and password are needed.",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "At least 8 characters",
+    "confirmPassword": "Confirm password",
+    "emailRequired": "Email is required.",
+    "passwordRequired": "Password is required.",
+    "passwordMin": "At least 8 characters.",
+    "confirmRequired": "Please confirm your password.",
+    "confirmMismatch": "Passwords do not match.",
+    "submit": "Create my account"
+  },
+  "gpsModal": {
+    "title": "Allow location access?",
+    "desc": "To validate GPS steps and find hunts near you, the app needs access to your location.",
+    "accept": "Allow",
+    "decline": "Decline"
+  },
+  "hunts": {
+    "filterAll": "All",
+    "searchPlaceholder": "Search a hunt…",
+    "noHunts": "No hunt found",
+    "noHuntsSub": "Try with different keywords",
+    "countOne": "1 hunt",
+    "countOther": "{{count}} hunts",
+    "sortedByDistance": "sorted by distance",
+    "diffEasy": "Easy",
+    "diffMedium": "Medium",
+    "diffHard": "Hard"
+  },
+  "bottomSheet": {
+    "join": "Join hunt"
+  },
+  "map": {
+    "searchPlaceholder": "Search a hunt…",
+    "noResults": "No hunt found",
+    "seeMore": "See {{count}} more results →",
+    "gpsRefused": "GPS denied — map centered on Rennes"
+  },
+  "hunt": {
+    "notFound": "Hunt not found",
+    "stepOf": "Step {{current}} of {{total}}",
+    "completed": "Hunt completed!",
+    "radius": "Radius: {{value}} m",
+    "approachStep": "Get closer to the step",
+    "joinError": "Unable to join hunt. Please try again.",
+    "genericError": "An error occurred. Please try again.",
+    "gpsRefused": "GPS permission denied.",
+    "inProgress": "In progress",
+    "authorizeCamera": "Authorize camera",
+    "scanQr": "Scan the QR code",
+    "frameArtwork": "Frame the artwork",
+    "validating": "Validating…",
+    "joinToScan": "Join the hunt to activate scanning",
+    "instructionQr": "Scan the QR code on the artwork to validate this step.",
+    "instructionPhoto": "Frame the artwork and take a photo to validate.",
+    "instructionQuiz": "Answer the question to validate this step.",
+    "instructionGps": "Get close to the location and validate your GPS position.",
+    "yourAnswer": "Your answer…",
+    "submitAnswer": "Submit answer",
+    "join": "Join hunt",
+    "success": "Step validated! Well done!",
+    "difficulty": {
+      "easy": "Easy",
+      "medium": "Medium",
+      "hard": "Hard"
+    }
+  },
+  "completion": {
+    "title": "Congratulations!",
+    "subtitle": "Hunt completed successfully",
+    "completed": "100% Complete",
+    "rewards": "Unlocked rewards",
+    "xp": "+ {{count}} XP",
+    "createAccount": "Create an account",
+    "continueWithout": "Continue without account",
+    "saveProgress": "Save my progress",
+    "viewDetails": "View details",
+    "rewardTitle": "🏆 Hunter",
+    "guestPrompt": "Create an account to keep your progress and badges permanently."
+  },
+  "profile": {
+    "levelBadge": "Level {{level}}",
+    "hunts": "Hunts",
+    "points": "Points",
+    "badges": "Badges",
+    "huntsCompleted": "Completed Hunts",
+    "huntsCompletedCount": "Completed Hunts ({{count}})",
+    "badgesEarned": "Earned Badges",
+    "badgesEarnedCount": "Earned Badges ({{count}})",
+    "noHunts": "No completed hunt yet.",
+    "noBadges": "No badge earned yet.",
+    "settings": "Settings",
+    "logout": "Log out",
+    "logoutConfirmTitle": "Log out",
+    "logoutConfirmMsg": "Confirm logout?",
+    "memberSince": "Member since {{date}}",
+    "levels": {
+      "1": "Novice",
+      "2": "Explorer",
+      "3": "Adventurer",
+      "4": "Hunter",
+      "5": "Tracker",
+      "6": "Expert",
+      "7": "Master",
+      "8": "Legend"
+    },
+    "badgeLabels": {
+      "first_hunt": "First step",
+      "hunt_completed": "Hunt completed",
+      "hunt_5": "5 hunts",
+      "streak_3": "3-streak",
+      "precision": "Precision",
+      "points_1000": "1000 points",
+      "explorer": "Explorer"
+    }
+  },
+  "badgesScreen": {
+    "badgesTitle": "Badges",
+    "huntsTitle": "Completed hunts",
+    "noHunts": "No completed hunt yet.",
+    "condition": "Condition: {{value}}",
+    "earnedOn": "Earned on {{date}}",
+    "close": "Close"
+  },
+  "badgeCatalog": {
+    "first_hunt": {
+      "name": "First hunt",
+      "description": "Complete your very first treasure hunt.",
+      "condition": "Complete 1 hunt"
+    },
+    "hunt_completed": {
+      "name": "Hunter",
+      "description": "Complete at least one treasure hunt from start to finish.",
+      "condition": "Complete 1 hunt"
+    },
+    "explorer": {
+      "name": "Explorer",
+      "description": "Participate in at least 5 different hunts.",
+      "condition": "Join 5 hunts"
+    },
+    "collector": {
+      "name": "Collector",
+      "description": "Earn 3 distinct badges.",
+      "condition": "Unlock 3 badges"
+    },
+    "speedrunner": {
+      "name": "Speedrunner",
+      "description": "Complete a hunt in less than 15 minutes.",
+      "condition": "Finish a hunt < 15 min"
+    },
+    "legend": {
+      "name": "Legend",
+      "description": "Reach the maximum level (Legend).",
+      "condition": "Accumulate 1,400 pts"
+    }
+  },
+  "settings": {
+    "avatarTitle": "Avatar",
+    "photoLabel": "Profile picture",
+    "uploading": "Uploading…",
+    "tapToChange": "Tap the photo to choose from gallery",
+    "remove": "Remove",
+    "permissionDenied": "Permission denied",
+    "permissionDeniedMsg": "Gallery access is needed to change the avatar.",
+    "uploadErrorMsg": "Upload failed. Check your connection.",
+    "updateError": "Unable to update avatar.",
+    "removeAvatarTitle": "Remove avatar",
+    "removeAvatarMsg": "Confirm removal?",
+    "noChange": "No change",
+    "noChangeMsg": "Username hasn't changed.",
+    "pseudoUpdated": "Username updated.",
+    "pseudoError": "Update failed.",
+    "pseudoTitle": "Username",
+    "pseudoLabel": "Username",
+    "pseudoPlaceholder": "Your username",
+    "save": "Save",
+    "privacyTitle": "Privacy",
+    "gpsLabel": "GPS Location",
+    "gpsSub": "Allow the app to access your location to validate GPS steps.",
+    "securityTitle": "Security",
+    "securitySub": "Password and account deletion",
+    "emailLabel": "Email: ",
+    "memberSinceLabel": "Member since: ",
+    "language": "Language",
+    "languageDesc": "Choose the app language."
+  },
+  "stepValidation": {
+    "stepInProgress": "Current step",
+    "success": "Step validated! Well done!",
+    "validating": "Validating…",
+    "genericError": "An error occurred. Please try again.",
+    "retry": "🔄 Try again",
+    "type": {
+      "qrcode": "📱 QR code validation",
+      "quiz": "❓ Quiz validation",
+      "photo": "📷 Photo validation",
+      "ar": "🔮 AR validation",
+      "gps": "📡 GPS validation"
+    },
+    "camera": {
+      "title": "Camera access required",
+      "authorize": "Authorize camera"
+    },
+    "gps": {
+      "radiusLabel": "📏 Validation radius: {{value}} m",
+      "inZone": "You are in the validation zone!",
+      "remaining": "{{dist}} remaining",
+      "unknownPos": "Unknown position",
+      "pressToValidate": "Press \"Validate\" to get your position",
+      "noCoordinates": "Destination coordinates are not available.\nApproach the indicated location and validate.",
+      "locating": "Getting your GPS position…",
+      "validating": "Validating…",
+      "validateBtn": "Validate my GPS position",
+      "hint": "Go to the step location, then press the button to validate your presence.",
+      "tooFar": "You are not close enough to the destination. Get closer and try again.",
+      "permissionDenied": "GPS permission denied. Allow location access in settings.",
+      "getPositionError": "Unable to get your GPS position. Please try again."
+    },
+    "qr": {
+      "cameraDesc": "To scan the QR code for this step, allow camera access.",
+      "pointQr": "Point at the QR code",
+      "checking": "Checking QR code…",
+      "hint": "Scan the QR code at the step location to validate your presence."
+    },
+    "photo": {
+      "cameraDesc": "To take the photo for this step, allow camera access.",
+      "usePhoto": "Use this photo",
+      "retake": "🔄 Retake photo",
+      "takePhoto": "📷 Take photo",
+      "hint": "Frame the step location, then take the photo to validate your presence.",
+      "validateError": "Unable to validate the photo. Please try again."
+    },
+    "quiz": {
+      "answerLabel": "Your answer",
+      "answerPlaceholder": "Type your answer…",
+      "checking": "Checking answer…",
+      "validateBtn": "Submit my answer",
+      "hint": "The answer is not case-sensitive and ignores extra spaces.",
+      "wrongAnswer": "Wrong answer. Try again!"
+    },
+    "ar": {
+      "wrongQr": "Incorrect QR code. Find the right QR code."
+    }
+  },
+  "security": {
+    "missingFields": "Missing fields",
+    "missingFieldsMsg": "Please fill in all fields.",
+    "passwordTooShort": "Password too short",
+    "passwordTooShortMsg": "At least 8 characters.",
+    "mismatch": "Passwords don't match",
+    "mismatchMsg": "New passwords do not match.",
+    "successMsg": "Password changed successfully.",
+    "wrongPassword": "Wrong password",
+    "wrongPasswordMsg": "Current password is incorrect.",
+    "errorMsg": "An error occurred. Please try again.",
+    "logoutTitle": "Log out",
+    "logoutMsg": "Confirm logout?",
+    "deleteAccount": "Delete account",
+    "deleteMsg": "This action is irreversible. All your data will be deleted.",
+    "deleteConfirm": "Delete permanently",
+    "deleteError": "Unable to delete account. Please try again.",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "newPasswordPlaceholder": "At least 8 characters",
+    "confirmNewPassword": "Confirm new password",
+    "submit": "Change password",
+    "session": "Session",
+    "logoutBtn": "Log out",
+    "dangerZone": "Danger zone",
+    "dangerDesc": "Account deletion is irreversible. All your data, progress and badges will be permanently deleted.",
+    "deleteBtn": "Delete my account"
+  }
+}

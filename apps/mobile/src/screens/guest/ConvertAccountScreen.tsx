@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -22,10 +23,10 @@ interface Props {
 /**
  * ConvertAccountScreen — modal permettant à un invité de créer un vrai compte.
  * Appelle PATCH /auth/convert avec le JWT invité courant.
- * En cas de succès, isGuest passe à false et la bannière disparaît.
  */
 export default function ConvertAccountScreen({ visible, onClose }: Props) {
   const { convertAccount } = useAuthStore();
+  const { t } = useTranslation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,11 +41,11 @@ export default function ConvertAccountScreen({ visible, onClose }: Props) {
 
   const validate = (): boolean => {
     const next: typeof errors = {};
-    if (!email.trim()) next.email = "L'email est requis.";
-    if (!password) next.password = 'Le mot de passe est requis.';
-    else if (password.length < 8) next.password = 'Minimum 8 caractères.';
-    if (!confirm) next.confirm = 'Veuillez confirmer le mot de passe.';
-    else if (confirm !== password) next.confirm = 'Les mots de passe ne correspondent pas.';
+    if (!email.trim()) next.email = t('convert.emailRequired');
+    if (!password) next.password = t('convert.passwordRequired');
+    else if (password.length < 8) next.password = t('convert.passwordMin');
+    if (!confirm) next.confirm = t('convert.confirmRequired');
+    else if (confirm !== password) next.confirm = t('convert.confirmMismatch');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -55,12 +56,11 @@ export default function ConvertAccountScreen({ visible, onClose }: Props) {
     setErrors({});
     try {
       await convertAccount(email.trim(), password);
-      // isGuest devient false → la bannière disparaît, la modal se ferme
       onClose();
     } catch (err: unknown) {
       const { status, message } = extractApiError(err);
       if (status === 409) {
-        setErrors({ email: 'Cet email est déjà utilisé.' });
+        setErrors({ email: t('register.emailUsed') });
       } else {
         setErrors({ global: message });
       }
@@ -88,17 +88,14 @@ export default function ConvertAccountScreen({ visible, onClose }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Créer un compte</Text>
+            <Text style={styles.title}>{t('convert.title')}</Text>
             <TouchableOpacity onPress={handleClose} hitSlop={{ top: 12, right: 12, bottom: 12, left: 12 }}>
               <Text style={styles.closeBtn}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.subtitle}>
-            Votre progression est conservée — seul un email et un mot de passe vous sont demandés.
-          </Text>
+          <Text style={styles.subtitle}>{t('convert.subtitle')}</Text>
 
           {errors.global && (
             <View style={styles.globalError}>
@@ -107,8 +104,8 @@ export default function ConvertAccountScreen({ visible, onClose }: Props) {
           )}
 
           <Input
-            label="Email"
-            placeholder="vous@exemple.com"
+            label={t('convert.email')}
+            placeholder={t('convert.emailPlaceholder')}
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
@@ -117,8 +114,8 @@ export default function ConvertAccountScreen({ visible, onClose }: Props) {
           />
 
           <Input
-            label="Mot de passe"
-            placeholder="Minimum 8 caractères"
+            label={t('convert.password')}
+            placeholder={t('convert.passwordPlaceholder')}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
@@ -126,7 +123,7 @@ export default function ConvertAccountScreen({ visible, onClose }: Props) {
           />
 
           <Input
-            label="Confirmer le mot de passe"
+            label={t('convert.confirmPassword')}
             placeholder="••••••••"
             secureTextEntry
             value={confirm}
@@ -135,7 +132,7 @@ export default function ConvertAccountScreen({ visible, onClose }: Props) {
           />
 
           <Button
-            label="Sauvegarder ma progression"
+            label={t('convert.submit')}
             loading={loading}
             onPress={handleConvert}
             style={styles.button}

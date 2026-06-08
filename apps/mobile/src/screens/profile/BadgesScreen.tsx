@@ -9,97 +9,60 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useBadges } from '../../hooks/useProfile';
 import { useHuntHistory } from '../../hooks/useHunts';
 import { useHuntsList } from '../../hooks/useHunts';
 
-// ─── Catalogue des badges (client-side) ──────────────────────────────────────
+// ─── Badge types (same keys as backend) ──────────────────────────────────────
 
-interface BadgeDef {
-  type: string;
-  icon: string;
-  name: string;
-  description: string;
-  condition: string;
-}
+const BADGE_TYPES = ['first_hunt', 'hunt_completed', 'explorer', 'collector', 'speedrunner', 'legend'] as const;
+type BadgeType = typeof BADGE_TYPES[number];
 
-const BADGE_CATALOG: BadgeDef[] = [
-  {
-    type: 'first_hunt',
-    icon: '🏁',
-    name: 'Première chasse',
-    description: 'Terminer votre toute première chasse au trésor.',
-    condition: 'Compléter 1 chasse',
-  },
-  {
-    type: 'hunt_completed',
-    icon: '🏆',
-    name: 'Chasseur',
-    description: 'Valider au moins une chasse au trésor jusqu\'au bout.',
-    condition: 'Compléter 1 chasse',
-  },
-  {
-    type: 'explorer',
-    icon: '🗺',
-    name: 'Explorateur',
-    description: 'Participer à au moins 5 chasses différentes.',
-    condition: 'Rejoindre 5 chasses',
-  },
-  {
-    type: 'collector',
-    icon: '💎',
-    name: 'Collectionneur',
-    description: 'Obtenir 3 badges distincts.',
-    condition: 'Débloquer 3 badges',
-  },
-  {
-    type: 'speedrunner',
-    icon: '⚡',
-    name: 'Speedrunner',
-    description: 'Terminer une chasse en moins de 15 minutes.',
-    condition: 'Finir une chasse < 15 min',
-  },
-  {
-    type: 'legend',
-    icon: '🌟',
-    name: 'Légende',
-    description: 'Atteindre le niveau maximum (Légende).',
-    condition: 'Accumuler 1 400 pts',
-  },
-];
+const BADGE_ICONS: Record<BadgeType, string> = {
+  first_hunt:     '🏁',
+  hunt_completed: '🏆',
+  explorer:       '🗺',
+  collector:      '💎',
+  speedrunner:    '⚡',
+  legend:         '🌟',
+};
 
 // ─── BadgeCard ────────────────────────────────────────────────────────────────
 
 function BadgeCard({
-  def,
+  type,
   earned,
   earnedAt,
   onPress,
 }: {
-  def: BadgeDef;
+  type: BadgeType;
   earned: boolean;
   earnedAt?: string;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
+  const name = t(`badgeCatalog.${type}.name`);
+  const condition = t(`badgeCatalog.${type}.condition`);
+  const icon = BADGE_ICONS[type];
+
   return (
     <TouchableOpacity
       style={[styles.badgeCard, !earned && styles.badgeCardLocked]}
       onPress={onPress}
       activeOpacity={0.75}
     >
-      <Text style={[styles.badgeIcon, !earned && styles.badgeIconLocked]}>
-        {def.icon}
-      </Text>
+      <Text style={[styles.badgeIcon, !earned && styles.badgeIconLocked]}>{icon}</Text>
       <Text style={[styles.badgeName, !earned && styles.badgeNameLocked]} numberOfLines={1}>
-        {def.name}
+        {name}
       </Text>
       {earned && earnedAt ? (
         <Text style={styles.badgeDate}>
-          {new Date(earnedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+          {new Date(earnedAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
         </Text>
       ) : (
         <Text style={styles.badgeCondition} numberOfLines={2}>
-          {def.condition}
+          {condition}
         </Text>
       )}
     </TouchableOpacity>
@@ -109,46 +72,54 @@ function BadgeCard({
 // ─── BadgeModal ───────────────────────────────────────────────────────────────
 
 function BadgeModal({
-  def,
+  type,
   earned,
   earnedAt,
   visible,
   onClose,
 }: {
-  def: BadgeDef | null;
+  type: BadgeType | null;
   earned: boolean;
   earnedAt?: string;
   visible: boolean;
   onClose: () => void;
 }) {
-  if (!def) return null;
+  const { t } = useTranslation();
+  if (!type) return null;
+
+  const name = t(`badgeCatalog.${type}.name`);
+  const description = t(`badgeCatalog.${type}.description`);
+  const condition = t(`badgeCatalog.${type}.condition`);
+  const icon = BADGE_ICONS[type];
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
         <View style={styles.modalCard}>
-          <Text style={[styles.modalIcon, !earned && styles.badgeIconLocked]}>{def.icon}</Text>
-          <Text style={styles.modalName}>{def.name}</Text>
-          <Text style={styles.modalDescription}>{def.description}</Text>
+          <Text style={[styles.modalIcon, !earned && styles.badgeIconLocked]}>{icon}</Text>
+          <Text style={styles.modalName}>{name}</Text>
+          <Text style={styles.modalDescription}>{description}</Text>
 
           {earned && earnedAt ? (
             <View style={styles.earnedBadge}>
               <Text style={styles.earnedBadgeText}>
-                Obtenu le{' '}
-                {new Date(earnedAt).toLocaleDateString('fr-FR', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
+                {t('badgesScreen.earnedOn', {
+                  date: new Date(earnedAt).toLocaleDateString(undefined, {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  }),
                 })}
               </Text>
             </View>
           ) : (
             <View style={styles.lockedBadge}>
-              <Text style={styles.lockedBadgeText}>Condition : {def.condition}</Text>
+              <Text style={styles.lockedBadgeText}>{t('badgesScreen.condition', { value: condition })}</Text>
             </View>
           )}
 
           <TouchableOpacity style={styles.modalCloseBtn} onPress={onClose} activeOpacity={0.8}>
-            <Text style={styles.modalCloseBtnText}>Fermer</Text>
+            <Text style={styles.modalCloseBtnText}>{t('badgesScreen.close')}</Text>
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -159,23 +130,23 @@ function BadgeModal({
 // ─── BadgesScreen ─────────────────────────────────────────────────────────────
 
 export default function BadgesScreen() {
+  const { t } = useTranslation();
   const { data: badges = [], isLoading: badgesLoading } = useBadges();
   const { data: history = [], isLoading: historyLoading } = useHuntHistory();
   const { data: allHunts = [], isLoading: huntsLoading } = useHuntsList('');
 
-  const [modalDef, setModalDef] = useState<BadgeDef | null>(null);
+  const [modalType, setModalType] = useState<BadgeType | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
   const earnedMap = new Map(badges.map((b) => [b.badge_type, b.earned_at]));
 
   const completedHistory = history.filter((h) => h.completed_at !== null);
-
   const huntTitleMap = new Map(allHunts.map((h) => [h.id, h.title]));
 
   const isLoading = badgesLoading || historyLoading || huntsLoading;
 
-  function openModal(def: BadgeDef) {
-    setModalDef(def);
+  function openModal(type: BadgeType) {
+    setModalType(type);
     setModalVisible(true);
   }
 
@@ -193,37 +164,37 @@ export default function BadgesScreen() {
 
         {/* ── Badges ── */}
         <Text style={styles.sectionTitle}>
-          Badges{' '}
+          {t('badgesScreen.badgesTitle')}{' '}
           <Text style={styles.sectionCount}>
-            {earnedMap.size}/{BADGE_CATALOG.length}
+            {earnedMap.size}/{BADGE_TYPES.length}
           </Text>
         </Text>
 
         <View style={styles.badgesGrid}>
-          {BADGE_CATALOG.map((def) => {
-            const earned = earnedMap.has(def.type);
+          {BADGE_TYPES.map((type) => {
+            const earned = earnedMap.has(type);
             return (
               <BadgeCard
-                key={def.type}
-                def={def}
+                key={type}
+                type={type}
                 earned={earned}
-                earnedAt={earnedMap.get(def.type)}
-                onPress={() => openModal(def)}
+                earnedAt={earnedMap.get(type)}
+                onPress={() => openModal(type)}
               />
             );
           })}
         </View>
 
-        {/* ── Historique des chasses ── */}
+        {/* ── Historique ── */}
         <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>
-          Chasses terminées{' '}
+          {t('badgesScreen.huntsTitle')}{' '}
           <Text style={styles.sectionCount}>{completedHistory.length}</Text>
         </Text>
 
         {completedHistory.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🗺</Text>
-            <Text style={styles.emptyText}>Aucune chasse terminée pour l'instant.</Text>
+            <Text style={styles.emptyText}>{t('badgesScreen.noHunts')}</Text>
           </View>
         ) : (
           <View style={styles.historyList}>
@@ -231,10 +202,10 @@ export default function BadgesScreen() {
               <View key={item.hunt_id} style={styles.historyRow}>
                 <View style={styles.historyLeft}>
                   <Text style={styles.historyTitle} numberOfLines={1}>
-                    {huntTitleMap.get(item.hunt_id) ?? 'Chasse inconnue'}
+                    {huntTitleMap.get(item.hunt_id) ?? '—'}
                   </Text>
                   <Text style={styles.historyDate}>
-                    {new Date(item.completed_at!).toLocaleDateString('fr-FR', {
+                    {new Date(item.completed_at!).toLocaleDateString(undefined, {
                       day: 'numeric',
                       month: 'long',
                       year: 'numeric',
@@ -243,7 +214,7 @@ export default function BadgesScreen() {
                 </View>
                 <View style={styles.historyRight}>
                   <Text style={styles.historyPoints}>+{item.total_points}</Text>
-                  <Text style={styles.historyPtsLabel}>pts</Text>
+                  <Text style={styles.historyPtsLabel}>{t('common.pts')}</Text>
                 </View>
               </View>
             ))}
@@ -252,9 +223,9 @@ export default function BadgesScreen() {
       </ScrollView>
 
       <BadgeModal
-        def={modalDef}
-        earned={modalDef ? earnedMap.has(modalDef.type) : false}
-        earnedAt={modalDef ? earnedMap.get(modalDef.type) : undefined}
+        type={modalType}
+        earned={modalType ? earnedMap.has(modalType) : false}
+        earnedAt={modalType ? earnedMap.get(modalType) : undefined}
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
       />
@@ -273,7 +244,6 @@ const styles = StyleSheet.create({
   sectionTitleTop: { marginTop: 8 },
   sectionCount: { fontSize: 15, fontWeight: '500', color: '#6B7280' },
 
-  // ── Grid de badges
   badgesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -311,7 +281,6 @@ const styles = StyleSheet.create({
     lineHeight: 13,
   },
 
-  // ── Historique
   emptyState: {
     backgroundColor: '#fff',
     borderRadius: 14,
@@ -346,7 +315,6 @@ const styles = StyleSheet.create({
   historyPoints: { fontSize: 16, fontWeight: '800', color: '#1D4ED8' },
   historyPtsLabel: { fontSize: 10, color: '#6B7280' },
 
-  // ── Modal badge
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',

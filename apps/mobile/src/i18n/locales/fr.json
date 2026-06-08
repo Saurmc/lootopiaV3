@@ -1,0 +1,324 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "success": "Succès",
+    "error": "Erreur",
+    "loading": "Chargement…",
+    "easy": "Facile",
+    "medium": "Moyen",
+    "hard": "Difficile",
+    "min": "min",
+    "pts": "pts",
+    "close": "Fermer"
+  },
+  "auth": {
+    "email": "Email",
+    "emailPlaceholder": "vous@exemple.com",
+    "emailRequired": "L'email est requis.",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Minimum 8 caractères",
+    "passwordRequired": "Le mot de passe est requis.",
+    "passwordMin": "Minimum 8 caractères.",
+    "login": "Se connecter",
+    "loginFailed": "Email ou mot de passe incorrect.",
+    "continueGuest": "Continuer sans compte",
+    "noAccount": "Pas encore de compte ? ",
+    "createAccount": "S'inscrire",
+    "alreadyAccount": "Déjà un compte ? ",
+    "gpsTitle": "Localisation GPS",
+    "gpsDesc": "Activez la localisation pour valider vos étapes par position GPS et trouver les chasses proches de vous.",
+    "gpsEnabled": "Localisation activée",
+    "gpsDisabled": "Localisation désactivée"
+  },
+  "register": {
+    "title": "Lootopia",
+    "subtitle": "Créer un compte",
+    "pseudo": "Pseudo",
+    "pseudoPlaceholder": "Votre pseudo",
+    "pseudoRequired": "Le pseudo est requis.",
+    "pseudoMin": "Minimum 2 caractères.",
+    "emailRequired": "L'email est requis.",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmRequired": "La confirmation est requise.",
+    "confirmMismatch": "Les mots de passe ne correspondent pas.",
+    "emailUsed": "Cet email est déjà utilisé.",
+    "submit": "Créer mon compte"
+  },
+  "convert": {
+    "title": "Créer un compte",
+    "subtitle": "Votre progression est conservée — seul un email et un mot de passe vous sont demandés.",
+    "email": "Email",
+    "emailPlaceholder": "vous@exemple.com",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Minimum 8 caractères",
+    "confirmPassword": "Confirmer le mot de passe",
+    "emailRequired": "L'email est requis.",
+    "passwordRequired": "Le mot de passe est requis.",
+    "passwordMin": "Minimum 8 caractères.",
+    "confirmRequired": "Veuillez confirmer le mot de passe.",
+    "confirmMismatch": "Les mots de passe ne correspondent pas.",
+    "submit": "Créer mon compte"
+  },
+  "gpsModal": {
+    "title": "Autoriser la localisation ?",
+    "desc": "Pour valider les étapes GPS et trouver les chasses autour de vous, l'application a besoin d'accéder à votre position.",
+    "accept": "Autoriser",
+    "decline": "Refuser"
+  },
+  "hunts": {
+    "filterAll": "Tous",
+    "searchPlaceholder": "Rechercher une chasse…",
+    "noHunts": "Aucune chasse trouvée",
+    "noHuntsSub": "Essayez avec d'autres mots-clés",
+    "countOne": "1 chasse",
+    "countOther": "{{count}} chasses",
+    "sortedByDistance": "triées par distance",
+    "diffEasy": "Facile",
+    "diffMedium": "Moyen",
+    "diffHard": "Difficile"
+  },
+  "bottomSheet": {
+    "join": "Rejoindre la chasse"
+  },
+  "map": {
+    "searchPlaceholder": "Rechercher une chasse…",
+    "noResults": "Aucune chasse trouvée",
+    "seeMore": "Voir {{count}} autres résultats →",
+    "gpsRefused": "GPS refusé — carte centrée sur Rennes"
+  },
+  "hunt": {
+    "notFound": "Chasse introuvable",
+    "stepOf": "Étape {{current}} sur {{total}}",
+    "completed": "Chasse terminée !",
+    "radius": "Rayon : {{value}} m",
+    "approachStep": "Approchez-vous de l'étape",
+    "joinError": "Impossible de rejoindre la chasse. Réessayez.",
+    "genericError": "Une erreur est survenue. Réessayez.",
+    "gpsRefused": "Permission GPS refusée.",
+    "inProgress": "En cours",
+    "authorizeCamera": "Autoriser la caméra",
+    "scanQr": "Scannez le QR code",
+    "frameArtwork": "Cadrez l'œuvre",
+    "validating": "Validation…",
+    "joinToScan": "Rejoignez la chasse pour activer le scan",
+    "instructionQr": "Scannez le QR code présent sur l'œuvre pour valider cette étape.",
+    "instructionPhoto": "Cadrez l'œuvre devant vous, puis prenez la photo pour valider.",
+    "instructionQuiz": "Répondez à la question pour valider cette étape.",
+    "instructionGps": "Approchez-vous de l'emplacement et validez votre position GPS.",
+    "yourAnswer": "Votre réponse…",
+    "submitAnswer": "Valider la réponse",
+    "join": "Rejoindre la chasse",
+    "success": "Étape validée ! Bravo !",
+    "difficulty": {
+      "easy": "Facile",
+      "medium": "Moyen",
+      "hard": "Difficile"
+    }
+  },
+  "completion": {
+    "title": "Félicitations !",
+    "subtitle": "Chasse terminée avec succès",
+    "completed": "100% Complété",
+    "rewards": "Récompenses débloquées",
+    "xp": "+ {{count}} XP",
+    "createAccount": "Créer un compte",
+    "continueWithout": "Continuer sans compte",
+    "saveProgress": "Sauvegarder ma progression",
+    "viewDetails": "Voir les détails",
+    "rewardTitle": "🏆 Chasseur",
+    "guestPrompt": "Créez un compte pour conserver votre progression et vos badges définitivement."
+  },
+  "profile": {
+    "levelBadge": "Niveau {{level}}",
+    "hunts": "Chasses",
+    "points": "Points",
+    "badges": "Badges",
+    "huntsCompleted": "Chasses Complétées",
+    "huntsCompletedCount": "Chasses Complétées ({{count}})",
+    "badgesEarned": "Badges Obtenus",
+    "badgesEarnedCount": "Badges Obtenus ({{count}})",
+    "noHunts": "Aucune chasse terminée pour l'instant.",
+    "noBadges": "Aucun badge obtenu pour l'instant.",
+    "settings": "Paramètres",
+    "logout": "Se déconnecter",
+    "logoutConfirmTitle": "Se déconnecter",
+    "logoutConfirmMsg": "Confirmer la déconnexion ?",
+    "memberSince": "Membre depuis {{date}}",
+    "levels": {
+      "1": "Novice",
+      "2": "Explorateur",
+      "3": "Aventurier",
+      "4": "Chasseur",
+      "5": "Traqueur",
+      "6": "Expert",
+      "7": "Maître",
+      "8": "Légende"
+    },
+    "badgeLabels": {
+      "first_hunt": "Premier pas",
+      "hunt_completed": "Chasse terminée",
+      "hunt_5": "5 chasses",
+      "streak_3": "Série de 3",
+      "precision": "Précision",
+      "points_1000": "1000 points",
+      "explorer": "Explorateur"
+    }
+  },
+  "badgesScreen": {
+    "badgesTitle": "Badges",
+    "huntsTitle": "Chasses terminées",
+    "noHunts": "Aucune chasse terminée pour l'instant.",
+    "condition": "Condition : {{value}}",
+    "earnedOn": "Obtenu le {{date}}",
+    "close": "Fermer"
+  },
+  "badgeCatalog": {
+    "first_hunt": {
+      "name": "Première chasse",
+      "description": "Terminer votre toute première chasse au trésor.",
+      "condition": "Compléter 1 chasse"
+    },
+    "hunt_completed": {
+      "name": "Chasseur",
+      "description": "Valider au moins une chasse au trésor jusqu'au bout.",
+      "condition": "Compléter 1 chasse"
+    },
+    "explorer": {
+      "name": "Explorateur",
+      "description": "Participer à au moins 5 chasses différentes.",
+      "condition": "Rejoindre 5 chasses"
+    },
+    "collector": {
+      "name": "Collectionneur",
+      "description": "Obtenir 3 badges distincts.",
+      "condition": "Débloquer 3 badges"
+    },
+    "speedrunner": {
+      "name": "Speedrunner",
+      "description": "Terminer une chasse en moins de 15 minutes.",
+      "condition": "Finir une chasse < 15 min"
+    },
+    "legend": {
+      "name": "Légende",
+      "description": "Atteindre le niveau maximum (Légende).",
+      "condition": "Accumuler 1 400 pts"
+    }
+  },
+  "settings": {
+    "avatarTitle": "Avatar",
+    "photoLabel": "Photo de profil",
+    "uploading": "Upload en cours…",
+    "tapToChange": "Touchez la photo pour choisir depuis la galerie",
+    "remove": "Supprimer",
+    "permissionDenied": "Permission refusée",
+    "permissionDeniedMsg": "L'accès à la galerie est nécessaire pour changer l'avatar.",
+    "uploadErrorMsg": "L'upload a échoué. Vérifiez votre connexion.",
+    "updateError": "Impossible de mettre à jour l'avatar.",
+    "removeAvatarTitle": "Supprimer l'avatar",
+    "removeAvatarMsg": "Confirmer la suppression ?",
+    "noChange": "Aucune modification",
+    "noChangeMsg": "Le pseudo n'a pas changé.",
+    "pseudoUpdated": "Pseudo mis à jour.",
+    "pseudoError": "La mise à jour a échoué.",
+    "pseudoTitle": "Pseudo",
+    "pseudoLabel": "Pseudo",
+    "pseudoPlaceholder": "Votre pseudo",
+    "save": "Enregistrer",
+    "privacyTitle": "Confidentialité",
+    "gpsLabel": "Localisation GPS",
+    "gpsSub": "Autoriser l'application à accéder à votre position pour valider les étapes GPS.",
+    "securityTitle": "Sécurité",
+    "securitySub": "Mot de passe et suppression du compte",
+    "emailLabel": "Email : ",
+    "memberSinceLabel": "Membre depuis : ",
+    "language": "Langue",
+    "languageDesc": "Choisissez la langue de l'application."
+  },
+  "stepValidation": {
+    "stepInProgress": "Étape en cours",
+    "success": "Étape validée ! Bravo !",
+    "validating": "Validation…",
+    "genericError": "Une erreur est survenue. Réessayez.",
+    "retry": "🔄 Réessayer",
+    "type": {
+      "qrcode": "📱 Validation par QR code",
+      "quiz": "❓ Validation par quiz",
+      "photo": "📷 Validation par photo",
+      "ar": "🔮 Validation par RA",
+      "gps": "📡 Validation par GPS"
+    },
+    "camera": {
+      "title": "Accès caméra requis",
+      "authorize": "Autoriser la caméra"
+    },
+    "gps": {
+      "radiusLabel": "📏 Rayon de validation : {{value}} m",
+      "inZone": "Vous êtes dans la zone de validation !",
+      "remaining": "Il vous reste {{dist}} à parcourir",
+      "unknownPos": "Position inconnue",
+      "pressToValidate": "Appuyez sur \"Valider\" pour obtenir votre position",
+      "noCoordinates": "Les coordonnées de destination ne sont pas disponibles.\nApprochez-vous de l'emplacement indiqué et validez.",
+      "locating": "Obtention de votre position GPS…",
+      "validating": "Validation en cours…",
+      "validateBtn": "Valider ma position GPS",
+      "hint": "Rendez-vous à l'emplacement de l'étape, puis appuyez sur le bouton pour valider votre présence.",
+      "tooFar": "Vous n'êtes pas assez proche de la destination. Rapprochez-vous et réessayez.",
+      "permissionDenied": "Permission GPS refusée. Autorisez l'accès à votre position dans les réglages.",
+      "getPositionError": "Impossible d'obtenir votre position GPS. Réessayez."
+    },
+    "qr": {
+      "cameraDesc": "Pour scanner le QR code de cette étape, autorisez l'accès à votre caméra.",
+      "pointQr": "Pointez vers le QR code",
+      "checking": "Vérification du QR code…",
+      "hint": "Scannez le QR code présent à l'emplacement de l'étape pour valider votre présence."
+    },
+    "photo": {
+      "cameraDesc": "Pour prendre la photo de cette étape, autorisez l'accès à votre caméra.",
+      "usePhoto": "Utiliser cette photo",
+      "retake": "🔄 Reprendre la photo",
+      "takePhoto": "📷 Prendre la photo",
+      "hint": "Cadrez l'emplacement de l'étape, puis prenez la photo pour valider votre présence.",
+      "validateError": "Impossible de valider la photo. Réessayez."
+    },
+    "quiz": {
+      "answerLabel": "Votre réponse",
+      "answerPlaceholder": "Saisissez votre réponse…",
+      "checking": "Vérification de la réponse…",
+      "validateBtn": "Valider ma réponse",
+      "hint": "La réponse n'est pas sensible à la casse ni aux espaces superflus.",
+      "wrongAnswer": "Mauvaise réponse. Réessayez !"
+    },
+    "ar": {
+      "wrongQr": "QR code incorrect. Trouvez le bon QR code."
+    }
+  },
+  "security": {
+    "missingFields": "Champs manquants",
+    "missingFieldsMsg": "Veuillez remplir tous les champs.",
+    "passwordTooShort": "Mot de passe trop court",
+    "passwordTooShortMsg": "Minimum 8 caractères.",
+    "mismatch": "Mots de passe différents",
+    "mismatchMsg": "Les nouveaux mots de passe ne correspondent pas.",
+    "successMsg": "Mot de passe modifié avec succès.",
+    "wrongPassword": "Mot de passe incorrect",
+    "wrongPasswordMsg": "Le mot de passe actuel est incorrect.",
+    "errorMsg": "Une erreur est survenue. Réessayez.",
+    "logoutTitle": "Se déconnecter",
+    "logoutMsg": "Confirmer la déconnexion ?",
+    "deleteAccount": "Supprimer le compte",
+    "deleteMsg": "Cette action est irréversible. Toutes vos données seront supprimées.",
+    "deleteConfirm": "Supprimer définitivement",
+    "deleteError": "Impossible de supprimer le compte. Réessayez.",
+    "changePassword": "Changer de mot de passe",
+    "currentPassword": "Mot de passe actuel",
+    "newPassword": "Nouveau mot de passe",
+    "newPasswordPlaceholder": "Minimum 8 caractères",
+    "confirmNewPassword": "Confirmer le nouveau mot de passe",
+    "submit": "Modifier le mot de passe",
+    "session": "Session",
+    "logoutBtn": "Se déconnecter",
+    "dangerZone": "Zone de danger",
+    "dangerDesc": "La suppression de votre compte est irréversible. Toutes vos données, progressions et badges seront définitivement effacés.",
+    "deleteBtn": "Supprimer mon compte"
+  }
+}

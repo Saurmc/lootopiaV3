@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -19,27 +19,15 @@ import type { AppStackParamList } from '../../navigation/AppNavigator';
 import { haversineDistance, formatDistance } from '../../services/hunt.service';
 import type { HuntListItem } from '../../services/hunt.service';
 import HuntBottomSheet from '../map/HuntBottomSheet';
+import { useTranslation } from 'react-i18next';
 import theme from '../../constants/theme';
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
-
-const DIFFICULTIES = [
-  { key: '', label: 'Tous' },
-  { key: 'easy', label: 'Facile' },
-  { key: 'medium', label: 'Moyen' },
-  { key: 'hard', label: 'Difficile' },
-] as const;
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: theme.colors.difficultyEasy,
   medium: theme.colors.difficultyMedium,
   hard: theme.colors.difficultyHard,
-};
-
-const DIFFICULTY_LABELS: Record<string, string> = {
-  easy: 'Facile',
-  medium: 'Moyen',
-  hard: 'Difficile',
 };
 
 // ─── Debounce hook ────────────────────────────────────────────────────────────
@@ -63,6 +51,12 @@ interface HuntCardProps {
 }
 
 function HuntCard({ hunt, userLat, userLng, onPress }: HuntCardProps) {
+  const { t } = useTranslation();
+  const DIFFICULTY_LABELS: Record<string, string> = {
+    easy: t('common.easy'),
+    medium: t('common.medium'),
+    hard: t('common.hard'),
+  };
   const diffColor = DIFFICULTY_COLORS[hunt.difficulty ?? ''] ?? theme.colors.textSecondary;
   const diffLabel = DIFFICULTY_LABELS[hunt.difficulty ?? ''] ?? hunt.difficulty;
 
@@ -135,7 +129,21 @@ type HuntsNavProp = NativeStackNavigationProp<AppStackParamList>;
 
 export default function HuntsListScreen() {
   const { consentGps } = useAuthStore();
+  const { t } = useTranslation();
   const navigation = useNavigation<HuntsNavProp>();
+
+  const DIFFICULTIES = [
+    { key: '', label: t('hunts.filterAll') },
+    { key: 'easy', label: t('common.easy') },
+    { key: 'medium', label: t('common.medium') },
+    { key: 'hard', label: t('common.hard') },
+  ] as const;
+
+  const DIFFICULTY_LABELS: Record<string, string> = {
+    easy: t('common.easy'),
+    medium: t('common.medium'),
+    hard: t('common.hard'),
+  };
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('');
@@ -182,7 +190,7 @@ export default function HuntsListScreen() {
         <Ionicons name="search-outline" size={16} color={theme.colors.textSecondary} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Rechercher une chasse…"
+          placeholder={t('hunts.searchPlaceholder')}
           placeholderTextColor={theme.colors.textDisabled}
           value={search}
           onChangeText={setSearch}
@@ -210,9 +218,9 @@ export default function HuntsListScreen() {
       {/* Compteur résultats */}
       {!isLoading && (
         <Text style={styles.count}>
-          {filtered.length} chasse{filtered.length !== 1 ? 's' : ''}
+          {filtered.length !== 1 ? t('hunts.countOther', { count: filtered.length }) : t('hunts.countOne')}
           {filter ? ` · ${DIFFICULTY_LABELS[filter]}` : ''}
-          {userPos ? ' · triées par distance' : ''}
+          {userPos ? ` · ${t('hunts.sortedByDistance')}` : ''}
         </Text>
       )}
 
@@ -236,9 +244,9 @@ export default function HuntsListScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="search-outline" size={48} color={theme.colors.textDisabled} />
-              <Text style={styles.emptyText}>Aucune chasse trouvée</Text>
+              <Text style={styles.emptyText}>{t('hunts.noHunts')}</Text>
               {search ? (
-                <Text style={styles.emptyHint}>Essayez un autre mot-clé</Text>
+                <Text style={styles.emptyHint}>{t('hunts.noHuntsSub')}</Text>
               ) : null}
             </View>
           }
