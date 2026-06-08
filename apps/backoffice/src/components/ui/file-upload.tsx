@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Upload, X, FileText, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { filesService, ACCEPTED_TYPES, MAX_SIZE_BYTES } from '@/services/files.service';
@@ -53,7 +53,7 @@ export default function FileUpload({
     }
   }
 
-  async function resolvePreview(): Promise<string | null> {
+  const resolvePreview = useCallback(async (): Promise<string | null> => {
     if (previewUrl) return previewUrl;
     if (!value) return null;
     if (value.startsWith('http')) return value;
@@ -64,7 +64,7 @@ export default function FileUpload({
     } catch {
       return null;
     }
-  }
+  }, [previewUrl, value]);
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
@@ -145,12 +145,25 @@ export default function FileUpload({
 
 function ImagePreview({ resolve }: { resolve: () => Promise<string | null> }) {
   const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
-  if (!src) {
-    resolve().then((url) => { if (url) setSrc(url); });
-  }
+  useEffect(() => {
+    let cancelled = false;
+    resolve().then((url) => {
+      if (!cancelled) setSrc(url);
+    }).catch(() => {
+      if (!cancelled) setFailed(true);
+    });
+    return () => { cancelled = true; };
+  }, [resolve]);
+
+  if (failed) return (
+    <div className="w-full h-24 flex items-center justify-center bg-gray-50 text-xs text-gray-400">
+      Impossible de charger l'aperçu
+    </div>
+  );
 
   return src
-    ? <img src={src} alt="Aperçu" className="w-full max-h-48 object-contain bg-gray-50" />
-    : <div className="w-full h-24 bg-gray-100 animate-pulse" />;
+    ? <img src={src} alt="Aperçu" className="w-full max-h-48 object-contain bg-gray-50 rounded" />
+    : <div className="w-full h-24 bg-gray-100 animate-pulse rounded" />;
 }

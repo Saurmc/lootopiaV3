@@ -22,11 +22,17 @@ export interface HuntDto extends Omit<RawHuntDto, 'image_url'> {
 
 export interface HuntTemplate {
   id: string;
-  title: string;
+  name: string;
   description: string;
-  difficulty: string;
-  duration: number;
-  points: number;
+  icon?: string;
+  stepsHint?: string[];
+  defaults: {
+    title: string;
+    description: string;
+    difficulty: string;
+    duration: number;
+    points: number;
+  };
 }
 
 export interface CreateHuntPayload {
