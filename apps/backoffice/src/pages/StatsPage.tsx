@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { ChevronDown, ChevronRight, Users } from 'lucide-react';
+import { ChevronDown, ChevronRight, Users, Download } from 'lucide-react';
 import { huntsService } from '@/services/hunts.service';
 import { statsService, type ParticipantDto } from '@/services/stats.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +42,26 @@ export default function StatsPage() {
 
   function toggleExpand(huntId: string) {
     setExpandedHuntId((prev) => (prev === huntId ? null : huntId));
+  }
+
+  function exportParticipantsCsv(huntTitle: string, rows: ParticipantDto[]) {
+    const header = ['Email', 'Étape courante', 'Étapes validées', 'Points', 'Démarré le', 'Terminé le'];
+    const lines = rows.map((p) => [
+      p.email,
+      String(p.current_step),
+      String(p.completed_steps.length),
+      String(p.total_points),
+      new Date(p.started_at).toLocaleDateString('fr-FR'),
+      p.completed_at ? new Date(p.completed_at).toLocaleDateString('fr-FR') : 'En cours',
+    ].map((v) => `"${v.replace(/"/g, '""')}"`).join(';'));
+    const csv = [header.join(';'), ...lines].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `participants_${huntTitle.replace(/\s+/g, '_').toLowerCase()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   if (isLoading) {
@@ -115,6 +135,20 @@ export default function StatsPage() {
                       {isExpanded && (
                         <tr key={`${hunt.id}-detail`} className="bg-gray-50">
                           <td colSpan={6} className="px-6 py-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                {t('stats.participants')}
+                              </span>
+                              {!participantsFetching && participants.length > 0 && (
+                                <button
+                                  onClick={() => exportParticipantsCsv(hunt.title, participants)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  {t('stats.exportCsv')}
+                                </button>
+                              )}
+                            </div>
                             <ParticipantTable participants={participants} loading={participantsFetching} t={t} />
                           </td>
                         </tr>
