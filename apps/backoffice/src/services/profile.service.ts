@@ -32,7 +32,11 @@ export const profileService = {
   },
 
   async updatePassword(payload: UpdatePasswordPayload): Promise<void> {
-    await api.patch('/me/password', payload);
+    await api.patch('/me/password', {
+      current_password: payload.current_password,
+      new_password: payload.new_password,
+      new_password_confirm: payload.new_password,
+    });
   },
 
   async deleteAccount(): Promise<void> {
