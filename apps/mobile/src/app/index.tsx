@@ -1,5 +1,6 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '../i18n';
 import RootNavigator from '../navigation/RootNavigator';
 
 const queryClient = new QueryClient({

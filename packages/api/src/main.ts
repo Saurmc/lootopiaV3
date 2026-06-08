@@ -23,12 +23,11 @@ async function bootstrap() {
   // Filtre d'exceptions global
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  // CORS strict
-  const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
-    .split(',')
-    .map((o) => o.trim());
+  // CORS — supporte une liste séparée par des virgules dans CORS_ORIGIN
+  const rawOrigins = process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174';
+  const origins = rawOrigins.split(',').map((o) => o.trim());
   app.enableCors({
-    origin: corsOrigins.length === 1 ? corsOrigins[0] : corsOrigins,
+    origin: origins.length === 1 ? origins[0] : origins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],

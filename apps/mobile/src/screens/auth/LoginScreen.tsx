@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -15,6 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Input from '../../components/common/Input';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/auth.store';
 import { extractApiError } from '../../utils/error.utils';
 import theme from '../../constants/theme';
@@ -27,6 +28,7 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ onGuestLogin, guestLoading, onGoToRegister }: LoginScreenProps) {
   const { login } = useAuth();
+  const { t } = useTranslation();
   const { consentGps, setConsentGps } = useAuthStore();
 
   const [email, setEmail] = useState('');
@@ -37,8 +39,8 @@ export default function LoginScreen({ onGuestLogin, guestLoading, onGoToRegister
 
   const validate = (): boolean => {
     const next: typeof errors = {};
-    if (!email.trim()) next.email = "L'email est requis.";
-    if (!password) next.password = 'Le mot de passe est requis.';
+    if (!email.trim()) next.email = t('auth.emailRequired');
+    if (!password) next.password = t('auth.passwordRequired');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -52,7 +54,7 @@ export default function LoginScreen({ onGuestLogin, guestLoading, onGoToRegister
     } catch (err: unknown) {
       const { status, message } = extractApiError(err);
       if (status === 401) {
-        setErrors({ password: 'Email ou mot de passe incorrect.' });
+        setErrors({ password: t('auth.loginFailed') });
       } else {
         setErrors({ global: message });
       }
@@ -98,8 +100,8 @@ export default function LoginScreen({ onGuestLogin, guestLoading, onGoToRegister
           )}
 
           <Input
-            label="Email"
-            placeholder="vous@exemple.com"
+            label={t('auth.email')}
+            placeholder={t('auth.emailPlaceholder')}
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
@@ -108,8 +110,8 @@ export default function LoginScreen({ onGuestLogin, guestLoading, onGoToRegister
           />
 
           <Input
-            label="Mot de passe"
-            placeholder="••••••••"
+            label={t('auth.password')}
+            placeholder={t('auth.passwordPlaceholder')}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
@@ -125,7 +127,7 @@ export default function LoginScreen({ onGuestLogin, guestLoading, onGoToRegister
           >
             {loading
               ? <ActivityIndicator color={theme.colors.textInverse} />
-              : <Text style={styles.btnPrimaryText}>Se connecter</Text>}
+              : <Text style={styles.btnPrimaryText}>{t('auth.login')}</Text>}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -136,13 +138,13 @@ export default function LoginScreen({ onGuestLogin, guestLoading, onGoToRegister
           >
             {guestLoading
               ? <ActivityIndicator color={theme.colors.textInverse} />
-              : <Text style={styles.btnGhostText}>Continuer sans compte</Text>}
+              : <Text style={styles.btnGhostText}>{t('auth.continueGuest')}</Text>}
           </TouchableOpacity>
 
           <View style={styles.registerRow}>
-            <Text style={styles.registerText}>Pas encore inscrit ? </Text>
+            <Text style={styles.registerText}>{t('auth.noAccount')}</Text>
             <TouchableOpacity onPress={onGoToRegister} activeOpacity={0.7}>
-              <Text style={styles.registerLink}>Créer un compte</Text>
+              <Text style={styles.registerLink}>{t('auth.createAccount')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -163,14 +165,14 @@ export default function LoginScreen({ onGuestLogin, guestLoading, onGoToRegister
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Ionicons name="location-outline" size={20} color={theme.colors.primary} />
-              <Text style={styles.modalTitle}>Localisation GPS</Text>
+              <Text style={styles.modalTitle}>{t('auth.gpsTitle')}</Text>
             </View>
             <Text style={styles.modalDesc}>
-              Nécessaire pour valider les étapes de chasse et afficher les chasses près de vous.
+              {t('auth.gpsDesc')}
             </Text>
             <View style={styles.modalToggleRow}>
               <Text style={styles.modalToggleLabel}>
-                {consentGps ? 'Activée' : 'Désactivée'}
+                {consentGps ? t('auth.gpsEnabled') : t('auth.gpsDisabled')}
               </Text>
               <Switch
                 value={consentGps === true}

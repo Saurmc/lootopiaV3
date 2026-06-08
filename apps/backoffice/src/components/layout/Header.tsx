@@ -1,11 +1,14 @@
-import { Bell, ChevronDown } from 'lucide-react';
-import { useAuthStore } from '@/store/auth.store';
-import { useNavigate } from 'react-router-dom';
+import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '@/store/auth.store';
+import LanguageSwitcher from '../LanguageSwitcher';
 
 export default function Header() {
   const { user, clearAuth } = useAuthStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
 
   const handleLogout = () => {
@@ -13,17 +16,11 @@ export default function Header() {
     navigate('/login');
   };
 
-  const initials = user?.email
-    ? user.email.slice(0, 2).toUpperCase()
-    : 'U';
+  const initials = user?.email ? user.email.slice(0, 2).toUpperCase() : 'U';
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-end gap-3 shrink-0">
-      {/* Notification bell */}
-      <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
-        <Bell className="h-5 w-5 text-gray-500" />
-        <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-orange-500 rounded-full" />
-      </button>
+      <LanguageSwitcher />
 
       {/* Avatar dropdown */}
       <div className="relative">
@@ -49,7 +46,7 @@ export default function Header() {
               onClick={handleLogout}
               className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
             >
-              Déconnexion
+              {t('common.logout')}
             </button>
           </div>
         )}

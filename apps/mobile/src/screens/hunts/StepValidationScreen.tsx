@@ -21,6 +21,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { huntService, haversineDistance, formatDistance } from '../../services/hunt.service';
 import type { HuntProgress } from '../../services/hunt.service';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
+import ARSection from '../../components/step/ARSection';
+import type { ArContent } from '../../components/step/ARSection';
+import { useTranslation } from 'react-i18next';
 
 type RouteProps = RouteProp<AppStackParamList, 'StepValidation'>;
 type NavProp = NativeStackNavigationProp<AppStackParamList, 'StepValidation'>;
@@ -55,6 +58,7 @@ function GpsSection({
   onValidate,
   pulseAnim,
 }: GpsSectionProps) {
+  const { t } = useTranslation();
   const distance =
     userPos && coordinates
       ? haversineDistance(userPos.lat, userPos.lng, coordinates.lat, coordinates.lng)
@@ -67,7 +71,7 @@ function GpsSection({
     <>
       {/* Rayon */}
       <View style={styles.radiusChip}>
-        <Text style={styles.radiusChipText}>📏 Rayon de validation : {validationRadius} m</Text>
+        <Text style={styles.radiusChipText}>{t('stepValidation.gps.radiusLabel', { value: validationRadius })}</Text>
       </View>
 
       {/* Indicateur distance */}
@@ -87,14 +91,14 @@ function GpsSection({
                 </Text>
                 <Text style={styles.distanceSubtext}>
                   {isClose
-                    ? 'Vous êtes dans la zone de validation !'
-                    : `Il vous reste ${formatDistance(Math.max(0, distance - validationRadius))} à parcourir`}
+                    ? t('stepValidation.gps.inZone')
+                    : t('stepValidation.gps.remaining', { dist: formatDistance(Math.max(0, distance - validationRadius)) })}
                 </Text>
               </>
             ) : (
               <>
-                <Text style={styles.distanceValue}>Position inconnue</Text>
-                <Text style={styles.distanceSubtext}>Appuyez sur "Valider" pour obtenir votre position</Text>
+                <Text style={styles.distanceValue}>{t('stepValidation.gps.unknownPos')}</Text>
+                <Text style={styles.distanceSubtext}>{t('stepValidation.gps.pressToValidate')}</Text>
               </>
             )}
           </View>
@@ -102,10 +106,7 @@ function GpsSection({
       ) : (
         <View style={styles.distanceCard}>
           <Text style={styles.distanceIcon}>🗺</Text>
-          <Text style={styles.distanceSubtext}>
-            Les coordonnées de destination ne sont pas disponibles.{'\n'}
-            Approchez-vous de l'emplacement indiqué et validez.
-          </Text>
+          <Text style={styles.distanceSubtext}>{t('stepValidation.gps.noCoordinates')}</Text>
         </View>
       )}
 
@@ -114,7 +115,7 @@ function GpsSection({
         <View style={styles.statusRow}>
           <ActivityIndicator size="small" color="#3B82F6" />
           <Text style={styles.statusText}>
-            {state === 'locating' ? 'Obtention de votre position GPS…' : 'Validation en cours…'}
+            {state === 'locating' ? t('stepValidation.gps.locating') : t('stepValidation.gps.validating')}
           </Text>
         </View>
       )}
@@ -137,16 +138,14 @@ function GpsSection({
           ) : (
             <>
               <Text style={styles.validateBtnIcon}>📡</Text>
-              <Text style={styles.validateBtnLabel}>Valider ma position GPS</Text>
+              <Text style={styles.validateBtnLabel}>{t('stepValidation.gps.validateBtn')}</Text>
             </>
           )}
         </TouchableOpacity>
       )}
 
       {state === 'idle' && (
-        <Text style={styles.hint}>
-          Rendez-vous à l'emplacement de l'étape, puis appuyez sur le bouton pour valider votre présence.
-        </Text>
+        <Text style={styles.hint}>{t('stepValidation.gps.hint')}</Text>
       )}
     </>
   );
@@ -163,6 +162,7 @@ interface QrSectionProps {
 }
 
 function QrSection({ state, errorMsg, onScanned, onRetry, scanned }: QrSectionProps) {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
 
   if (!permission) {
@@ -177,12 +177,10 @@ function QrSection({ state, errorMsg, onScanned, onRetry, scanned }: QrSectionPr
     return (
       <View style={styles.permissionBox}>
         <Text style={styles.permissionIcon}>📷</Text>
-        <Text style={styles.permissionTitle}>Accès caméra requis</Text>
-        <Text style={styles.permissionText}>
-          Pour scanner le QR code de cette étape, autorisez l'accès à votre caméra.
-        </Text>
+        <Text style={styles.permissionTitle}>{t('stepValidation.camera.title')}</Text>
+        <Text style={styles.permissionText}>{t('stepValidation.qr.cameraDesc')}</Text>
         <TouchableOpacity style={styles.validateBtn} onPress={requestPermission} activeOpacity={0.8}>
-          <Text style={styles.validateBtnLabel}>Autoriser la caméra</Text>
+          <Text style={styles.validateBtnLabel}>{t('stepValidation.camera.authorize')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -210,7 +208,7 @@ function QrSection({ state, errorMsg, onScanned, onRetry, scanned }: QrSectionPr
         {/* Label */}
         <View style={styles.cameraLabel}>
           <Text style={styles.cameraLabelText}>
-            {state === 'validating' ? 'Validation…' : 'Pointez vers le QR code'}
+            {state === 'validating' ? t('stepValidation.validating') : t('stepValidation.qr.pointQr')}
           </Text>
         </View>
       </View>
@@ -219,7 +217,7 @@ function QrSection({ state, errorMsg, onScanned, onRetry, scanned }: QrSectionPr
       {state === 'validating' && (
         <View style={styles.statusRow}>
           <ActivityIndicator size="small" color="#3B82F6" />
-          <Text style={styles.statusText}>Vérification du QR code…</Text>
+          <Text style={styles.statusText}>{t('stepValidation.qr.checking')}</Text>
         </View>
       )}
 
@@ -228,15 +226,13 @@ function QrSection({ state, errorMsg, onScanned, onRetry, scanned }: QrSectionPr
         <>
           <ErrorBanner type="other" message={errorMsg} />
           <TouchableOpacity style={styles.retryBtn} onPress={onRetry} activeOpacity={0.8}>
-            <Text style={styles.retryBtnLabel}>🔄 Réessayer</Text>
+            <Text style={styles.retryBtnLabel}>{t('stepValidation.retry')}</Text>
           </TouchableOpacity>
         </>
       )}
 
       {state === 'idle' && (
-        <Text style={styles.hint}>
-          Scannez le QR code présent à l'emplacement de l'étape pour valider votre présence.
-        </Text>
+        <Text style={styles.hint}>{t('stepValidation.qr.hint')}</Text>
       )}
     </>
   );
@@ -251,6 +247,7 @@ interface PhotoSectionProps {
 }
 
 function PhotoSection({ state, errorMsg, onSubmit }: PhotoSectionProps) {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef<CameraView>(null);
   const [capturedUri, setCapturedUri] = useState<string | null>(null);
@@ -281,12 +278,10 @@ function PhotoSection({ state, errorMsg, onSubmit }: PhotoSectionProps) {
     return (
       <View style={styles.permissionBox}>
         <Text style={styles.permissionIcon}>📷</Text>
-        <Text style={styles.permissionTitle}>Accès caméra requis</Text>
-        <Text style={styles.permissionText}>
-          Pour prendre la photo de cette étape, autorisez l'accès à votre caméra.
-        </Text>
+        <Text style={styles.permissionTitle}>{t('stepValidation.camera.title')}</Text>
+        <Text style={styles.permissionText}>{t('stepValidation.photo.cameraDesc')}</Text>
         <TouchableOpacity style={styles.validateBtn} onPress={requestPermission} activeOpacity={0.8}>
-          <Text style={styles.validateBtnLabel}>Autoriser la caméra</Text>
+          <Text style={styles.validateBtnLabel}>{t('stepValidation.camera.authorize')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -312,7 +307,7 @@ function PhotoSection({ state, errorMsg, onSubmit }: PhotoSectionProps) {
           ) : (
             <>
               <Text style={styles.validateBtnIcon}>✔️</Text>
-              <Text style={styles.validateBtnLabel}>Utiliser cette photo</Text>
+              <Text style={styles.validateBtnLabel}>{t('stepValidation.photo.usePhoto')}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -323,7 +318,7 @@ function PhotoSection({ state, errorMsg, onSubmit }: PhotoSectionProps) {
           disabled={isValidating}
           activeOpacity={0.8}
         >
-          <Text style={styles.retryBtnLabel}>🔄 Reprendre la photo</Text>
+          <Text style={styles.retryBtnLabel}>{t('stepValidation.photo.retake')}</Text>
         </TouchableOpacity>
       </>
     );
@@ -356,14 +351,12 @@ function PhotoSection({ state, errorMsg, onSubmit }: PhotoSectionProps) {
         ) : (
           <>
             <Text style={styles.validateBtnIcon}>📷</Text>
-            <Text style={styles.validateBtnLabel}>Prendre la photo</Text>
+            <Text style={styles.validateBtnLabel}>{t('stepValidation.photo.takePhoto')}</Text>
           </>
         )}
       </TouchableOpacity>
 
-      <Text style={styles.hint}>
-        Cadrez l'emplacement de l'étape, puis prenez la photo pour valider votre présence.
-      </Text>
+      <Text style={styles.hint}>{t('stepValidation.photo.hint')}</Text>
     </>
   );
 }
@@ -379,6 +372,7 @@ interface QuizSectionProps {
 }
 
 function QuizSection({ state, errorMsg, answer, onChangeAnswer, onSubmit }: QuizSectionProps) {
+  const { t } = useTranslation();
   const isLoading = state === 'validating';
   const hasError = state === 'error_other' && errorMsg !== null;
 
@@ -386,10 +380,10 @@ function QuizSection({ state, errorMsg, answer, onChangeAnswer, onSubmit }: Quiz
     <>
       {/* Zone de réponse */}
       <View style={styles.quizInputWrapper}>
-        <Text style={styles.quizInputLabel}>Votre réponse</Text>
+        <Text style={styles.quizInputLabel}>{t('stepValidation.quiz.answerLabel')}</Text>
         <TextInput
           style={[styles.quizInput, hasError && styles.quizInputError]}
-          placeholder="Saisissez votre réponse…"
+          placeholder={t('stepValidation.quiz.answerPlaceholder')}
           placeholderTextColor="#9CA3AF"
           value={answer}
           onChangeText={onChangeAnswer}
@@ -405,7 +399,7 @@ function QuizSection({ state, errorMsg, answer, onChangeAnswer, onSubmit }: Quiz
       {isLoading && (
         <View style={styles.statusRow}>
           <ActivityIndicator size="small" color="#3B82F6" />
-          <Text style={styles.statusText}>Vérification de la réponse…</Text>
+          <Text style={styles.statusText}>{t('stepValidation.quiz.checking')}</Text>
         </View>
       )}
 
@@ -426,14 +420,12 @@ function QuizSection({ state, errorMsg, answer, onChangeAnswer, onSubmit }: Quiz
         ) : (
           <>
             <Text style={styles.validateBtnIcon}>✔️</Text>
-            <Text style={styles.validateBtnLabel}>Valider ma réponse</Text>
+            <Text style={styles.validateBtnLabel}>{t('stepValidation.quiz.validateBtn')}</Text>
           </>
         )}
       </TouchableOpacity>
 
-      <Text style={styles.hint}>
-        La réponse n'est pas sensible à la casse ni aux espaces superflus.
-      </Text>
+      <Text style={styles.hint}>{t('stepValidation.quiz.hint')}</Text>
     </>
   );
 }
@@ -458,6 +450,7 @@ function ErrorBanner({ type, message }: { type: 'range' | 'other'; message: stri
  * - "qrcode" : scanner caméra     → POST { qr_code }
  */
 export default function StepValidationScreen() {
+  const { t } = useTranslation();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavProp>();
   const queryClient = useQueryClient();
@@ -470,6 +463,7 @@ export default function StepValidationScreen() {
     validationType,
     validationRadius,
     coordinates,
+    arContent,
   } = route.params;
 
   const [state, setState] = useState<ValidationState>('idle');
@@ -510,7 +504,7 @@ export default function StepValidationScreen() {
         navigation.replace('HuntCompletion', {
           huntId,
           totalPoints: progress.total_points,
-          stepCount: progress.steps.length,
+          stepCount: progress.completed_steps?.length ?? 0,
           startedAt: progress.started_at,
           completedAt: progress.completed_at,
         });
@@ -524,10 +518,10 @@ export default function StepValidationScreen() {
     const msg = extractErrorMessage(err);
     if (isRangeError) {
       setState('error_range');
-      setErrorMsg('Vous n\'êtes pas assez proche de la destination. Rapprochez-vous et réessayez.');
+      setErrorMsg(t('stepValidation.gps.tooFar'));
     } else {
       setState('error_other');
-      setErrorMsg(msg || 'Une erreur est survenue. Réessayez.');
+      setErrorMsg(msg || t('stepValidation.genericError'));
     }
   };
 
@@ -542,7 +536,7 @@ export default function StepValidationScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setState('error_other');
-        setErrorMsg('Permission GPS refusée. Autorisez l\'accès à votre position dans les réglages.');
+        setErrorMsg(t('stepValidation.gps.permissionDenied'));
         return;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -550,7 +544,7 @@ export default function StepValidationScreen() {
       setUserPos(pos);
     } catch {
       setState('error_other');
-      setErrorMsg('Impossible d\'obtenir votre position GPS. Réessayez.');
+      setErrorMsg(t('stepValidation.gps.getPositionError'));
       return;
     }
 
@@ -596,7 +590,32 @@ export default function StepValidationScreen() {
     } catch (err) {
       const msg = extractErrorMessage(err);
       setState('error_other');
-      setErrorMsg(msg || 'Impossible de valider la photo. Réessayez.');
+      setErrorMsg(msg || t('stepValidation.photo.validateError'));
+    }
+  };
+
+  // ── Validation AR ────────────────────────────────────────────────────────────
+
+  const handleArConfirm = async (qrCode?: string) => {
+    setState('validating');
+    setErrorMsg(null);
+    try {
+      let payload: Record<string, unknown> = {};
+      if ((arContent as { type?: string } | null)?.type === 'ar-3d-spatial') {
+        payload = { marker_triggered: true };
+      } else if (qrCode) {
+        payload = { qr_code: qrCode };
+      }
+      const progress = await huntService.validateStep(huntId, stepId, payload);
+      await onValidated(progress);
+    } catch (err) {
+      const msg = extractErrorMessage(err);
+      setState('error_other');
+      setErrorMsg(
+        msg.toLowerCase().includes('qr')
+          ? t('stepValidation.ar.wrongQr')
+          : (msg || t('stepValidation.genericError')),
+      );
     }
   };
 
@@ -615,8 +634,8 @@ export default function StepValidationScreen() {
       setState('error_other');
       setErrorMsg(
         msg.toLowerCase().includes('wrong') || msg.toLowerCase().includes('answer')
-          ? 'Mauvaise réponse. Réessayez !'
-          : (msg || 'Une erreur est survenue. Réessayez.'),
+          ? t('stepValidation.quiz.wrongAnswer')
+          : (msg || t('stepValidation.genericError')),
       );
     }
   };
@@ -632,7 +651,7 @@ export default function StepValidationScreen() {
     >
       {/* En-tête étape */}
       <View style={styles.stepCard}>
-        <Text style={styles.stepLabel}>Étape en cours</Text>
+        <Text style={styles.stepLabel}>{t('stepValidation.stepInProgress')}</Text>
         <Text style={styles.stepTitle}>{stepTitle}</Text>
         {stepDescription ? <Text style={styles.stepDesc}>{stepDescription}</Text> : null}
       </View>
@@ -641,12 +660,14 @@ export default function StepValidationScreen() {
       <View style={styles.typeChip}>
         <Text style={styles.typeChipText}>
           {validationType === 'qrcode'
-            ? '📱 Validation par QR code'
+            ? t('stepValidation.type.qrcode')
             : validationType === 'quiz'
-            ? '❓ Validation par quiz'
+            ? t('stepValidation.type.quiz')
             : validationType === 'photo'
-            ? '📷 Validation par photo'
-            : '📡 Validation par GPS'}
+            ? t('stepValidation.type.photo')
+            : validationType === 'ar'
+            ? t('stepValidation.type.ar')
+            : t('stepValidation.type.gps')}
         </Text>
       </View>
 
@@ -654,7 +675,7 @@ export default function StepValidationScreen() {
       {state === 'success' && (
         <View style={styles.successBanner}>
           <Text style={styles.successIcon}>🎉</Text>
-          <Text style={styles.successText}>Étape validée ! Bravo !</Text>
+          <Text style={styles.successText}>{t('stepValidation.success')}</Text>
         </View>
       )}
 
@@ -681,6 +702,13 @@ export default function StepValidationScreen() {
             state={state}
             errorMsg={errorMsg}
             onSubmit={handlePhotoSubmit}
+          />
+        ) : validationType === 'ar' && arContent ? (
+          <ARSection
+            arContent={arContent as ArContent}
+            onConfirm={handleArConfirm}
+            validating={state === 'validating'}
+            errorMsg={errorMsg}
           />
         ) : (
           <GpsSection

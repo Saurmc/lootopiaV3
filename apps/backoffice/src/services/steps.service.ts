@@ -7,6 +7,7 @@ export interface StepDto {
   title: string;
   description: string | null;
   validation_radius: number;
+  validation_type: 'gps' | 'qrcode' | 'quiz' | 'photo' | 'ar' | null;
   ar_content: Record<string, unknown> | null;
   created_at: string;
 }
@@ -18,6 +19,7 @@ export interface CreateStepPayload {
   lat?: number;
   lng?: number;
   validation_radius: number;
+  validation_type?: 'gps' | 'qrcode' | 'quiz' | 'photo' | 'ar';
   ar_content?: Record<string, unknown> | null;
 }
 

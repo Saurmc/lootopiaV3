@@ -48,9 +48,13 @@ export class CreateStepDto {
   @Type(() => Number)
   validation_radius?: number;
 
-  @IsIn(['gps', 'qrcode', 'quiz', 'photo'])
+  @IsIn(['gps', 'qrcode', 'quiz', 'photo', 'ar'])
   @IsOptional()
   validation_type?: string;
+
+  @IsObject()
+  @IsOptional()
+  validation_data?: Record<string, unknown>;
 
   @IsObject()
   @IsOptional()

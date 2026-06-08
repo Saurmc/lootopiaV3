@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +11,7 @@ import {
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import { useAuth } from '../../hooks/useAuth';
+import { useTranslation } from 'react-i18next';
 import { extractApiError } from '../../utils/error.utils';
 import theme from '../../constants/theme';
 
@@ -20,6 +21,7 @@ interface RegisterScreenProps {
 
 export default function RegisterScreen({ onBack }: RegisterScreenProps) {
   const { register } = useAuth();
+  const { t } = useTranslation();
 
   const [pseudo, setPseudo] = useState('');
   const [email, setEmail] = useState('');
@@ -36,13 +38,13 @@ export default function RegisterScreen({ onBack }: RegisterScreenProps) {
 
   const validate = (): boolean => {
     const next: typeof errors = {};
-    if (!pseudo.trim()) next.pseudo = 'Le pseudo est requis.';
-    else if (pseudo.trim().length < 2) next.pseudo = 'Minimum 2 caractères.';
-    if (!email.trim()) next.email = "L'email est requis.";
-    if (!password) next.password = 'Le mot de passe est requis.';
-    else if (password.length < 8) next.password = 'Minimum 8 caractères.';
-    if (!confirm) next.confirm = 'Veuillez confirmer le mot de passe.';
-    else if (confirm !== password) next.confirm = 'Les mots de passe ne correspondent pas.';
+    if (!pseudo.trim()) next.pseudo = t('register.pseudoRequired');
+    else if (pseudo.trim().length < 2) next.pseudo = t('register.pseudoMin');
+    if (!email.trim()) next.email = t('register.pseudoRequired'.replace('pseudo', 'email')) || t('auth.emailRequired');
+    if (!password) next.password = t('auth.passwordRequired');
+    else if (password.length < 8) next.password = t('auth.passwordMin');
+    if (!confirm) next.confirm = t('register.confirmRequired');
+    else if (confirm !== password) next.confirm = t('register.confirmMismatch');
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -57,7 +59,7 @@ export default function RegisterScreen({ onBack }: RegisterScreenProps) {
     } catch (err: unknown) {
       const { status, message } = extractApiError(err);
       if (status === 409) {
-        setErrors({ email: 'Cet email est déjà utilisé.' });
+        setErrors({ email: t('register.emailUsed') });
       } else {
         setErrors({ global: message });
       }
@@ -77,8 +79,8 @@ export default function RegisterScreen({ onBack }: RegisterScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.logoSection}>
-          <Text style={styles.logoText}>Lootopia</Text>
-          <Text style={styles.logoSubtitle}>Créez votre compte</Text>
+          <Text style={styles.logoText}>{t('register.title')}</Text>
+          <Text style={styles.logoSubtitle}>{t('register.subtitle')}</Text>
         </View>
 
         <View style={styles.form}>
@@ -89,8 +91,8 @@ export default function RegisterScreen({ onBack }: RegisterScreenProps) {
           )}
 
           <Input
-            label="Pseudo"
-            placeholder="Votre nom d'aventurier"
+            label={t('register.pseudo')}
+            placeholder={t('register.pseudoPlaceholder')}
             value={pseudo}
             onChangeText={setPseudo}
             error={errors.pseudo}
@@ -100,8 +102,8 @@ export default function RegisterScreen({ onBack }: RegisterScreenProps) {
           />
 
           <Input
-            label="Email"
-            placeholder="vous@exemple.com"
+            label={t('auth.email')}
+            placeholder={t('auth.emailPlaceholder')}
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
@@ -110,8 +112,8 @@ export default function RegisterScreen({ onBack }: RegisterScreenProps) {
           />
 
           <Input
-            label="Mot de passe"
-            placeholder="Minimum 8 caractères"
+            label={t('auth.password')}
+            placeholder={t('auth.passwordPlaceholder')}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
@@ -120,7 +122,7 @@ export default function RegisterScreen({ onBack }: RegisterScreenProps) {
           />
 
           <Input
-            label="Confirmer le mot de passe"
+            label={t('register.confirmPassword')}
             placeholder="••••••••"
             secureTextEntry
             value={confirm}
@@ -130,7 +132,7 @@ export default function RegisterScreen({ onBack }: RegisterScreenProps) {
           />
 
           <Button
-            label="Créer mon compte"
+            label={t('register.submit')}
             loading={loading}
             onPress={handleRegister}
             style={styles.button}
@@ -138,9 +140,9 @@ export default function RegisterScreen({ onBack }: RegisterScreenProps) {
 
           {onBack && (
             <View style={styles.backRow}>
-              <Text style={styles.backText}>Déjà un compte ? </Text>
+              <Text style={styles.backText}>{t('auth.alreadyAccount')}</Text>
               <TouchableOpacity onPress={onBack} activeOpacity={0.7}>
-                <Text style={styles.backLink}>Se connecter</Text>
+                <Text style={styles.backLink}>{t('auth.login')}</Text>
               </TouchableOpacity>
             </View>
           )}

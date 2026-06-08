@@ -12,6 +12,7 @@ vi.mock('./api', () => ({
 import { api } from './api';
 import { huntsService } from './hunts.service';
 
+// Réponse brute de l'API (image_url)
 const mockHunt = {
   id: 'hunt-1',
   partner_id: 'user-1',
@@ -23,6 +24,22 @@ const mockHunt = {
   points: 100,
   is_active: true,
   created_at: '2026-01-01T00:00:00Z',
+  image_url: null,
+};
+
+// DTO exposé côté backoffice (plan_url)
+const expectedHunt = {
+  id: 'hunt-1',
+  partner_id: 'user-1',
+  title: 'Test Hunt',
+  description: 'A test hunt',
+  location: 'Paris',
+  difficulty: 'easy' as const,
+  duration: 60,
+  points: 100,
+  is_active: true,
+  created_at: '2026-01-01T00:00:00Z',
+  plan_url: null,
 };
 
 describe('huntsService', () => {
@@ -33,7 +50,7 @@ describe('huntsService', () => {
       vi.mocked(api.get).mockResolvedValueOnce({ data: [mockHunt] });
       const result = await huntsService.getAll();
       expect(api.get).toHaveBeenCalledWith('/hunts', { params: {} });
-      expect(result).toEqual([mockHunt]);
+      expect(result).toEqual([expectedHunt]);
     });
 
     it('passe le paramètre q si fourni', async () => {
@@ -48,7 +65,7 @@ describe('huntsService', () => {
       vi.mocked(api.post).mockResolvedValueOnce({ data: mockHunt });
       const result = await huntsService.create({ title: 'Test Hunt', is_active: false });
       expect(api.post).toHaveBeenCalledWith('/hunts', { title: 'Test Hunt', is_active: false });
-      expect(result).toEqual(mockHunt);
+      expect(result).toEqual(expectedHunt);
     });
   });
 
@@ -85,7 +102,7 @@ describe('huntsService', () => {
       vi.mocked(api.post).mockResolvedValueOnce({ data: mockHunt });
       const result = await huntsService.createFromTemplate('urban-explorer');
       expect(api.post).toHaveBeenCalledWith('/hunts/from-template/urban-explorer');
-      expect(result).toEqual(mockHunt);
+      expect(result).toEqual(expectedHunt);
     });
   });
 });

@@ -1,17 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useQueries } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { huntsService } from '@/services/hunts.service';
 import { statsService, type ParticipantDto } from '@/services/stats.service';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-const DIFF_LABEL: Record<string, string> = {
-  easy: 'Facile',
-  medium: 'Moyen',
-  hard: 'Difficile',
-};
-
 export default function StatsPage() {
+  const { t } = useTranslation();
   const [expandedHuntId, setExpandedHuntId] = useState<string | null>(null);
 
   const { data: hunts = [], isLoading: huntsLoading } = useQuery({
@@ -37,6 +33,13 @@ export default function StatsPage() {
 
   const isLoading = huntsLoading || statsQueries.some((q) => q.isLoading);
 
+  const diffLabel = (d?: string) => {
+    if (d === 'easy') return t('hunts.diffEasy');
+    if (d === 'medium') return t('hunts.diffMedium');
+    if (d === 'hard') return t('hunts.diffHard');
+    return d ?? '';
+  };
+
   function toggleExpand(huntId: string) {
     setExpandedHuntId((prev) => (prev === huntId ? null : huntId));
   }
@@ -54,27 +57,27 @@ export default function StatsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Statistiques</h2>
-        <p className="text-sm text-gray-500 mt-0.5">Performances de toutes vos chasses.</p>
+        <h2 className="text-2xl font-bold text-gray-900">{t('stats.title')}</h2>
+        <p className="text-sm text-gray-500 mt-0.5">{t('stats.subtitle')}</p>
       </div>
 
       {hunts.length === 0 ? (
-        <p className="text-sm text-gray-400 text-center py-16">Aucune chasse disponible.</p>
+        <p className="text-sm text-gray-400 text-center py-16">{t('stats.noHunts')}</p>
       ) : (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Résumé par chasse</CardTitle>
+            <CardTitle className="text-base">{t('stats.tableTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-gray-50 text-xs text-gray-500 uppercase tracking-wide">
                   <th className="text-left px-6 py-3 w-8" />
-                  <th className="text-left px-6 py-3">Chasse</th>
-                  <th className="text-right px-4 py-3">Participants</th>
-                  <th className="text-right px-4 py-3">Complétés</th>
-                  <th className="text-right px-4 py-3">Complétion</th>
-                  <th className="text-right px-6 py-3">Pts moyens</th>
+                  <th className="text-left px-6 py-3">{t('stats.colHunt')}</th>
+                  <th className="text-right px-4 py-3">{t('stats.colParticipants')}</th>
+                  <th className="text-right px-4 py-3">{t('stats.colCompleted')}</th>
+                  <th className="text-right px-4 py-3">{t('stats.colCompletion')}</th>
+                  <th className="text-right px-6 py-3">{t('stats.colAvgPoints')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,31 +93,19 @@ export default function StatsPage() {
                         onClick={() => toggleExpand(hunt.id)}
                       >
                         <td className="px-6 py-3 text-gray-400">
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" />
-                          )}
+                          {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         </td>
                         <td className="px-6 py-3">
                           <p className="font-medium text-gray-900">{hunt.title}</p>
                           <p className="text-xs text-gray-400">
                             {hunt.location ?? '—'}
-                            {hunt.difficulty ? ` · ${DIFF_LABEL[hunt.difficulty] ?? hunt.difficulty}` : ''}
+                            {hunt.difficulty ? ` · ${diffLabel(hunt.difficulty)}` : ''}
                           </p>
                         </td>
-                        <td className="px-4 py-3 text-right text-gray-700">
-                          {stats?.participant_count ?? '—'}
-                        </td>
-                        <td className="px-4 py-3 text-right text-gray-700">
-                          {stats?.completed_count ?? '—'}
-                        </td>
+                        <td className="px-4 py-3 text-right text-gray-700">{stats?.participant_count ?? '—'}</td>
+                        <td className="px-4 py-3 text-right text-gray-700">{stats?.completed_count ?? '—'}</td>
                         <td className="px-4 py-3 text-right">
-                          {stats ? (
-                            <CompletionBadge rate={stats.completion_rate} />
-                          ) : (
-                            '—'
-                          )}
+                          {stats ? <CompletionBadge rate={stats.completion_rate} /> : '—'}
                         </td>
                         <td className="px-6 py-3 text-right text-gray-700">
                           {stats ? Math.round(stats.average_points) : '—'}
@@ -124,10 +115,7 @@ export default function StatsPage() {
                       {isExpanded && (
                         <tr key={`${hunt.id}-detail`} className="bg-gray-50">
                           <td colSpan={6} className="px-6 py-4">
-                            <ParticipantTable
-                              participants={participants}
-                              loading={participantsFetching}
-                            />
+                            <ParticipantTable participants={participants} loading={participantsFetching} t={t} />
                           </td>
                         </tr>
                       )}
@@ -145,11 +133,9 @@ export default function StatsPage() {
 
 function CompletionBadge({ rate }: { rate: number }) {
   const color =
-    rate >= 75
-      ? 'bg-green-100 text-green-700'
-      : rate >= 40
-      ? 'bg-yellow-100 text-yellow-700'
-      : 'bg-red-100 text-red-700';
+    rate >= 75 ? 'bg-green-100 text-green-700'
+    : rate >= 40 ? 'bg-yellow-100 text-yellow-700'
+    : 'bg-red-100 text-red-700';
   return (
     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
       {rate} %
@@ -160,19 +146,19 @@ function CompletionBadge({ rate }: { rate: number }) {
 function ParticipantTable({
   participants,
   loading,
+  t,
 }: {
   participants: ParticipantDto[];
   loading: boolean;
+  t: (key: string) => string;
 }) {
-  if (loading) {
-    return <p className="text-xs text-gray-400 py-2">Chargement des participants…</p>;
-  }
+  if (loading) return <p className="text-xs text-gray-400 py-2">{t('common.loading')}</p>;
 
   if (participants.length === 0) {
     return (
       <p className="text-xs text-gray-400 flex items-center gap-1.5 py-2">
         <Users className="h-3.5 w-3.5" />
-        Aucun participant pour cette chasse.
+        {t('stats.noParticipants')}
       </p>
     );
   }
@@ -182,12 +168,12 @@ function ParticipantTable({
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b bg-white text-gray-500 uppercase tracking-wide">
-            <th className="text-left px-4 py-2">Email</th>
-            <th className="text-right px-4 py-2">Étape</th>
-            <th className="text-right px-4 py-2">Étapes faites</th>
-            <th className="text-right px-4 py-2">Points</th>
-            <th className="text-right px-4 py-2">Démarré le</th>
-            <th className="text-right px-4 py-2">Terminé le</th>
+            <th className="text-left px-4 py-2">{t('stats.colEmail')}</th>
+            <th className="text-right px-4 py-2">{t('stats.colStep')}</th>
+            <th className="text-right px-4 py-2">{t('stats.colStepsDone')}</th>
+            <th className="text-right px-4 py-2">{t('stats.colPoints')}</th>
+            <th className="text-right px-4 py-2">{t('stats.colStarted')}</th>
+            <th className="text-right px-4 py-2">{t('stats.colFinished')}</th>
           </tr>
         </thead>
         <tbody>
@@ -198,12 +184,12 @@ function ParticipantTable({
               <td className="px-4 py-2 text-right text-gray-700">{p.completed_steps.length}</td>
               <td className="px-4 py-2 text-right font-medium text-gray-900">{p.total_points}</td>
               <td className="px-4 py-2 text-right text-gray-400">
-                {new Date(p.started_at).toLocaleDateString('fr-FR')}
+                {new Date(p.started_at).toLocaleDateString()}
               </td>
               <td className="px-4 py-2 text-right text-gray-400">
                 {p.completed_at
-                  ? new Date(p.completed_at).toLocaleDateString('fr-FR')
-                  : <span className="text-orange-500">En cours</span>}
+                  ? new Date(p.completed_at).toLocaleDateString()
+                  : <span className="text-orange-500">{t('stats.inProgress')}</span>}
               </td>
             </tr>
           ))}

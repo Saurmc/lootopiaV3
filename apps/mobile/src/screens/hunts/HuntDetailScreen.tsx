@@ -27,13 +27,15 @@ import { haversineDistance, formatDistance } from '../../services/hunt.service';
 import type { StepDetail, StepStatus, HuntProgress } from '../../services/hunt.service';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import theme from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
 
 type RouteProps = RouteProp<AppStackParamList, 'HuntDetail'>;
 type NavProp = NativeStackNavigationProp<AppStackParamList, 'HuntDetail'>;
 
 type ValidationState = 'idle' | 'locating' | 'validating' | 'success' | 'error';
 
-const DIFFICULTY_LABELS: Record<string, string> = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' };
+// Difficulty labels resolved inside component via useTranslation
+const DIFFICULTY_LABELS_FALLBACK: Record<string, string> = { easy: 'Facile', medium: 'Moyen', hard: 'Difficile' };
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: theme.colors.difficultyEasy,
   medium: theme.colors.difficultyMedium,
@@ -136,6 +138,7 @@ interface CameraSectionProps {
 }
 
 function CameraSection({ huntId, currentStep, onValidated, onError, setValidationState, validationState }: CameraSectionProps) {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const isQr = currentStep?.validation_type === 'qrcode';
@@ -163,7 +166,7 @@ function CameraSection({ huntId, currentStep, onValidated, onError, setValidatio
     return (
       <TouchableOpacity style={styles.cameraBox} onPress={requestPermission} activeOpacity={0.8}>
         <Ionicons name="camera-outline" size={40} color="rgba(255,255,255,0.7)" />
-        <Text style={styles.cameraPermText}>Autoriser la caméra</Text>
+        <Text style={styles.cameraPermText}>{t('hunt.authorizeCamera')}</Text>
       </TouchableOpacity>
     );
   }
@@ -183,21 +186,21 @@ function CameraSection({ huntId, currentStep, onValidated, onError, setValidatio
           <View style={[styles.corner, styles.cornerBL]} />
           <View style={[styles.corner, styles.cornerBR]} />
           <Text style={styles.cameraFrameLabel}>
-            {isQr ? 'Scannez le QR code' : 'Cadrez l\'œuvre'}
+            {isQr ? t('hunt.scanQr') : t('hunt.frameArtwork')}
           </Text>
         </View>
       </View>
       {validationState === 'validating' && (
         <View style={styles.cameraValidating}>
           <ActivityIndicator color="#fff" />
-          <Text style={styles.cameraValidatingText}>Validation…</Text>
+          <Text style={styles.cameraValidatingText}>{t('hunt.validating')}</Text>
         </View>
       )}
       {!currentStep && (
         <View style={styles.cameraOverlay}>
           <View style={styles.cameraInactiveOverlay}>
             <Ionicons name="scan-outline" size={36} color="rgba(255,255,255,0.6)" />
-            <Text style={styles.cameraInactiveText}>Rejoignez la chasse pour activer le scan</Text>
+            <Text style={styles.cameraInactiveText}>{t('hunt.joinToScan')}</Text>
           </View>
         </View>
       )}
@@ -210,8 +213,15 @@ function CameraSection({ huntId, currentStep, onValidated, onError, setValidatio
 export default function HuntDetailScreen() {
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavProp>();
+  const { t } = useTranslation();
   const { huntId } = route.params;
   const queryClient = useQueryClient();
+
+  const DIFFICULTY_LABELS: Record<string, string> = {
+    easy: t('hunt.difficulty.easy'),
+    medium: t('hunt.difficulty.medium'),
+    hard: t('hunt.difficulty.hard'),
+  };
 
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
@@ -268,7 +278,7 @@ export default function HuntDetailScreen() {
   const onError = (err: unknown) => {
     const msg = extractMsg(err);
     setValidationState('error');
-    setErrorMsg(msg || 'Une erreur est survenue. Réessayez.');
+    setErrorMsg(msg || t('hunt.genericError'));
   };
 
   // ── Validation GPS ─────────────────────────────────────────────────────────
@@ -281,7 +291,7 @@ export default function HuntDetailScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
         setValidationState('error');
-        setErrorMsg('Permission GPS refusée.');
+        setErrorMsg(t('hunt.gpsRefused'));
         return;
       }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
@@ -339,7 +349,7 @@ export default function HuntDetailScreen() {
       await huntService.joinHunt(huntId);
       await queryClient.invalidateQueries({ queryKey: ['hunt', huntId, 'progress'] });
     } catch {
-      setJoinError('Impossible de rejoindre la chasse. Réessayez.');
+      setJoinError(t('hunt.joinError'));
     } finally {
       setJoining(false);
     }
@@ -359,7 +369,7 @@ export default function HuntDetailScreen() {
     return (
       <View style={styles.center}>
         <Ionicons name="warning-outline" size={40} color={theme.colors.textSecondary} />
-        <Text style={styles.errorText}>Chasse introuvable</Text>
+        <Text style={styles.errorText}>{t('hunt.notFound')}</Text>
       </View>
     );
   }
@@ -373,10 +383,10 @@ export default function HuntDetailScreen() {
   const instructionText = (() => {
     if (!currentStep) return null;
     switch (currentStep.validation_type) {
-      case 'qrcode': return 'Scannez le QR code présent sur l\'œuvre pour valider cette étape.';
-      case 'photo':  return 'Cadrez l\'œuvre devant vous, puis prenez la photo pour valider.';
-      case 'quiz':   return 'Répondez à la question pour valider cette étape.';
-      default:       return 'Approchez-vous de l\'emplacement et validez votre position GPS.';
+      case 'qrcode': return t('hunt.instructionQr');
+      case 'photo':  return t('hunt.instructionPhoto');
+      case 'quiz':   return t('hunt.instructionQuiz');
+      default:       return t('hunt.instructionGps');
     }
   })();
 
@@ -420,7 +430,7 @@ export default function HuntDetailScreen() {
         {progress && currentStep && (
           <View style={styles.stepMeta}>
             <Text style={styles.stepMetaText}>
-              Étape {currentStep.order} sur {steps.length}
+              {t('hunt.stepOf', { current: currentStep.order, total: steps.length })}
             </Text>
             <View style={styles.stepMetaDot} />
             <Ionicons name="star" size={13} color={theme.colors.points} />
@@ -432,7 +442,7 @@ export default function HuntDetailScreen() {
         {progress?.completed_at && (
           <View style={styles.completedPill}>
             <Ionicons name="trophy" size={14} color={theme.colors.success} />
-            <Text style={styles.completedPillText}>Chasse terminée !</Text>
+            <Text style={styles.completedPillText}>{t('hunt.completed')}</Text>
           </View>
         )}
       </View>
@@ -452,8 +462,8 @@ export default function HuntDetailScreen() {
             ) : null}
             <Text style={styles.gpsLabel}>
               {userPos && currentStep.coordinates
-                ? `Rayon : ${currentStep.validation_radius} m`
-                : 'Approchez-vous de l\'étape'}
+                ? t('hunt.radius', { value: currentStep.validation_radius })
+                : t('hunt.approachStep')}
             </Text>
           </View>
         ) : currentStep?.validation_type === 'ar' && currentStep.ar_content ? (
@@ -496,7 +506,7 @@ export default function HuntDetailScreen() {
       {isSuccess && (
         <View style={styles.successBanner}>
           <Ionicons name="checkmark-circle" size={18} color={theme.colors.success} />
-          <Text style={styles.successBannerText}>Étape validée ! Bravo !</Text>
+          <Text style={styles.successBannerText}>{t('hunt.success')}</Text>
         </View>
       )}
 
@@ -504,7 +514,7 @@ export default function HuntDetailScreen() {
       {progress && currentStep?.validation_type === 'quiz' && !isSuccess && (
         <TextInput
           style={styles.quizInput}
-          placeholder="Votre réponse…"
+          placeholder={t('hunt.yourAnswer')}
           placeholderTextColor={theme.colors.textDisabled}
           value={answer}
           onChangeText={setAnswer}
@@ -540,7 +550,7 @@ export default function HuntDetailScreen() {
             >
               {joining
                 ? <ActivityIndicator color={theme.colors.textInverse} size="small" />
-                : <Text style={styles.validateBtnText}>Rejoindre la chasse</Text>}
+                : <Text style={styles.validateBtnText}>{t('hunt.join')}</Text>}
             </TouchableOpacity>
           </View>
         </>

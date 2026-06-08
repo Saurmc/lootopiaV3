@@ -14,6 +14,10 @@ export class UsersRepository {
     return this.repo.find();
   }
 
+  findByRole(role: string): Promise<UserEntity[]> {
+    return this.repo.find({ where: { role: role as any }, order: { created_at: 'DESC' } });
+  }
+
   findById(id: string): Promise<UserEntity | null> {
     return this.repo.findOneBy({ id });
   }
@@ -36,5 +40,9 @@ export class UsersRepository {
 
   async updateConsentGps(id: string, consent: boolean): Promise<void> {
     await this.repo.update(id, { consent_gps: consent });
+  }
+
+  async setBlocked(id: string, is_blocked: boolean): Promise<void> {
+    await this.repo.update(id, { is_blocked });
   }
 }

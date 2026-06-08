@@ -63,8 +63,8 @@ const mockHunt = {
 };
 
 const mockSteps = [
-  { id: 's1', hunt_id: 'hunt-1', order: 0, title: 'Fontaine centrale', description: null, validation_radius: 50, ar_content: null, created_at: '2026-01-01T00:00:00Z' },
-  { id: 's2', hunt_id: 'hunt-1', order: 1, title: 'Entrée du musée', description: 'Cherchez la plaque', validation_radius: 30, ar_content: null, created_at: '2026-01-01T00:00:00Z' },
+  { id: 's1', hunt_id: 'hunt-1', order: 0, title: 'Fontaine centrale', description: null, validation_radius: 50, validation_type: 'gps' as const, ar_content: null, created_at: '2026-01-01T00:00:00Z' },
+  { id: 's2', hunt_id: 'hunt-1', order: 1, title: 'Entrée du musée', description: 'Cherchez la plaque', validation_radius: 30, validation_type: 'gps' as const, ar_content: null, created_at: '2026-01-01T00:00:00Z' },
 ];
 
 const mockZones = [

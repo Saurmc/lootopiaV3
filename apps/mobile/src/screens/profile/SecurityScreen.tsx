@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   Alert,
@@ -22,6 +23,7 @@ import { useAuthStore } from '../../store/auth.store';
  * Changement de mot de passe, déconnexion et suppression de compte.
  */
 export default function SecurityScreen() {
+  const { t } = useTranslation();
   const { logout } = useAuthStore();
 
   const [currentPwd, setCurrentPwd] = useState('');
@@ -33,31 +35,31 @@ export default function SecurityScreen() {
   // ── Changement de mot de passe
   async function handleChangePassword() {
     if (!currentPwd || !newPwd || !confirmPwd) {
-      Alert.alert('Champs manquants', 'Tous les champs sont requis.');
+      Alert.alert(t('security.missingFields'), t('security.missingFieldsMsg'));
       return;
     }
     if (newPwd.length < 8) {
-      Alert.alert('Mot de passe trop court', 'Le nouveau mot de passe doit contenir au moins 8 caractères.');
+      Alert.alert(t('security.passwordTooShort'), t('security.passwordTooShortMsg'));
       return;
     }
     if (newPwd !== confirmPwd) {
-      Alert.alert('Confirmation incorrecte', 'Les deux nouveaux mots de passe ne correspondent pas.');
+      Alert.alert(t('security.mismatch'), t('security.mismatchMsg'));
       return;
     }
 
     setPwdLoading(true);
     try {
       await profileService.changePassword(currentPwd, newPwd, confirmPwd);
-      Alert.alert('Succès', 'Mot de passe modifié avec succès.');
+      Alert.alert(t('common.success'), t('security.successMsg'));
       setCurrentPwd('');
       setNewPwd('');
       setConfirmPwd('');
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 401) {
-        Alert.alert('Mot de passe incorrect', 'Le mot de passe actuel est erroné.');
+        Alert.alert(t('security.wrongPassword'), t('security.wrongPasswordMsg'));
       } else {
-        Alert.alert('Erreur', 'La modification a échoué. Réessayez plus tard.');
+        Alert.alert(t('common.error'), t('security.errorMsg'));
       }
     } finally {
       setPwdLoading(false);
@@ -67,13 +69,13 @@ export default function SecurityScreen() {
   // ── Déconnexion
   function handleLogout() {
     Alert.alert(
-      'Déconnexion',
-      'Êtes-vous sûr de vouloir vous déconnecter ?',
+      t('security.logoutTitle'),
+      t('security.logoutMsg'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Déconnexion',
-          style: 'destructive',
+          text: t('security.logoutTitle'),
+            style: 'destructive',
           onPress: () => logout(),
         },
       ],
@@ -83,13 +85,13 @@ export default function SecurityScreen() {
   // ── Suppression de compte
   function handleDeleteAccount() {
     Alert.alert(
-      'Supprimer le compte',
-      'Cette action est irréversible. Toutes vos données (progression, badges, points) seront définitivement supprimées.',
+      t('security.deleteAccount'),
+      t('security.deleteMsg'),
       [
-        { text: 'Annuler', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Supprimer',
-          style: 'destructive',
+          text: t('security.deleteConfirm'),
+            style: 'destructive',
           onPress: async () => {
             setDeleteLoading(true);
             try {
@@ -97,7 +99,7 @@ export default function SecurityScreen() {
               await logout();
             } catch {
               setDeleteLoading(false);
-              Alert.alert('Erreur', 'La suppression a échoué. Réessayez plus tard.');
+              Alert.alert(t('common.error'), t('security.deleteError'));
             }
           },
         },
@@ -117,11 +119,11 @@ export default function SecurityScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* ── Mot de passe ── */}
-          <Text style={styles.sectionTitle}>Changer le mot de passe</Text>
+          <Text style={styles.sectionTitle}>{t('security.changePassword')}</Text>
 
           <View style={styles.card}>
             <View style={styles.fieldRow}>
-              <Text style={styles.label}>Mot de passe actuel</Text>
+              <Text style={styles.label}>{t('security.currentPassword')}</Text>
               <TextInput
                 style={styles.input}
                 value={currentPwd}
@@ -136,12 +138,12 @@ export default function SecurityScreen() {
             <View style={styles.divider} />
 
             <View style={styles.fieldRow}>
-              <Text style={styles.label}>Nouveau mot de passe</Text>
+              <Text style={styles.label}>{t('security.newPassword')}</Text>
               <TextInput
                 style={styles.input}
                 value={newPwd}
                 onChangeText={setNewPwd}
-                placeholder="8 caractères minimum"
+                placeholder={t('security.newPasswordPlaceholder')}
                 placeholderTextColor="#9CA3AF"
                 secureTextEntry
                 autoCapitalize="none"
@@ -151,7 +153,7 @@ export default function SecurityScreen() {
             <View style={styles.divider} />
 
             <View style={styles.fieldRow}>
-              <Text style={styles.label}>Confirmer le nouveau mot de passe</Text>
+              <Text style={styles.label}>{t('security.confirmNewPassword')}</Text>
               <TextInput
                 style={styles.input}
                 value={confirmPwd}
@@ -173,27 +175,26 @@ export default function SecurityScreen() {
             {pwdLoading ? (
               <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <Text style={styles.primaryBtnText}>Modifier le mot de passe</Text>
+              <Text style={styles.primaryBtnText}>{t('security.submit')}</Text>
             )}
           </TouchableOpacity>
 
           {/* ── Session ── */}
-          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>Session</Text>
+          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>{t('security.session')}</Text>
 
           <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.8}>
             <Text style={styles.logoutIcon}>🚪</Text>
-            <Text style={styles.logoutText}>Se déconnecter</Text>
+            <Text style={styles.logoutText}>{t('security.logoutBtn')}</Text>
           </TouchableOpacity>
 
-          {/* ── Zone dangereuse ── */}
+          {/* ── Zone de danger ── */}
           <Text style={[styles.sectionTitle, styles.sectionTitleTop, styles.dangerTitle]}>
-            Zone dangereuse
+            {t('security.dangerZone')}
           </Text>
 
           <View style={styles.dangerCard}>
             <Text style={styles.dangerDescription}>
-              La suppression de votre compte est définitive et irréversible. Toutes vos données
-              (progression, badges, points) seront supprimées.
+              {t('security.dangerDesc')}
             </Text>
             <TouchableOpacity
               style={[styles.deleteBtn, deleteLoading && styles.btnDisabled]}
@@ -204,7 +205,7 @@ export default function SecurityScreen() {
               {deleteLoading ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.deleteBtnText}>Supprimer mon compte</Text>
+                <Text style={styles.deleteBtnText}>{t('security.deleteBtn')}</Text>
               )}
             </TouchableOpacity>
           </View>

@@ -2,6 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Patch, Post, UseGuards } from '
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterPartnerDto } from './dto/register-partner.dto';
 import { GuestLoginDto } from './dto/guest-login.dto';
 import { ConvertAccountDto } from './dto/convert-account.dto';
 import { Auth } from '../../common/guards/auth-roles.guard';
@@ -15,6 +16,16 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterDto): Promise<{ access_token: string }> {
     return this.authService.register(dto);
+  }
+
+  /**
+   * POST /auth/register/partner — Finalise l'inscription partenaire via token d'invitation (US03)
+   * Le token est extrait du lien d'invitation reçu par email.
+   */
+  @Post('register/partner')
+  @HttpCode(HttpStatus.CREATED)
+  registerPartner(@Body() dto: RegisterPartnerDto): Promise<{ access_token: string }> {
+    return this.authService.registerPartner(dto);
   }
 
   @Post('login')

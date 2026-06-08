@@ -58,10 +58,19 @@ export class ProfileController {
   }
 
   /**
-   * GET /me/badges — liste des badges obtenus par le joueur
+   * GET /me/badges — badges obtenus avec métadonnées (label, description, emoji)
    */
   @Get('badges')
   getBadges(@CurrentUser() user: AuthenticatedUser) {
     return this.badgesService.getUserBadges(user.id);
+  }
+
+  /**
+   * GET /me/badges/catalog — catalogue complet des badges avec statut earned/non-earned
+   * Utile pour afficher tous les badges (débloqués en couleur, verrouillés en grisé)
+   */
+  @Get('badges/catalog')
+  getBadgeCatalog(@CurrentUser() user: AuthenticatedUser) {
+    return this.badgesService.getBadgeCatalogForUser(user.id);
   }
 }

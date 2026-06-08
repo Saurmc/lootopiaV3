@@ -20,6 +20,7 @@ import { useBadges } from '../../hooks/useProfile';
 import { useAuthStore } from '../../store/auth.store';
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import theme from '../../constants/theme';
+import { useTranslation } from 'react-i18next';
 
 const GUEST_COMPLETED_KEY = 'guest_completed_hunts';
 
@@ -109,6 +110,7 @@ function StatCard({ icon, label, value }: { icon: string; label: string; value: 
 // ─── HuntCompletionScreen ─────────────────────────────────────────────────────
 
 export default function HuntCompletionScreen() {
+  const { t } = useTranslation();
   const route = useRoute<RouteProps>();
   const navigation = useNavigation<NavProp>();
   const { huntId, totalPoints, stepCount, startedAt, completedAt } = route.params;
@@ -172,13 +174,13 @@ export default function HuntCompletionScreen() {
         <Animated.Text style={[styles.trophy, { transform: [{ scale: trophyScale }] }]}>🏆</Animated.Text>
 
         {/* Titres */}
-        <Text style={styles.congratsTitle}>Félicitations !</Text>
-        <Text style={styles.congratsSub}>Chasse terminée avec succès</Text>
+        <Text style={styles.congratsTitle}>{t('completion.title')}</Text>
+        <Text style={styles.congratsSub}>{t('completion.subtitle')}</Text>
 
         {/* 100% Complété */}
         <View style={styles.completeBadge}>
           <Ionicons name="checkmark-circle" size={20} color={theme.colors.success} />
-          <Text style={styles.completeBadgeText}>100% Complété</Text>
+          <Text style={styles.completeBadgeText}>{t('completion.completed')}</Text>
         </View>
 
         {/* Encadré chasse */}
@@ -196,21 +198,21 @@ export default function HuntCompletionScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatCard icon="⏱" label="Durée" value={durationLabel} />
-          <StatCard icon="⭐" label="Points" value={`${totalPoints}`} />
-          <StatCard icon="✅" label="Étapes" value={`${stepCount}/${stepCount}`} />
+          <StatCard icon="⏱" label={t('common.min')} value={durationLabel} />
+          <StatCard icon="⭐" label={t('profile.points')} value={`${totalPoints}`} />
+          <StatCard icon="✅" label={t('profile.badges')} value={`${stepCount}/${stepCount}`} />
         </View>
 
         {/* Récompenses débloquées */}
         <View style={styles.rewardsBox}>
           <View style={styles.rewardsHeader}>
             <Text style={styles.rewardsIcon}>🔥</Text>
-            <Text style={styles.rewardsTitle}>Récompenses débloquées</Text>
+            <Text style={styles.rewardsTitle}>{t('completion.rewards')}</Text>
           </View>
 
           {newBadges.length === 0 && (
             <View style={styles.rewardChip}>
-              <Text style={styles.rewardChipText}>🏆 Chasseur</Text>
+              <Text style={styles.rewardChipText}>{t('completion.rewardTitle')}</Text>
             </View>
           )}
           {newBadges.map((b) => {
@@ -223,7 +225,7 @@ export default function HuntCompletionScreen() {
           })}
 
           <View style={[styles.rewardChip, styles.rewardChipXp]}>
-            <Text style={[styles.rewardChipText, styles.rewardChipXpText]}>+ {totalPoints} XP</Text>
+            <Text style={[styles.rewardChipText, styles.rewardChipXpText]}>{t('completion.xp', { count: totalPoints })}</Text>
           </View>
         </View>
 
@@ -232,9 +234,7 @@ export default function HuntCompletionScreen() {
           <>
             <View style={styles.guestBanner}>
               <Ionicons name="information-circle-outline" size={18} color={theme.colors.points} />
-              <Text style={styles.guestBannerText}>
-                Créez un compte pour conserver votre progression et vos badges définitivement.
-              </Text>
+              <Text style={styles.guestBannerText}>{t('completion.guestPrompt')}</Text>
             </View>
 
             <TouchableOpacity
@@ -246,7 +246,7 @@ export default function HuntCompletionScreen() {
               activeOpacity={0.8}
             >
               <Ionicons name="person-add-outline" size={18} color={theme.colors.textInverse} />
-              <Text style={styles.primaryBtnLabel}>Créer un compte</Text>
+              <Text style={styles.primaryBtnLabel}>{t('completion.createAccount')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -254,7 +254,7 @@ export default function HuntCompletionScreen() {
               onPress={() => saveAndGo(() => navigation.popToTop())}
               activeOpacity={0.8}
             >
-              <Text style={styles.secondaryBtnLabel}>Continuer sans compte</Text>
+              <Text style={styles.secondaryBtnLabel}>{t('completion.continueWithout')}</Text>
             </TouchableOpacity>
           </>
         ) : (
@@ -266,7 +266,7 @@ export default function HuntCompletionScreen() {
               activeOpacity={0.8}
             >
               <Ionicons name="map-outline" size={18} color={theme.colors.textInverse} />
-              <Text style={styles.primaryBtnLabel}>Sauvegarder ma progression</Text>
+              <Text style={styles.primaryBtnLabel}>{t('completion.saveProgress')}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -277,7 +277,7 @@ export default function HuntCompletionScreen() {
               })}
               activeOpacity={0.8}
             >
-              <Text style={styles.secondaryBtnLabel}>Voir les détails</Text>
+              <Text style={styles.secondaryBtnLabel}>{t('completion.viewDetails')}</Text>
             </TouchableOpacity>
           </>
         )}

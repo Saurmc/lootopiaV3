@@ -1,207 +1,309 @@
-# LootopiaV3 — Claude Code Context
+# LootopiaV3 — Contexte Claude Code
 
-> For detailed US status and anomalies → [`SUIVI_US.md`](./SUIVI_US.md)
-
----
-
-## Tech Stack
-
-| Layer            | Technology                           | Notes                                       |
-| ---------------- | ------------------------------------ | ------------------------------------------- |
-| Mobile           | React Native 0.83.2 + Expo 55        | nativewind 4, react-navigation 7            |
-| Mobile state     | Zustand 5                            |                                             |
-| Data fetching    | TanStack Query 5 + Axios             |                                             |
-| Maps             | @maplibre/maplibre-react-native 10   |                                             |
-| AR               | @reactvision/react-viro 2.53         |                                             |
-| Backoffice/Admin | React 19 + Vite 7 + Tailwind 3       | Backoffice uses Radix UI                    |
-| Charts           | Recharts 3                           |                                             |
-| Backend          | NestJS 11                            | Node 20+                                    |
-| ORM              | TypeORM 0.3                          |                                             |
-| Database         | PostgreSQL 15 + PostGIS 3.3 (Docker) |                                             |
-| Auth             | passport-jwt + bcrypt                |                                             |
-| Validation       | class-validator + class-transformer  |                                             |
-| Files            | multer (local storage `/uploads`)    |                                             |
-| Tests API        | Jest 30 + ts-jest                    |                                             |
-| Tests backoffice | Vitest                               | spec deviation — kept as-is                 |
-| Tests admin      | none configured                      |                                             |
-| Logs             | winston                              |                                             |
-| Web forms        | react-hook-form + zod                |                                             |
-| Shared types     | @lootopia/shared                     |                                             |
-| Secure storage   | expo-secure-store ~13.0.0            | JWT stored via SecureStore in auth.store.ts |
+> Fichier généré au scan initial (2026-05-21). Lire en < 2 min avant chaque session.
+> **Suivi détaillé des US (statuts, anomalies, priorités) → [`SUIVI_US.md`](./SUIVI_US.md)** (créé 2026-05-22)
 
 ---
 
-## Infrastructure
+## Stack technique réelle
 
-- **Docker**: `docker-compose.yml` — postgres, pgadmin, minio, minio-init
-- **PostgreSQL 15 + PostGIS 3.3**: image `postgis/postgis:15-3.3`
-- **pgAdmin**: port 5050 — admin@lootopia.local / admin
-- **MinIO**: S3 API port 9000, console port 9001 — minioadmin/minioadmin123
-- **Seed**: `npm run seed -w packages/api`
-
----
-
-## Backend Modules (`packages/api/src/modules/`)
-
-| Module        | Contents                                                                   |
-| ------------- | -------------------------------------------------------------------------- |
-| `auth`        | module, controller, service, guard, strategies (jwt + jwt-optional), DTOs  |
-| `users`       | module, controller, service, repository, entity, DTOs                      |
-| `hunts`       | module, controller, service, repository, entity, DTOs, templates constants |
-| `steps`       | module, controller, service, repository, entity, DTOs                      |
-| `progress`    | module, controller, service, repository, entity, DTOs                      |
-| `badges`      | module, controller, service, repository, entity                            |
-| `geo`         | module, service (PostGIS ST_DWithin)                                       |
-| `files`       | module, controller, service                                                |
-| `profile`     | module, controller, service, DTOs                                          |
-| `rgpd`        | module, controller, service, DTOs                                          |
-| `admin`       | module, controller, service                                                |
-| `stats`       | module, controller, service                                                |
-| `zones`       | module, controller, service, repository, entity, DTOs                      |
-| `invitations` | module, repository, service, entity, DTO                                   |
-| `mail`        | module, service (console.log in dev)                                       |
-
-**Common**: `role.enum.ts`, `@Roles()`, `@CurrentUser()`, `JwtAuthGuard`, `JwtOptionalAuthGuard`, `RolesGuard`, `AuthRolesGuard`, `HttpExceptionFilter`
+| Couche | Technologie installée | Notes |
+|---|---|---|
+| Mobile | React Native 0.83.2 + Expo 55 | nativewind 4, react-navigation 7 |
+| État mobile | Zustand 5 | |
+| Requêtes | TanStack Query 5 + Axios | |
+| Cartes | @maplibre/maplibre-react-native 10 | |
+| AR | @reactvision/react-viro 2.53 | |
+| Backoffice/Admin | React 19 + Vite 7 + Tailwind 3 | Backoffice utilise Radix UI (dialog, select, label…) |
+| Graphiques | Recharts 3 | |
+| Backend | NestJS 11 | Node 20+ |
+| ORM | TypeORM 0.3 | |
+| BDD | PostgreSQL 15 + PostGIS 3.3 (Docker) | |
+| Auth | passport-jwt + bcrypt | |
+| Validation | class-validator + class-transformer | |
+| Fichiers | multer (stockage local `/uploads`) | multer ^1.4.5-lts.1 ajouté dans dependencies (2026-05-21) |
+| Tests API | Jest 30 + ts-jest | |
+| Tests backoffice | **Vitest** (pas Jest) | déviation de la spec |
+| Tests admin | ❌ Aucun test configuré | |
+| Logs | winston ^3.11.0 | ajouté dans dependencies (2026-05-21) |
+| Formulaires web | react-hook-form + zod | |
+| Types partagés | @lootopia/shared | |
+| SecureStorage | expo-secure-store ~13.0.0 | JWT migré vers SecureStore dans auth.store.ts (2026-05-21) |
 
 ---
 
-## Frontend Applications
+## État de l'infrastructure
 
-### `apps/mobile` — React Native + Expo
-
-- **Navigation**: RootNavigator, AppNavigator, AuthNavigator
-- **Screens**: auth (Login, Register), guest (ConvertAccount), map (Map, HuntBottomSheet), hunts (HuntDetail, HuntsList, StepValidation, HuntCompletion), profile (Profile, Badges, Settings, Security)
-- **Services**: api.ts, auth.service.ts, hunt.service.ts, progress.service.ts, profile.service.ts
-- **Hooks**: useAuth, useLocation, useHunts, useProfile
-- **Store**: auth.store.ts, hunts.store.ts
-
-### `apps/backoffice` — React + Vite (partner portal)
-
-- **Pages**: Login, Dashboard, Hunts, HuntCreate, HuntEdit, Steps, Stats, Settings
-- **Components**: layout, hunt (HuntForm, HuntManager, StepEditor), step (StepForm), stats (StatsViewer), zone (ZoneForm), ui (Radix-based)
-- **Services**: auth, hunts, steps, zones, files, stats, profile
-- **Tests**: Vitest — LoginPage, HuntsPage, StepsPage, all services, store
-
-### `apps/admin` — React + Vite (internal admin)
-
-- **Pages**: Login, Dashboard (stub), Users (stub), Partners (stub), Hunts (stub), Badges (stub), Invitations
-- **Services**: api.ts, auth.service, invitations.service
-- **Store**: auth.store (Zustand)
-- **No tests configured**
+- **Docker** : `docker-compose.yml` complet — postgres, pgadmin, minio, minio-init
+- **PostgreSQL 15 + PostGIS 3.3** : image `postgis/postgis:15-3.3`
+- **pgAdmin** : port 5050, email admin@lootopia.local / admin
+- **MinIO** : API S3 port 9000, console port 9001 (minioadmin/minioadmin123)
+- **postgres/init.sql** : active `postgis` + `uuid-ossp`; tables créées par TypeORM `synchronize`
+- **Seed** : `packages/api/src/database/seed.ts` (commande `npm run seed -w packages/api`)
 
 ---
 
-## Shared Packages (`packages/shared`)
+## Modules backend existants (`packages/api/src/modules/`)
 
-Types: `user.types.ts`, `hunt.types.ts`, `step.types.ts`, `progress.types.ts`, `badge.types.ts`, `api.types.ts`, `geo.types.ts` — barrel export via `src/index.ts`.
+| Module | Fichiers présents | Tests |
+|---|---|---|
+| `auth` | module, controller, service, guard, strategies (jwt + jwt-optional), DTOs (login, register, register-partner, guest-login, convert-account) | spec service + strategies |
+| `users` | module, controller, service, repository, entity, DTOs | spec service + entity |
+| `hunts` | module, controller, service, repository, entity, DTOs, hunt-templates.constants.ts | spec service + entity |
+| `steps` | module, controller, service, repository, entity, DTOs | spec service + entity |
+| `progress` | module, controller, service, repository, entity, DTOs (validate-step, progress-map) | spec service + entity |
+| `badges` | module, controller, service, repository, entity | spec service + entity |
+| `geo` | module, service (PostGIS) | spec service |
+| `files` | module, controller, service | spec service |
+| `profile` | module, controller, service, DTOs (update-profile, change-password) | spec service |
+| `rgpd` | module, controller, service, DTOs (update-consent, update-password) | spec service |
+| `admin` | module, controller, service | spec service |
+| `stats` | module, controller, service | spec service |
+| `zones` | module, controller, service, repository, entity, DTOs | spec service |
+| `invitations` | module, repository, service, entity, DTO (create-invitation), register-partner.dto dans auth | spec service (2026-05-23) |
+| `mail` | module, service (console.log dev) | — |
 
----
-
-## Development Rules
-
-### Strict scope
-
-Implement only what the US requires. No extras.
-
-### TDD — mandatory for every feature and fix
-
-Follow Red → Green → Refactor strictly:
-
-1. **Write the failing test first** — before any implementation code
-2. **Write the minimal code** to make it pass
-3. **Refactor** without breaking the test
-
-**API (Jest 30 + ts-jest)**
-
-- Unit tests for every service method: `*.service.spec.ts`
-- Place spec files alongside the source file
-- Mock repositories with `jest.fn()` — no real DB in unit tests
-- Run: `npm run test -w packages/api`
-
-**Backoffice (Vitest)**
-
-- Unit tests for every service and key page
-- Run: `npm run test -w apps/backoffice`
-
-**Rules**
-
-- No feature or fix is complete without tests
-- Tests go in before the implementation commit
-- Aim for meaningful coverage of the US logic, not 100% line coverage
-- Ultra-compressed mode. Active every response until `stop caveman` or `normal mode`. Drop articles, filler, pleasantries, hedging. Fragments OK. Keep technical accuracy exact. Pattern: `[thing] [action] [reason]. [next step].` Use short words, preserve code/errors/API names unchanged. Example: `New object ref each render. Inline object prop = new ref = re-render. Wrap in useMemo.`
-
-### GDPR
-
-`consent_gps` required. No raw coordinates stored. Guest mode supported. Cascade delete on account removal.
-
-### Fixed stack
-
-Never substitute: no Prisma, Redux, Next.js, Zod for DTOs, localStorage for JWT.
-
-### TypeScript
-
-No `any` without justification. `class-validator` required on all NestJS DTOs.
-
-### Guards
-
-Reuse existing: `JwtAuthGuard`, `JwtOptionalAuthGuard`, `RolesGuard`, `@Auth()`, `@CurrentUser()`.
-
-### Shared files
-
-Flag explicitly before modifying `app.module.ts` or shared types.
-
-### SUIVI_US.md — mandatory update after every US
-
-After implementing or partially implementing any US, update its row in `SUIVI_US.md`:
-- Status icon (✅ / ⚠️ / 🔌 / ❌)
-- "Ce qui manque / problème" column — reflect the new state
-- "À faire" section — check the box if done, or update remaining items
-- Update "Dernière mise à jour" date at the top of the file
+**Common** : `role.enum.ts`, `@Roles()` decorator, `@CurrentUser()` decorator, `JwtAuthGuard`, `JwtOptionalAuthGuard`, `RolesGuard`, `AuthRolesGuard`, `HttpExceptionFilter`
 
 ---
 
-## Git Workflow
+## Applications frontend
 
-### Before any implementation
+### `apps/mobile` (React Native + Expo)
+- **Navigation** : RootNavigator, AppNavigator, AuthNavigator
+- **Screens** :
+  - `auth/` : LoginScreen, RegisterScreen
+  - `guest/` : ConvertAccountScreen
+  - `map/` : MapScreen, HuntBottomSheet
+  - `hunt/` : HuntDetailScreen, StepScreen, ARScreen ← **doublon** avec `hunts/`
+  - `hunts/` : HuntDetailScreen, HuntsListScreen, StepValidationScreen, HuntCompletionScreen
+  - `profile/` : ProfileScreen, BadgesScreen, SettingsScreen, SecurityScreen
+- **Services** : api.ts, auth.service.ts, hunts.service.ts, hunt.service.ts (**doublon**), progress.service.ts, profile.service.ts
+- **Hooks** : useAuth, useLocation, useHunts, useProfile
+- **Store** : auth.store.ts, hunts.store.ts
+- **Components** : Button, Input, LoadingSpinner, GpsConsentModal, HuntCard, StepCard, HuntMarker
+- **Utils** : geo.utils, format.utils, error.utils
 
-1. Check current branch: `git branch --show-current`
-2. If on `develop` or `main`, create a feature branch first:
+### `apps/backoffice` (React + Vite) — **Interface partenaires** (musées, villes, associations)
+> Portail dédié aux partenaires organisateurs : création et gestion de leurs chasses, configuration des étapes, suivi de leurs participants et statistiques. Un partenaire ne voit que ses propres données.
+- **Pages** : LoginPage, DashboardPage, HuntsPage, HuntCreatePage, HuntEditPage, StepsPage, StatsPage, SettingsPage
+- **Components** : layout (Header, Sidebar, Layout), hunt (HuntForm, HuntManager, StepEditor), step (StepForm), stats (StatsViewer), zone (ZoneForm), ui/ (Radix-based components)
+- **Services** : auth, hunts, steps, zones, files, stats, profile
+- **Tests** : vitest — tests présents sur LoginPage, HuntsPage, StepsPage, services (auth, hunts, steps, zones, files, stats, profile), store
+
+### `apps/admin` (React + Vite) — **Interface administrateurs internes** (équipe Out of Cache)
+> Console de supervision de la plateforme entière : KPIs globaux (tous joueurs, toutes chasses), modération des partenaires, gestion des utilisateurs et badges. Session courte (2h), auth stricte. Séparée intentionnellement du backoffice (spec F03, Décision 3 DTDC).
+- **Pages** : LoginPage ✅, DashboardPage (stub), UsersPage (stub), PartnersPage (stub), HuntsPage (stub), BadgesPage (stub), **InvitationsPage ✅**
+- **Components** : layout (Header ✅, Sidebar ✅, Layout ✅), hunt (HuntManager stub, StepEditor stub), stats (StatsViewer stub)
+- **Services** : api.ts ✅, auth.service ✅, invitations.service ✅, hunts.service (stub — pas de stats, users, badges services dédiés)
+- **Store** : auth.store ✅ (Zustand)
+- **Router** : router/index.tsx ✅ (PrivateRoute, login, dashboard, invitations)
+- **vite.config.ts** : resolve.alias React dédupliqué (correction instance dupliquée monorepo)
+- **⚠️ Pas de tests configurés**
+
+---
+
+## Packages partagés (`packages/shared`)
+
+Types présents : `user.types.ts`, `hunt.types.ts`, `step.types.ts`, `progress.types.ts`, `badge.types.ts`, `api.types.ts`, `geo.types.ts` — barrel export via `src/index.ts`.
+
+---
+
+## Règles de travail (extrait CLAUDE_CONTEXT.md)
+
+- **Portée stricte** : implémenter uniquement l'US demandée, aucun bonus
+- **RGPD prioritaire** : `consent_gps` requis, pas de coordonnées stockées, mode invité possible, suppression en cascade
+- **Stack fixe** : ne jamais substituer (pas de Prisma, Redux, Next.js, Zod côté DTO, localStorage pour JWT)
+- **TypeScript strict** : pas de `any` sans justification
+- **DTO NestJS** : class-validator obligatoire
+- **Guards existants** : réutiliser JwtAuthGuard, JwtOptionalAuthGuard, RolesGuard, @Auth(), @CurrentUser()
+- **Tests** : Jest pour API, Vitest pour backoffice, viser couverture utile de l'US
+- **Fichiers partagés impactés** : signaler explicitement avant de modifier app.module.ts, types partagés, etc.
+
+---
+
+## Backlog — État estimé au scan initial
+
+> Légende : ✅ Implémentée | ⚠️ Partielle | ❌ Absente | ❓ Indéterminable sans lire le code
+
+| US | Titre | Statut | Raison |
+|---|---|---|---|
+| US01 | Connexion partenaire (backoffice) | ✅ | LoginPage + auth.service + auth.store présents |
+| US02 | Connexion administrateur | ✅ | LoginPage admin + rôle ADMIN dans guards |
+| US03 | Inscription/compte partenaire | ✅ | Flux invitation (2026-05-23) : POST /admin/invitations → token 72h → /register?token= → POST /auth/register/partner |
+| US04 | Accès joueur en mode invité | ✅ | guest-login.dto + ConvertAccountScreen + GpsConsentModal |
+| US05 | Gestion des rôles et autorisations | ✅ | RolesGuard, AuthRolesGuard, role.enum.ts |
+| US06 | Voir les chasses sur une carte | ✅ | MapScreen + HuntMarker + useLocation + GpsConsentModal |
+| US07 | Rechercher une chasse | ⚠️ | HuntsListScreen présent, filtres à vérifier |
+| US08 | Consulter le détail d'une chasse | ✅ | HuntDetailScreen (deux versions) |
+| US09 | Rejoindre une chasse | ✅ | progress.service + POST /hunts/:id/join |
+| US10 | Voir la progression sur la carte | ⚠️ | MapScreen présent, intégration progression à vérifier |
+| US11 | Valider une étape par proximité | ✅ | StepValidationScreen + validate-step.dto + geo.service |
+| US12 | Scanner une étape en RA simple | ⚠️ | ARScreen présent, logique viro à vérifier |
+| US13 | Voir mes points et badges | ✅ | ProfileScreen + BadgesScreen |
+| US14 | Sauvegarder ma progression | ✅ | progress module complet en base |
+| US15 | Multilangue FR/EN | ❌ | Aucune lib i18n dans aucun package.json |
+| US16 | Dashboard partenaire | ✅ | DashboardPage backoffice |
+| US17 | Créer une chasse | ✅ | HuntCreatePage + HuntForm + POST /hunts |
+| US18 | Modifier une chasse | ✅ | HuntEditPage + PATCH /hunts/:id |
+| US19 | Supprimer une chasse | ✅ | HuntsPage + DELETE /hunts/:id |
+| US20 | Templates de chasse | ✅ | hunt-templates.constants.ts + POST /hunts/from-template |
+| US21 | Ajouter un plan ou une image | ✅ | file-upload.tsx + files.service (backoffice) + files module API |
+| US22 | Définir des zones sur le plan | ✅ | ZoneForm + zones.service (backoffice) + zones module API |
+| US23 | Gérer les étapes d'une chasse | ✅ | StepsPage + StepEditor + StepForm + steps module API |
+| US24 | Configurer les éléments RA d'une étape | ⚠️ | StepEditor présent, champ ar_content à vérifier |
+| US25 | Statistiques de base d'une chasse | ✅ | StatsPage + stats.service + GET /hunts/:id/stats |
+| US26 | Liste des participants | ✅ | GET /hunts/:id/participants dans hunts.controller |
+| US27 | Dashboard global admin | ✅ | DashboardPage admin |
+| US28 | Métriques globales (joueurs/chasses) | ✅ | stats module + GET /admin/stats |
+| US29 | Taux de participation/complétion | ✅ | stats.service |
+| US30 | API d'authentification | ✅ | POST /auth/login, register, guest, PATCH /auth/convert |
+| US31 | API des chasses | ✅ | CRUD complet + templates + stats + participants |
+| US32 | API des étapes | ✅ | CRUD nested sous /hunts/:huntId/steps |
+| US33 | Gestion progression joueur | ✅ | progress module complet |
+| US34 | Validation géographique | ✅ | geo.service avec ST_DWithin |
+| US35 | Badges et points | ✅ | badges module + attribution via progress |
+| US36 | Upload de fichiers | ⚠️ | multer absent de package.json mais fonctionnel via transitive dep de @nestjs/platform-express ; stockage local /uploads/ |
+| US37 | Exposer les statistiques | ✅ | GET /stats/hunts |
+| US38 | Schéma de base de données | ✅ | Entités TypeORM + PostGIS + init.sql |
+| US39 | Sécuriser les endpoints | ✅ | Guards + Throttler + CORS + ValidationPipe |
+| US40 | Conformité RGPD minimale | ✅ | rgpd module + consent_gps + suppression cascade |
+| US47 | Connexion et inscription (mobile) | ✅ | LoginScreen + RegisterScreen + auth.service |
+| US48 | Mode invité (guest login) | ✅ | guest-login.dto API + ConvertAccountScreen mobile |
+| US49 | Conversion compte invité → réel | ✅ | ConvertAccountScreen + PATCH /auth/convert |
+| US50 | Carte interactive avec position | ✅ | MapScreen + useLocation + GpsConsentModal |
+| US51 | Affichage des chasses sur la carte | ✅ | MapScreen + HuntMarker + HuntBottomSheet |
+| US52 | Vue liste des chasses avec filtres | ✅ | HuntsListScreen |
+| US53 | Rejoindre une chasse + étapes | ✅ | HuntDetailScreen + progress.service |
+| US54 | Validation d'étape par GPS | ✅ | StepValidationScreen + POST validate |
+| US55 | Validation d'étape par QR Code | ❌ | StepScreen.tsx = stub `return null`. Aucune logique QR. expo-camera présent mais non utilisé. |
+| US56 | Validation d'étape par Quiz | ❌ | Aucun composant quiz. StepScreen.tsx = stub vide. |
+| US57 | Validation d'étape par photo | ❌ | StepScreen.tsx = stub `return null`. Aucune logique photo. expo-camera présent mais non utilisé. |
+| US58 | Récapitulatif fin de chasse | ✅ | HuntCompletionScreen |
+| US59 | Page de profil joueur | ✅ | ProfileScreen + GET /me/profile |
+| US60 | Collection badges + historique | ✅ | BadgesScreen — PR #49 mergé |
+| US61 | Modification profil + consentement GPS | ✅ | SettingsScreen — PR #50 mergé |
+| US62 | Sécurité du compte et suppression | ✅ | SecurityScreen — PR #51 mergé |
+
+---
+
+## Plan d'audit détaillé — Sessions recommandées
+
+### Session 2 — Audit des anomalies critiques
+1. **Doublon mobile** : `screens/hunt/HuntDetailScreen.tsx` vs `screens/hunts/HuntDetailScreen.tsx` — identifier lequel est actif dans la navigation
+2. **Doublon service** : `hunt.service.ts` vs `hunts.service.ts` dans mobile/src/services/
+3. **multer manquant** : vérifier si files.service.ts fonctionne réellement (upload local vs MinIO)
+4. **expo-secure-store absent** : JWT stocké en AsyncStorage = non conforme RGPD/sécurité
+
+### Session 3 — Audit backend (logique métier réelle)
+1. Lire `hunts.service.ts` : templates, stats, participants
+2. Lire `progress.service.ts` : logique validate + badges
+3. Lire `profile.service.ts` vs `rgpd.service.ts` : overlap possible
+4. Lire `auth.service.ts` : guest login + convert account
+
+### Session 4 — Audit mobile (navigation et flux complets)
+1. Lire `RootNavigator.tsx` + `AppNavigator.tsx` : routing réel
+2. Vérifier `StepScreen.tsx` et `StepValidationScreen.tsx` : gestion des types (GPS/QR/quiz/photo)
+3. Vérifier `ARScreen.tsx` : intégration react-viro réelle ou stub
+4. Vérifier `auth.store.ts` : gestion du mode invité
+
+### Session 5 — Audit backoffice/admin
+1. Vérifier `ZoneForm.tsx` : dessin de zones interactif (US22) ou formulaire simple
+2. Vérifier `DashboardPage.tsx` (backoffice) : KPI réels ou maquette
+3. Vérifier admin : store/services manquants (users, badges, partners)
+4. Vérifier `SettingsPage.tsx` backoffice
+
+### Session 6 — US restantes / manquantes
+- **US15** (multilangue) : totalement absent, nécessite i18next ou expo-localization
+- **US03** (inscription partenaire) : ✅ Implémenté 2026-05-23 — flux invitation complet
+- **US56** (quiz) : logique non trouvée, à implémenter dans StepScreen
+
+---
+
+## Fichiers clés à lire en priorité
+
+1. `packages/api/src/app.module.ts` — bootstrap et modules déclarés
+2. `packages/api/src/modules/auth/auth.service.ts` — login, register, guest, convert
+3. `packages/api/src/modules/progress/progress.service.ts` — cœur du gameplay
+4. `packages/api/src/modules/hunts/hunts.service.ts` — CRUD + templates + stats
+5. `packages/api/src/modules/geo/geo.service.ts` — PostGIS queries
+6. `apps/mobile/src/navigation/RootNavigator.tsx` — routing mobile réel
+7. `apps/mobile/src/screens/hunt/StepScreen.tsx` — types de validation
+8. `apps/mobile/src/store/auth.store.ts` — état auth + mode invité
+9. `apps/backoffice/src/pages/DashboardPage.tsx` — KPI partenaire
+10. `apps/admin/src/pages/DashboardPage.tsx` — KPI admin
+11. `packages/shared/src/types/hunt.types.ts` — types partagés centraux
+12. `packages/api/src/modules/files/files.service.ts` — upload local ou MinIO ?
+
+---
+
+## ⚠️ Points d'attention — Faits vérifiés (audit 2026-05-21)
+
+| # | Problème | Statut | Impact réel | Fichiers concernés |
+|---|---|---|---|---|
+| 1 | **Doublon HuntDetailScreen** | ✅ Résolu | Dead code supprimé. `screens/hunt/HuntDetailScreen.tsx` supprimé (2026-05-21). Seul `screens/hunts/HuntDetailScreen` subsiste. | supprimé |
+| 2 | **Doublon hunt.service / hunts.service** | ✅ Résolu | Dead code supprimé. `mobile/src/services/hunts.service.ts` supprimé (2026-05-21). Seul `hunt.service.ts` subsiste. | supprimé |
+| 3 | **multer absent de package.json** | ✅ Résolu | `"multer": "^1.4.5-lts.1"` ajouté dans `dependencies` (2026-05-21). `@types/multer` était déjà en devDeps. | `packages/api/package.json` |
+| 4 | **expo-secure-store absent** | ✅ Résolu | `"expo-secure-store": "~13.0.0"` ajouté dans `apps/mobile/package.json`. TOKEN_KEY migré vers `SecureStore.getItemAsync/setItemAsync/deleteItemAsync` dans `auth.store.ts`. AsyncStorage conservé pour CONSENT_GPS_KEY et DEVICE_TOKEN_KEY. (2026-05-21) | `apps/mobile/package.json`, `auth.store.ts` |
+| 5 | **Winston absent de package.json** | ✅ Résolu | `"winston": "^3.11.0"` ajouté dans `dependencies` (2026-05-21). | `packages/api/package.json` |
+| 6 | **Vitest dans backoffice** | ⚠️ Déviation de spec | Vitest utilisé au lieu de Jest (imposé dans CLAUDE_CONTEXT). | `apps/backoffice/package.json` |
+| 7 | **Admin sans tests** | ❌ Confirmé | Aucune config de test dans `apps/admin/`. | `apps/admin/` |
+| 8 | **US15 multilangue** | ❌ Absent | Aucune lib i18n dans aucun package.json. | Tous les packages |
+| 9 | **US03 inscription partenaire** | ✅ Résolu | Flux invitation complet (2026-05-25) : `POST /admin/invitations` → token 72h → lien email → `RegisterPage.tsx` backoffice → `POST /auth/register/partner`. | modules `invitations`, `mail`, `auth/dto/register-partner.dto.ts`, `apps/backoffice/src/pages/RegisterPage.tsx` |
+| 10 | **StepScreen.tsx stub complet** | ❌ Cassé | `screens/hunt/StepScreen.tsx` = stub `// TODO, return null`. Zéro logique QR (US55), quiz (US56), photo (US57). De plus ce fichier est dans `screens/hunt/` (dead code, non monté). | `apps/mobile/src/screens/hunt/StepScreen.tsx` |
+| 11 | **Admin services incomplets** | ⚠️ Partiellement résolu | `api.ts`, `auth.service`, `invitations.service` implémentés (2026-05-25). Pages UsersPage, BadgesPage, PartnersPage, HuntsPage, DashboardPage restent des stubs `return null`. | `apps/admin/src/pages/` |
+| 12 | **No `zones` dans CLAUDE_CONTEXT** | ⚠️ Documentation | Module zones implémenté côté API mais absent des règles CLAUDE_CONTEXT. | `packages/api/src/modules/zones/` |
+
+---
+
+## Workflow Git — Règles obligatoires
+
+> Ces règles s'appliquent à chaque session Claude Code. Elles sont non-négociables.
+
+### Avant toute implémentation
+
+1. **Vérifier la branche courante** : `git branch --show-current`
+2. **Si sur `develop` ou `main`** : créer une branche feature **avant** d'écrire la moindre ligne de code
    ```bash
    git checkout develop
    git pull origin develop
-   git checkout -b feature/USxx-short-description
+   git checkout -b feature/USxx-description-courte
    ```
-3. Never commit directly to `develop` or `main`
+3. **Ne jamais committer directement sur `develop` ou `main`**
 
-### Branch naming
+### Nommage des branches
 
-| Type    | Format                           | Example                           |
-| ------- | -------------------------------- | --------------------------------- |
-| New US  | `feature/USxx-kebab-description` | `feature/US55-qr-code-validation` |
-| Bug fix | `fix/kebab-description`          | `fix/duplicate-react-admin`       |
-| Docs    | `docs/kebab-description`         | `docs/contributing-guide`         |
+| Type | Format | Exemple |
+|---|---|---|
+| Nouvelle US | `feature/USxx-description-kebab` | `feature/US55-qr-code-validation` |
+| Correction de bug | `fix/description-kebab` | `fix/duplicate-react-admin` |
+| Documentation | `docs/description-kebab` | `docs/contributing-guide` |
 
-### Commit format
+### Format des commits
 
 ```
 type(scope): USxx — short description in English
 
-# Types: feat, fix, docs, refactor, test, chore
-# Scope: api, mobile, backoffice, admin, shared
+# Types : feat, fix, docs, refactor, test, chore
+# Scope : api, mobile, backoffice, admin, shared
 ```
 
-**Never** add `Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>` (or any Claude co-author line) to commits.
+Exemples valides :
+- `feat(api+backoffice): US03 — partner invitation flow`
+- `fix(admin): resolve duplicate React instance in Vite config`
+- `docs: add git workflow to CLAUDE.md and CONTRIBUTING.md`
 
-### Pull Requests
+### Règle de récupération (commit accidentel sur develop)
 
-- One branch = one US (or one atomic fix)
-- PR always targets `develop`, never `main`
-- `main` = stable production, merged from `develop` only after validation
-
-### Recovery (accidental commit on develop)
-
+Si un commit est fait par erreur sur `develop` **sans push** :
 ```bash
-git branch feature/USxx-description   # save the commit
-git reset --hard HEAD~1               # remove it from develop
-git checkout feature/USxx-description # back to the right branch
+git branch feature/USxx-description   # capture le commit
+git reset --hard HEAD~1                # retire le commit de develop
+git checkout feature/USxx-description  # retour sur la bonne branche
 ```
+
+### Pull Request
+
+- Une branche = une US (ou un fix atomique)
+- PR toujours vers `develop`, jamais vers `main`
+- `main` = production stable, merge uniquement depuis `develop` après validation
