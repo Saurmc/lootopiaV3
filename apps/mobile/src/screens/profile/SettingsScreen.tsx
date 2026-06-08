@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppStackParamList } from '../../navigation/AppNavigator';
+import { useTranslation } from 'react-i18next';
 import { useProfile, useUpdateProfile } from '../../hooks/useProfile';
 import { profileService } from '../../services/profile.service';
 import { useAuthStore } from '../../store/auth.store';
@@ -31,6 +32,7 @@ type SettingsNavProp = NativeStackNavigationProp<AppStackParamList, 'Settings'>;
  * Permet de modifier le pseudo, l'avatar (galerie photo) et le consentement GPS.
  */
 export default function SettingsScreen() {
+  const { t, i18n } = useTranslation();
   const navigation = useNavigation<SettingsNavProp>();
   const { data: profile, isLoading } = useProfile();
   const { mutate: updateProfile, isPending } = useUpdateProfile();
@@ -50,7 +52,7 @@ export default function SettingsScreen() {
   async function handlePickAvatar() {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (perm.status !== 'granted') {
-      Alert.alert('Permission refusée', "L'accès à la galerie est nécessaire pour changer l'avatar.");
+      Alert.alert(t('settings.permissionDenied'), t('settings.permissionDeniedMsg'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -71,20 +73,20 @@ export default function SettingsScreen() {
       setAvatarUri(presignedUrl);
       updateProfile(
         { avatar_url: key },
-        { onError: () => Alert.alert('Erreur', "Impossible de mettre à jour l'avatar.") },
+        { onError: () => Alert.alert(t('common.error'), t('settings.updateError')) },
       );
     } catch {
-      Alert.alert('Erreur', "L'upload a échoué. Vérifiez votre connexion.");
+      Alert.alert(t('common.error'), t('settings.uploadErrorMsg'));
     } finally {
       setAvatarUploading(false);
     }
   }
 
   function handleRemoveAvatar() {
-    Alert.alert('Supprimer l\'avatar', 'Confirmer la suppression ?', [
-      { text: 'Annuler', style: 'cancel' },
+    Alert.alert(t('settings.removeAvatarTitle'), t('settings.removeAvatarMsg'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Supprimer', style: 'destructive',
+        text: t('settings.remove'), style: 'destructive',
         onPress: () => {
           setAvatarUri(null);
           updateProfile({ avatar_url: undefined });
@@ -96,14 +98,14 @@ export default function SettingsScreen() {
   function handleSavePseudo() {
     const trimmed = pseudo.trim();
     if (trimmed === (profile?.pseudo ?? '')) {
-      Alert.alert('Aucune modification', 'Le pseudo n\'a pas changé.');
+      Alert.alert(t('settings.noChange'), t('settings.noChangeMsg'));
       return;
     }
     updateProfile(
       { pseudo: trimmed || undefined },
       {
-        onSuccess: () => Alert.alert('Succès', 'Pseudo mis à jour.'),
-        onError: () => Alert.alert('Erreur', 'La mise à jour a échoué.'),
+        onSuccess: () => Alert.alert(t('common.success'), t('settings.pseudoUpdated')),
+        onError: () => Alert.alert(t('common.error'), t('settings.pseudoError')),
       },
     );
   }
@@ -124,7 +126,7 @@ export default function SettingsScreen() {
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
           {/* ── Avatar ── */}
-          <Text style={styles.sectionTitle}>Avatar</Text>
+          <Text style={styles.sectionTitle}>{t('settings.avatarTitle')}</Text>
           <View style={styles.avatarSection}>
             <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.8} disabled={avatarUploading}>
               <View style={styles.avatarWrapper}>
@@ -145,28 +147,28 @@ export default function SettingsScreen() {
             </TouchableOpacity>
 
             <View style={styles.avatarInfo}>
-              <Text style={styles.avatarInfoTitle}>Photo de profil</Text>
+              <Text style={styles.avatarInfoTitle}>{t('settings.photoLabel')}</Text>
               <Text style={styles.avatarInfoSub}>
-                {avatarUploading ? 'Upload en cours…' : 'Touchez la photo pour choisir depuis la galerie'}
+                {avatarUploading ? t('settings.uploading') : t('settings.tapToChange')}
               </Text>
               {avatarUri && !avatarUploading && (
                 <TouchableOpacity onPress={handleRemoveAvatar}>
-                  <Text style={styles.avatarRemove}>Supprimer</Text>
+                  <Text style={styles.avatarRemove}>{t('settings.remove')}</Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
 
           {/* ── Pseudo ── */}
-          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>Pseudo</Text>
+          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>{t('settings.pseudoTitle')}</Text>
           <View style={styles.card}>
             <View style={styles.fieldRow}>
-              <Text style={styles.label}>Pseudo</Text>
+              <Text style={styles.label}>{t('settings.pseudoLabel')}</Text>
               <TextInput
                 style={styles.input}
                 value={pseudo}
                 onChangeText={setPseudo}
-                placeholder="Votre pseudo"
+                placeholder={t('settings.pseudoPlaceholder')}
                 placeholderTextColor={theme.colors.textDisabled}
                 maxLength={50}
                 autoCapitalize="none"
@@ -183,18 +185,16 @@ export default function SettingsScreen() {
           >
             {isPending
               ? <ActivityIndicator color={theme.colors.textInverse} size="small" />
-              : <Text style={styles.saveBtnText}>Enregistrer</Text>}
+              : <Text style={styles.saveBtnText}>{t('settings.save')}</Text>}
           </TouchableOpacity>
 
           {/* ── Confidentialité ── */}
-          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>Confidentialité</Text>
+          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>{t('settings.privacyTitle')}</Text>
           <View style={styles.card}>
             <View style={styles.toggleRow}>
               <View style={styles.toggleLeft}>
-                <Text style={styles.toggleLabel}>Localisation GPS</Text>
-                <Text style={styles.toggleSub}>
-                  Autoriser l'application à accéder à votre position pour valider les étapes GPS.
-                </Text>
+                <Text style={styles.toggleLabel}>{t('settings.gpsLabel')}</Text>
+                <Text style={styles.toggleSub}>{t('settings.gpsSub')}</Text>
               </View>
               <Switch
                 value={consentGps === true}
@@ -205,22 +205,43 @@ export default function SettingsScreen() {
             </View>
           </View>
 
+          {/* ── Langue ── */}
+          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>{t('settings.language')}</Text>
+          <View style={styles.card}>
+            <View style={styles.langRow}>
+              <TouchableOpacity
+                style={[styles.langBtn, i18n.language === 'fr' && styles.langBtnActive]}
+                onPress={() => i18n.changeLanguage('fr')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.langBtnText, i18n.language === 'fr' && styles.langBtnTextActive]}>🇫🇷 Français</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.langBtn, i18n.language === 'en' && styles.langBtnActive]}
+                onPress={() => i18n.changeLanguage('en')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.langBtnText, i18n.language === 'en' && styles.langBtnTextActive]}>🇬🇧 English</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {/* ── Sécurité ── */}
-          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>Sécurité</Text>
+          <Text style={[styles.sectionTitle, styles.sectionTitleTop]}>{t('settings.securityTitle')}</Text>
           <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Security')} activeOpacity={0.75}>
             <View style={styles.navRow}>
               <Ionicons name="lock-closed-outline" size={18} color={theme.colors.textSecondary} />
-              <Text style={styles.navRowText}>Mot de passe et suppression du compte</Text>
+              <Text style={styles.navRowText}>{t('settings.securitySub')}</Text>
               <Ionicons name="chevron-forward" size={16} color={theme.colors.textSecondary} />
             </View>
           </TouchableOpacity>
 
           {profile && (
             <View style={styles.infoCard}>
-              <Text style={styles.infoRow}><Text style={styles.infoLabel}>Email : </Text>{profile.email ?? '—'}</Text>
+              <Text style={styles.infoRow}><Text style={styles.infoLabel}>{t('settings.emailLabel')}</Text>{profile.email ?? '—'}</Text>
               <Text style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Membre depuis : </Text>
-                {new Date(profile.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                <Text style={styles.infoLabel}>{t('settings.memberSinceLabel')}</Text>
+                {new Date(profile.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}
               </Text>
             </View>
           )}
@@ -276,6 +297,12 @@ const styles = StyleSheet.create({
 
   navRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.md, gap: theme.spacing.sm },
   navRowText: { flex: 1, ...theme.typography.body, fontWeight: '500', color: theme.colors.text },
+
+  langRow: { flexDirection: 'row', paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.sm, gap: theme.spacing.sm },
+  langBtn: { flex: 1, paddingVertical: theme.spacing.sm, borderRadius: theme.borderRadius.md, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center', backgroundColor: theme.colors.surfaceElevated },
+  langBtnActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  langBtnText: { ...theme.typography.label, color: theme.colors.textSecondary },
+  langBtnTextActive: { color: theme.colors.textInverse },
 
   infoCard: { backgroundColor: theme.colors.surface, borderRadius: theme.borderRadius.lg, borderWidth: 1, borderColor: theme.colors.borderLight, padding: theme.spacing.md, gap: theme.spacing.sm },
   infoRow: { ...theme.typography.bodySmall, color: theme.colors.textSecondary },

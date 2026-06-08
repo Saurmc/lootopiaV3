@@ -15,6 +15,7 @@ import { CompositeNavigationProp, useNavigation } from '@react-navigation/native
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { AppTabParamList, AppStackParamList } from '../../navigation/AppNavigator';
+import { useTranslation } from 'react-i18next';
 import { useProfile, usePlayerStats, useBadges } from '../../hooks/useProfile';
 import { useHuntHistory, useHuntsList } from '../../hooks/useHunts';
 import { useAuthStore } from '../../store/auth.store';
@@ -27,27 +28,17 @@ type ProfileNavProp = CompositeNavigationProp<
 
 // ─── Système de niveaux ───────────────────────────────────────────────────────
 
-const TITLES = [
-  'Novice',
-  'Explorateur',
-  'Aventurier',
-  'Chasseur',
-  'Traqueur',
-  'Expert',
-  'Maître',
-  'Légende',
-];
+// Titles are resolved via i18n inside the component using profile.levels.*
 const POINTS_PER_LEVEL = 200;
-const MAX_LEVEL = TITLES.length;
+const MAX_LEVEL = 8;
 
 function computeLevel(points: number) {
   const rawLevel = Math.floor(points / POINTS_PER_LEVEL) + 1;
   const level = Math.min(rawLevel, MAX_LEVEL);
-  const title = TITLES[level - 1];
   const isMax = level >= MAX_LEVEL;
   const progress = isMax ? 1 : (points - (level - 1) * POINTS_PER_LEVEL) / POINTS_PER_LEVEL;
   const ptsToNext = isMax ? null : level * POINTS_PER_LEVEL - points;
-  return { level, title, progress, ptsToNext, isMax };
+  return { level, isMax, progress, ptsToNext };
 }
 
 // ─── StatCard ─────────────────────────────────────────────────────────────────
@@ -127,18 +118,18 @@ function CompletedHuntCard({ title, location, points, startedAt, completedAt }: 
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
-const BADGE_META: Record<string, { label: string; icon: IoniconName; color: string }> = {
-  first_hunt:      { label: 'Premier pas',      icon: 'flag',             color: theme.colors.points },
-  hunt_completed:  { label: 'Chasse terminée',  icon: 'trophy',           color: theme.colors.primary },
-  hunt_5:          { label: '5 chasses',        icon: 'compass',          color: theme.colors.warning },
-  streak_3:        { label: 'Série de 3',       icon: 'flame',            color: theme.colors.error },
-  precision:       { label: 'Précision',        icon: 'locate',           color: '#3B82F6' },
-  points_1000:     { label: '1000 points',      icon: 'star',             color: theme.colors.points },
-  explorer:        { label: 'Explorateur',      icon: 'earth',            color: theme.colors.success },
+const BADGE_ICONS: Record<string, { icon: IoniconName; color: string }> = {
+  first_hunt:      { icon: 'flag',             color: theme.colors.points },
+  hunt_completed:  { icon: 'trophy',           color: theme.colors.primary },
+  hunt_5:          { icon: 'compass',          color: theme.colors.warning },
+  streak_3:        { icon: 'flame',            color: theme.colors.error },
+  precision:       { icon: 'locate',           color: '#3B82F6' },
+  points_1000:     { icon: 'star',             color: theme.colors.points },
+  explorer:        { icon: 'earth',            color: theme.colors.success },
 };
 
-function getBadgeMeta(type: string) {
-  return BADGE_META[type] ?? { label: type, icon: 'ribbon' as IoniconName, color: theme.colors.gradientStart };
+function getBadgeIcons(type: string) {
+  return BADGE_ICONS[type] ?? { icon: 'ribbon' as IoniconName, color: theme.colors.gradientStart };
 }
 
 function chunkBadges<T>(arr: T[], size: number): T[][] {
@@ -150,7 +141,9 @@ function chunkBadges<T>(arr: T[], size: number): T[][] {
 // ─── BadgeCard ────────────────────────────────────────────────────────────────
 
 function BadgeCard({ badge_type }: { badge_type: string }) {
-  const { label, icon, color } = getBadgeMeta(badge_type);
+  const { t } = useTranslation();
+  const { icon, color } = getBadgeIcons(badge_type);
+  const label = t(`profile.badgeLabels.${badge_type}`, { defaultValue: badge_type });
   return (
     <View style={styles.badgeCard}>
       <View style={[styles.badgeIconBox, { backgroundColor: color + '18' }]}>
@@ -168,6 +161,7 @@ function BadgeCard({ badge_type }: { badge_type: string }) {
  * Affiche pseudo, avatar, niveau, barre de progression vers le suivant et stats.
  */
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<ProfileNavProp>();
   const { data: profile, isLoading: profileLoading } = useProfile();
   const { data: stats, isLoading: statsLoading } = usePlayerStats();
@@ -189,7 +183,8 @@ export default function ProfileScreen() {
   const displayName = profile?.pseudo ?? profile?.email ?? 'Joueur';
   const initials = displayName.slice(0, 2).toUpperCase();
   const totalPoints = stats?.total_points ?? 0;
-  const { level, title, progress, ptsToNext, isMax } = computeLevel(totalPoints);
+  const { level, progress, ptsToNext, isMax } = computeLevel(totalPoints);
+  const title = t(`profile.levels.${level}`, { defaultValue: 'Novice' });
 
   const completedHunts = history
     .filter((h) => h.completed_at !== null)
@@ -220,7 +215,7 @@ export default function ProfileScreen() {
 
           <View style={styles.levelRow}>
             <View style={styles.levelBadge}>
-              <Text style={styles.levelBadgeText}>Niveau {level}</Text>
+              <Text style={styles.levelBadgeText}>{t('profile.levelBadge', { level })}</Text>
             </View>
             <Text style={styles.levelTitle}>{title}</Text>
           </View>
@@ -236,7 +231,7 @@ export default function ProfileScreen() {
         <View style={styles.miniStatsRow}>
           <View style={styles.miniStatCard}>
             <Text style={styles.miniStatValue}>{stats?.hunt_count ?? 0}</Text>
-            <Text style={styles.miniStatLabel}>Chasses</Text>
+            <Text style={styles.miniStatLabel}>{t('profile.hunts')}</Text>
           </View>
           <View style={styles.miniStatCard}>
             <Text style={styles.miniStatValue}>
@@ -244,11 +239,11 @@ export default function ProfileScreen() {
                 ? `${(totalPoints / 1000).toFixed(1).replace('.0', '')}k`
                 : totalPoints}
             </Text>
-            <Text style={styles.miniStatLabel}>Points</Text>
+            <Text style={styles.miniStatLabel}>{t('profile.points')}</Text>
           </View>
           <View style={styles.miniStatCard}>
             <Text style={styles.miniStatValue}>{stats?.badge_count ?? 0}</Text>
-            <Text style={styles.miniStatLabel}>Badges</Text>
+            <Text style={styles.miniStatLabel}>{t('profile.badges')}</Text>
           </View>
         </View>
 
@@ -262,7 +257,9 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.collapsibleTitle}>
-              Chasses Complétées{completedHunts.length > 0 ? ` (${completedHunts.length})` : ''}
+              {completedHunts.length > 0
+                ? t('profile.huntsCompletedCount', { count: completedHunts.length })
+                : t('profile.huntsCompleted')}
             </Text>
             <Ionicons
               name={huntsExpanded ? 'chevron-up' : 'chevron-down'}
@@ -286,7 +283,7 @@ export default function ProfileScreen() {
                 ))}
               </View>
             ) : (
-              <Text style={styles.emptyHunts}>Aucune chasse terminée pour l'instant.</Text>
+              <Text style={styles.emptyHunts}>{t('profile.noHunts')}</Text>
             )
           )}
         </View>
@@ -299,7 +296,9 @@ export default function ProfileScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.collapsibleTitle}>
-              Badges Obtenus{badges.length > 0 ? ` (${badges.length})` : ''}
+              {badges.length > 0
+                ? t('profile.badgesEarnedCount', { count: badges.length })
+                : t('profile.badgesEarned')}
             </Text>
             <Ionicons
               name={badgesExpanded ? 'chevron-up' : 'chevron-down'}
@@ -323,7 +322,7 @@ export default function ProfileScreen() {
                 ))}
               </View>
             ) : (
-              <Text style={styles.emptyHunts}>Aucun badge obtenu pour l'instant.</Text>
+              <Text style={styles.emptyHunts}>{t('profile.noBadges')}</Text>
             )
           )}
         </View>
@@ -339,7 +338,7 @@ export default function ProfileScreen() {
             <View style={styles.actionIconBox}>
               <Ionicons name="settings-outline" size={20} color={theme.colors.primary} />
             </View>
-            <Text style={styles.actionLabel}>Paramètres</Text>
+            <Text style={styles.actionLabel}>{t('profile.settings')}</Text>
             <Ionicons name="chevron-forward" size={18} color={theme.colors.textSecondary} />
           </TouchableOpacity>
         </View>
@@ -349,23 +348,24 @@ export default function ProfileScreen() {
           style={styles.logoutBtn}
           activeOpacity={0.7}
           onPress={() =>
-            Alert.alert('Se déconnecter', 'Confirmer la déconnexion ?', [
-              { text: 'Annuler', style: 'cancel' },
-              { text: 'Déconnexion', style: 'destructive', onPress: logout },
+            Alert.alert(t('profile.logoutConfirmTitle'), t('profile.logoutConfirmMsg'), [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('profile.logout'), style: 'destructive', onPress: logout },
             ])
           }
         >
           <Ionicons name="log-out-outline" size={20} color={theme.colors.error} />
-          <Text style={styles.logoutLabel}>Se déconnecter</Text>
+          <Text style={styles.logoutLabel}>{t('profile.logout')}</Text>
         </TouchableOpacity>
 
         {/* Membre depuis */}
         {profile?.created_at && (
           <Text style={styles.memberSince}>
-            Membre depuis{' '}
-            {new Date(profile.created_at).toLocaleDateString('fr-FR', {
-              month: 'long',
-              year: 'numeric',
+            {t('profile.memberSince', {
+              date: new Date(profile.created_at).toLocaleDateString(undefined, {
+                month: 'long',
+                year: 'numeric',
+              }),
             })}
           </Text>
         )}

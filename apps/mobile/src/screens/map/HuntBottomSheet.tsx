@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+﻿import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import type { HuntListItem } from '../../services/hunt.service';
 import { formatDistance } from '../../services/hunt.service';
+import { useTranslation } from 'react-i18next';
 import theme from '../../constants/theme';
 
 interface Props {
@@ -18,12 +19,6 @@ interface Props {
   onClose: () => void;
   onJoin: (hunt: HuntListItem) => void;
 }
-
-const DIFFICULTY_LABELS: Record<string, string> = {
-  easy: 'Facile',
-  medium: 'Moyen',
-  hard: 'Difficile',
-};
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   easy: theme.colors.difficultyEasy,
@@ -35,6 +30,12 @@ const DIFFICULTY_COLORS: Record<string, string> = {
  * HuntBottomSheet — panneau glissant affiché au tap d'un marqueur de chasse.
  */
 export default function HuntBottomSheet({ hunt, userLat, userLng, onClose, onJoin }: Props) {
+  const { t } = useTranslation();
+  const DIFFICULTY_LABELS: Record<string, string> = {
+    easy: t('common.easy'),
+    medium: t('common.medium'),
+    hard: t('common.hard'),
+  };
   const translateY = useRef(new Animated.Value(300)).current;
 
   useEffect(() => {
@@ -122,12 +123,12 @@ export default function HuntBottomSheet({ hunt, userLat, userLng, onClose, onJoi
           {hunt.duration ? (
             <View style={styles.metaItem}>
               <Ionicons name="time-outline" size={13} color={theme.colors.textSecondary} />
-              <Text style={styles.metaText}>{hunt.duration} min</Text>
+              <Text style={styles.metaText}>{hunt.duration} {t('common.min')}</Text>
             </View>
           ) : null}
           <View style={styles.metaItem}>
             <Ionicons name="star" size={13} color={theme.colors.points} />
-            <Text style={styles.metaText}>{hunt.points} pts</Text>
+            <Text style={styles.metaText}>{hunt.points} {t('common.pts')}</Text>
           </View>
         </View>
 
@@ -138,7 +139,7 @@ export default function HuntBottomSheet({ hunt, userLat, userLng, onClose, onJoi
           activeOpacity={0.85}
         >
           <Ionicons name="play" size={16} color={theme.colors.textInverse} />
-          <Text style={styles.joinBtnLabel}>Rejoindre la chasse</Text>
+          <Text style={styles.joinBtnLabel}>{t('bottomSheet.join')}</Text>
         </TouchableOpacity>
       </Animated.View>
     </>

@@ -24,6 +24,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { CompositeNavigationProp } from '@react-navigation/native';
 import type { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/auth.store';
 import theme from '../../constants/theme';
 import type { AppTabParamList, AppStackParamList } from '../../navigation/AppNavigator';
@@ -63,6 +64,7 @@ type MapNavProp = CompositeNavigationProp<
 >;
 
 export default function MapScreen() {
+  const { t } = useTranslation();
   const { consentGps } = useAuthStore();
   const navigation = useNavigation<MapNavProp>();
   const cameraRef = useRef<CameraRef>(null);
@@ -277,7 +279,7 @@ export default function MapScreen() {
             <TextInput
               ref={searchRef}
               style={styles.searchInput}
-              placeholder="Rechercher une chasse…"
+              placeholder={t('map.searchPlaceholder')}
               placeholderTextColor={theme.colors.textDisabled}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -308,7 +310,7 @@ export default function MapScreen() {
           <View style={styles.resultsPanel} pointerEvents="box-none">
             {visibleHunts.length === 0 ? (
               <View style={styles.resultEmpty}>
-                <Text style={styles.resultEmptyText}>Aucune chasse trouvée</Text>
+                <Text style={styles.resultEmptyText}>{t('map.noResults')}</Text>
               </View>
             ) : (
               <ScrollView
@@ -344,7 +346,7 @@ export default function MapScreen() {
                     }}
                   >
                     <Text style={styles.resultMoreText}>
-                      Voir les {visibleHunts.length - MAX_RESULTS} autres résultats →
+                      {t('map.seeMore', { count: visibleHunts.length - MAX_RESULTS })}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -357,9 +359,7 @@ export default function MapScreen() {
         {permissionDenied && (
           <View style={styles.permissionBanner}>
             <Ionicons name="warning-outline" size={13} color={theme.colors.warning} />
-            <Text style={styles.permissionText}>
-              GPS refusé — carte centrée sur Paris
-            </Text>
+            <Text style={styles.permissionText}>{t('map.gpsRefused')}</Text>
           </View>
         )}
       </View>

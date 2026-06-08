@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface Props {
@@ -9,24 +10,21 @@ interface Props {
 
 /**
  * GpsConsentModal — popup demandant le consentement de localisation.
- * Affiché immédiatement après une connexion en mode invité.
  */
 export default function GpsConsentModal({ visible, onAccept, onDecline }: Props) {
+  const { t } = useTranslation();
   return (
     <Modal transparent animationType="fade" visible={visible} statusBarTranslucent>
       <View style={styles.overlay}>
         <View style={styles.card}>
           <Text style={styles.icon}>📍</Text>
-          <Text style={styles.title}>Autoriser la localisation</Text>
-          <Text style={styles.body}>
-            Autorisez la localisation pour découvrir les chasses au trésor près de vous et valider
-            vos étapes GPS.
-          </Text>
+          <Text style={styles.title}>{t('gpsModal.title')}</Text>
+          <Text style={styles.body}>{t('gpsModal.desc')}</Text>
           <TouchableOpacity style={styles.btnAccept} onPress={onAccept} activeOpacity={0.8}>
-            <Text style={styles.btnAcceptLabel}>Autoriser</Text>
+            <Text style={styles.btnAcceptLabel}>{t('gpsModal.accept')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnDecline} onPress={onDecline} activeOpacity={0.8}>
-            <Text style={styles.btnDeclineLabel}>Refuser</Text>
+            <Text style={styles.btnDeclineLabel}>{t('gpsModal.decline')}</Text>
           </TouchableOpacity>
         </View>
       </View>
