@@ -16,14 +16,14 @@ describe('useAuthStore', () => {
   });
 
   it('setAuth stocke le token et le user', () => {
-    useAuthStore.getState().setAuth('tok123', mockUser);
+    useAuthStore.getState().setAuth('tok123', 'refresh123', mockUser);
     const { token, user } = useAuthStore.getState();
     expect(token).toBe('tok123');
     expect(user).toEqual(mockUser);
   });
 
   it('clearAuth efface le token et le user', () => {
-    useAuthStore.getState().setAuth('tok123', mockUser);
+    useAuthStore.getState().setAuth('tok123', 'refresh123', mockUser);
     useAuthStore.getState().clearAuth();
     const { token, user } = useAuthStore.getState();
     expect(token).toBeNull();

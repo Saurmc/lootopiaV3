@@ -42,6 +42,10 @@ export class UserEntity {
   @Column({ type: 'varchar', length: 50, nullable: true })
   pseudo: string | null;
 
+  // Incrémenté à chaque logout ou changement de mot de passe — invalide tous les refresh tokens existants
+  @Column({ type: 'int', default: 1 })
+  refresh_token_version: number;
+
   // URL de la photo de profil (stockée via /files/upload)
   @Column({ type: 'varchar', nullable: true })
   avatar_url: string | null;

@@ -4,6 +4,7 @@ import type { AuthUser } from '../store/auth.store';
 
 interface LoginResponse {
   access_token: string;
+  refresh_token: string;
 }
 
 interface JwtPayload {
@@ -29,7 +30,7 @@ export const authService = {
   login: async (
     email: string,
     password: string,
-  ): Promise<{ token: string; user: AuthUser }> => {
+  ): Promise<{ token: string; refreshToken: string; user: AuthUser }> => {
     const { data } = await api.post<LoginResponse>('/auth/login', { email, password });
     const decoded = decodeJwt(data.access_token);
     if (decoded.role !== Role.ADMIN) {
@@ -37,6 +38,7 @@ export const authService = {
     }
     return {
       token: data.access_token,
+      refreshToken: data.refresh_token,
       user: { id: decoded.sub, role: decoded.role, email },
     };
   },

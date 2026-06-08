@@ -7,8 +7,8 @@ export function useAuth() {
   const navigate = useNavigate();
 
   const login = async (payload: LoginPayload) => {
-    const { token: newToken, user: newUser } = await authService.login(payload);
-    setAuth(newToken, newUser);
+    const { token: newToken, refreshToken: newRefreshToken, user: newUser } = await authService.login(payload);
+    setAuth(newToken, newRefreshToken, newUser);
     navigate('/dashboard');
   };
 

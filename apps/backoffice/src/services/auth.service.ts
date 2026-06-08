@@ -16,6 +16,7 @@ export interface RegisterPartnerPayload {
 
 interface LoginResponse {
   access_token: string;
+  refresh_token: string;
 }
 
 interface JwtPayload {
@@ -38,7 +39,7 @@ function decodeJwt(token: string): JwtPayload {
 }
 
 export const authService = {
-  login: async (payload: LoginPayload): Promise<{ token: string; user: AuthUser }> => {
+  login: async (payload: LoginPayload): Promise<{ token: string; refreshToken: string; user: AuthUser }> => {
     const { data } = await api.post<LoginResponse>('/auth/login', payload);
     const decoded = decodeJwt(data.access_token);
     const user: AuthUser = {
@@ -46,7 +47,7 @@ export const authService = {
       role: decoded.role,
       email: payload.email,
     };
-    return { token: data.access_token, user };
+    return { token: data.access_token, refreshToken: data.refresh_token, user };
   },
 
   registerPartner: async (payload: RegisterPartnerPayload): Promise<void> => {

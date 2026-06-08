@@ -9,14 +9,16 @@ export interface AuthUser {
 
 interface AuthState {
   token: string | null;
+  refreshToken: string | null;
   user: AuthUser | null;
-  setAuth: (token: string, user: AuthUser) => void;
+  setAuth: (token: string, refreshToken: string, user: AuthUser) => void;
   clearAuth: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   token: null,
+  refreshToken: null,
   user: null,
-  setAuth: (token, user) => set({ token, user }),
-  clearAuth: () => set({ token: null, user: null }),
+  setAuth: (token, refreshToken, user) => set({ token, refreshToken, user }),
+  clearAuth: () => set({ token: null, refreshToken: null, user: null }),
 }));
