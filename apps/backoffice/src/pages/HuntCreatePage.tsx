@@ -1,23 +1,16 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Wand2 } from 'lucide-react';
+import { ArrowLeft, Wand2, Clock, Star, ChevronRight } from 'lucide-react';
 import { huntsService, type CreateHuntPayload } from '@/services/hunts.service';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import HuntForm from '@/components/hunt/HuntForm';
 
-const DIFFICULTY_LABELS: Record<string, string> = {
-  easy: 'Facile',
-  medium: 'Moyen',
-  hard: 'Difficile',
-};
-
-const TEMPLATE_COLORS: Record<string, string> = {
-  'urban-explorer': 'bg-blue-500',
-  'history-trail': 'bg-amber-500',
-  'nature-challenge': 'bg-green-500',
-  'family-fun': 'bg-purple-500',
+const DIFFICULTY_LABELS: Record<string, { label: string; cls: string }> = {
+  easy:   { label: 'Facile',    cls: 'bg-green-50 text-green-700' },
+  medium: { label: 'Moyen',     cls: 'bg-amber-50 text-amber-700' },
+  hard:   { label: 'Difficile', cls: 'bg-red-50 text-red-600' },
 };
 
 type Mode = 'form' | 'templates';
@@ -27,7 +20,7 @@ export default function HuntCreatePage() {
   const qc = useQueryClient();
   const [mode, setMode] = useState<Mode>('form');
 
-  const { data: templates = [] } = useQuery({
+  const { data: templates = [], isLoading: templatesLoading } = useQuery({
     queryKey: ['hunt-templates'],
     queryFn: huntsService.getTemplates,
   });
@@ -101,37 +94,78 @@ export default function HuntCreatePage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <p className="text-sm text-gray-500">
-            Démarrez depuis un template préconfigurée. Vous pourrez personnaliser tous les détails ensuite.
+            Démarrez depuis un modèle préconfigurée. Tous les détails (titre, étapes, etc.) restent modifiables ensuite.
           </p>
-          {templates.length === 0 ? (
-            <div className="py-8 text-center text-sm text-gray-400">Chargement des templates…</div>
-          ) : (
+
+          {templatesLoading ? (
             <div className="grid grid-cols-2 gap-4">
-              {templates.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  disabled={fromTemplateMutation.isPending}
-                  onClick={() => fromTemplateMutation.mutate(tpl.id)}
-                  className="text-left p-4 bg-white rounded-xl border border-gray-200 hover:border-primary hover:shadow-sm transition-all disabled:opacity-50"
-                >
-                  <div
-                    className={`h-10 w-10 rounded-lg ${TEMPLATE_COLORS[tpl.id] ?? 'bg-gray-400'} mb-3`}
-                  />
-                  <p className="font-semibold text-gray-900 text-sm">{tpl.title}</p>
-                  <p className="text-xs text-gray-400 mt-1 line-clamp-2">{tpl.description}</p>
-                  <div className="mt-3 flex items-center gap-3 text-xs text-gray-500">
-                    <span>{DIFFICULTY_LABELS[tpl.difficulty] ?? tpl.difficulty}</span>
-                    <span>·</span>
-                    <span>{tpl.duration} min</span>
-                    <span>·</span>
-                    <span>{tpl.points} pts</span>
-                  </div>
-                </button>
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-52 rounded-2xl bg-gray-100 animate-pulse" />
               ))}
             </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {templates.map((tpl) => {
+                const diff = tpl.defaults?.difficulty;
+                const diffStyle = DIFFICULTY_LABELS[diff] ?? { label: diff, cls: 'bg-gray-100 text-gray-500' };
+                return (
+                  <button
+                    key={tpl.id}
+                    disabled={fromTemplateMutation.isPending}
+                    onClick={() => fromTemplateMutation.mutate(tpl.id)}
+                    className="group text-left p-5 bg-white rounded-2xl border border-gray-200 hover:border-[#4B49B8] hover:shadow-md transition-all disabled:opacity-50 flex flex-col gap-3"
+                  >
+                    {/* Icon + title */}
+                    <div className="flex items-start gap-3">
+                      <span className="text-3xl leading-none">{tpl.icon ?? '🗺️'}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-900 text-sm leading-tight">{tpl.name}</p>
+                        <p className="text-xs text-gray-400 mt-1 line-clamp-2">{tpl.description}</p>
+                      </div>
+                    </div>
+
+                    {/* Meta */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${diffStyle.cls}`}>
+                        {diffStyle.label}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                        <Clock className="h-3 w-3" />
+                        {tpl.defaults?.duration ?? '—'} min
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-gray-400">
+                        <Star className="h-3 w-3" />
+                        {tpl.defaults?.points ?? '—'} pts
+                      </span>
+                    </div>
+
+                    {/* Steps hint */}
+                    {tpl.stepsHint && tpl.stepsHint.length > 0 && (
+                      <div className="border-t border-gray-50 pt-2 space-y-1">
+                        {tpl.stepsHint.slice(0, 3).map((hint, i) => (
+                          <p key={i} className="text-[11px] text-gray-400 flex items-center gap-1.5">
+                            <span className="w-4 h-4 rounded-full bg-[#4B49B8]/10 text-[#4B49B8] text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                              {i + 1}
+                            </span>
+                            <span className="line-clamp-1">{hint}</span>
+                          </p>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* CTA */}
+                    <div className="flex items-center justify-end gap-1 text-[#4B49B8] text-xs font-medium group-hover:gap-2 transition-all mt-auto">
+                      Utiliser ce template
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           )}
+
           {fromTemplateMutation.isError && (
             <p className="text-sm text-red-500 text-center">
               Erreur lors de la création depuis le template.
