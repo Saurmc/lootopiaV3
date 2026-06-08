@@ -13,11 +13,13 @@ export interface HuntFormValues {
   title: string;
   description: string;
   location: string;
+  lat: string;
+  lng: string;
   difficulty: 'easy' | 'medium' | 'hard' | '';
   duration: string;
   points: string;
   is_active: boolean;
-  plan_url: string; // uploaded plan/map image URL
+  plan_url: string;
 }
 
 interface HuntFormProps {
@@ -28,10 +30,14 @@ interface HuntFormProps {
 }
 
 function toPayload(values: HuntFormValues): CreateHuntPayload {
+  const lat = parseFloat(values.lat);
+  const lng = parseFloat(values.lng);
   return {
     title: values.title,
     description: values.description || undefined,
     location: values.location || undefined,
+    lat: !isNaN(lat) ? lat : undefined,
+    lng: !isNaN(lng) ? lng : undefined,
     difficulty: values.difficulty || undefined,
     duration: values.duration ? parseInt(values.duration, 10) : undefined,
     points: values.points ? parseInt(values.points, 10) : undefined,
@@ -45,6 +51,8 @@ export function huntDtoToFormValues(hunt: HuntDto): HuntFormValues {
     title: hunt.title,
     description: hunt.description ?? '',
     location: hunt.location ?? '',
+    lat: hunt.lat != null ? String(hunt.lat) : '',
+    lng: hunt.lng != null ? String(hunt.lng) : '',
     difficulty: hunt.difficulty ?? '',
     duration: hunt.duration?.toString() ?? '',
     points: hunt.points?.toString() ?? '',
@@ -70,6 +78,8 @@ export default function HuntForm({
       title: '',
       description: '',
       location: '',
+      lat: '',
+      lng: '',
       difficulty: '',
       duration: '',
       points: '',
@@ -125,6 +135,36 @@ export default function HuntForm({
           placeholder="Ex : Paris, Louvre"
           {...register('location')}
         />
+      </div>
+
+      {/* Coordonnées GPS */}
+      <div className="space-y-1.5">
+        <Label>Coordonnées GPS <span className="text-gray-400 font-normal">(optionnel — positionne la chasse sur la carte)</span></Label>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Input
+              id="lat"
+              placeholder="Latitude  ex : 48.8566"
+              {...register('lat', {
+                validate: (v) => v === '' || (!isNaN(parseFloat(v)) && parseFloat(v) >= -90 && parseFloat(v) <= 90) || 'Latitude invalide (−90 à 90)',
+              })}
+            />
+            {errors.lat && <p className="text-xs text-red-500">{errors.lat.message}</p>}
+          </div>
+          <div className="space-y-1">
+            <Input
+              id="lng"
+              placeholder="Longitude  ex : 2.3522"
+              {...register('lng', {
+                validate: (v) => v === '' || (!isNaN(parseFloat(v)) && parseFloat(v) >= -180 && parseFloat(v) <= 180) || 'Longitude invalide (−180 à 180)',
+              })}
+            />
+            {errors.lng && <p className="text-xs text-red-500">{errors.lng.message}</p>}
+          </div>
+        </div>
+        <p className="text-xs text-gray-400">
+          Trouvez les coordonnées sur <span className="font-medium">Google Maps</span> : clic droit sur le lieu → copier les coordonnées.
+        </p>
       </div>
 
       {/* Difficulté + Durée */}

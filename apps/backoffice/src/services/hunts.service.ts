@@ -14,10 +14,13 @@ interface RawHuntDto {
   created_at: string;
   step_count?: number;
   image_url?: string | null;
+  coordinates?: { type: string; coordinates: [number, number] } | null;
 }
 
-export interface HuntDto extends Omit<RawHuntDto, 'image_url'> {
+export interface HuntDto extends Omit<RawHuntDto, 'image_url' | 'coordinates'> {
   plan_url?: string | null;
+  lat?: number | null;
+  lng?: number | null;
 }
 
 export interface HuntTemplate {
@@ -51,11 +54,17 @@ export interface CreateHuntPayload {
 export type UpdateHuntPayload = Partial<CreateHuntPayload>;
 
 function fromRaw(raw: RawHuntDto): HuntDto {
-  const { image_url, ...rest } = raw;
-  return { ...rest, plan_url: image_url ? filesService.getFileUrl(image_url) : null };
+  const { image_url, coordinates, ...rest } = raw;
+  const [lng, lat] = coordinates?.coordinates ?? [];
+  return {
+    ...rest,
+    plan_url: image_url ? filesService.getFileUrl(image_url) : null,
+    lat: typeof lat === 'number' ? lat : null,
+    lng: typeof lng === 'number' ? lng : null,
+  };
 }
 
-function toApiPayload(payload: CreateHuntPayload): Omit<CreateHuntPayload, 'plan_url'> & { image_url?: string } {
+function toApiPayload(payload: Partial<CreateHuntPayload>): Omit<Partial<CreateHuntPayload>, 'plan_url'> & { image_url?: string } {
   const { plan_url, ...rest } = payload;
   return { ...rest, ...(plan_url !== undefined ? { image_url: plan_url } : {}) };
 }
