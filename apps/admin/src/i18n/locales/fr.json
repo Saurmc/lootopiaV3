@@ -87,7 +87,8 @@
     "reactivate": "Réactiver",
     "suspending": "Suspension…",
     "confirmTitle": "Suspendre le partenaire",
-    "confirmDesc": "Suspendre <strong>{{name}}</strong> ? Son compte sera bloqué et il ne pourra plus se connecter au backoffice.",
+    "confirmDescBefore": "Suspendre",
+    "confirmDescAfter": " ? Son compte sera bloqué et il ne pourra plus se connecter au backoffice.",
     "confirmBtn": "Suspendre"
   },
   "invitations": {

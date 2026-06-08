@@ -177,7 +177,9 @@ export default function HuntsPage() {
           <DialogHeader>
             <DialogTitle>{t('hunts.deleteTitle')}</DialogTitle>
             <DialogDescription>
-              {t('hunts.deleteDesc', { title: deleteTarget?.title })}
+              {t('hunts.deleteDescBefore')}{' '}
+              <strong>{deleteTarget?.title}</strong>
+              {t('hunts.deleteDescAfter')}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
