@@ -53,10 +53,11 @@ try {
 const ARTWORK_MAT = 'artworkDisplay';
 
 function ARScene(props: any) {
-  const { artworkImage, modelUrl, onMarkerFound } =
+  const { artworkImage, modelUrl, targetName, onMarkerFound } =
     (props.sceneNavigator?.viroAppProps ?? {}) as {
       artworkImage: string;
       modelUrl?: string;
+      targetName: string;
       onMarkerFound?: () => void;
     };
 
@@ -72,7 +73,7 @@ function ARScene(props: any) {
     <ViroARScene>
       <ViroAmbientLight color="#FFFFFF" intensity={1200} />
 
-      <ViroARImageMarker target="markerTarget" onAnchorFound={handleAnchorFound}>
+      <ViroARImageMarker target={targetName} onAnchorFound={handleAnchorFound}>
         {modelUrl ? (
           <Viro3DObject
             source={{ uri: modelUrl }}
@@ -142,13 +143,18 @@ export default function ViroARPhase({ arContent, onConfirm, isValidating }: Viro
   const markerUrl  = resolveUrl(arContent.marker_image);
   const artworkUrl = resolveUrl(arContent.artwork_image ?? arContent.marker_image);
 
+  // Nom de cible unique par étape — évite que la session AR native continue de
+  // reconnaître l'image de l'étape précédente (la cible "markerTarget" fixe restait active)
+  const targetNameRef = useRef(`markerTarget_${Math.random().toString(36).slice(2)}`);
+  const targetName = targetNameRef.current;
+
   // Ref stable pour éviter de recréer viroAppProps à chaque render
   const onMarkerFoundRef = useRef(() => setMarkerDetected(true));
 
   useEffect(() => {
     setTargetReady(false);
     ViroARTrackingTargets.createTargets({
-      markerTarget: {
+      [targetName]: {
         source: { uri: markerUrl },
         orientation: 'Up',
         physicalWidth: 0.2,
@@ -168,8 +174,11 @@ export default function ViroARPhase({ arContent, onConfirm, isValidating }: Viro
     }
     // Délai suffisant pour que Viro enregistre cible + material avant de monter la scène
     const t = setTimeout(() => setTargetReady(true), 600);
-    return () => clearTimeout(t);
-  }, [arContent.marker_image, artworkUrl]);
+    return () => {
+      clearTimeout(t);
+      ViroARTrackingTargets.deleteTarget(targetName);
+    };
+  }, [arContent.marker_image, artworkUrl, targetName]);
 
   const isDisabled = !markerDetected || isValidating;
 
@@ -182,6 +191,7 @@ export default function ViroARPhase({ arContent, onConfirm, isValidating }: Viro
             viroAppProps={{
               artworkImage: artworkUrl,
               modelUrl: arContent.model_url ? resolveUrl(arContent.model_url) : undefined,
+              targetName,
               onMarkerFound: onMarkerFoundRef.current,
             }}
             initialScene={{ scene: ARScene }}

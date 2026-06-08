@@ -68,6 +68,15 @@ type GridStep = {
   thumbnail?: string | null;
 };
 
+/** Extrait l'image d'aperçu d'une œuvre AR (marker_image / artwork_image) à partir de ar_content. */
+function getArtworkThumb(ar_content: unknown): string | null {
+  if (!ar_content || typeof ar_content !== 'object') return null;
+  const ac = ar_content as Record<string, unknown>;
+  if (ac.type !== 'ar-3d-spatial') return null;
+  const img = ac.marker_image ?? ac.artwork_image;
+  return typeof img === 'string' ? img : null;
+}
+
 function StepGrid({ steps, currentStepId }: { steps: GridStep[]; currentStepId?: string }) {
   return (
     <View style={styles.gridWrapper}>
@@ -451,6 +460,7 @@ export default function HuntDetailScreen() {
           /* AR ViroReact — marqueur image + contenu 3D */
           <View style={styles.arWrapper}>
             <ARSection
+              key={currentStep?.id ?? 'no-step'}
               arContent={currentStep.ar_content as ArContent}
               onConfirm={handleArConfirm}
               validating={validationState === 'validating'}
@@ -508,14 +518,17 @@ export default function HuntDetailScreen() {
 
       {/* ── Grille des étapes ── */}
       {steps.length > 0 && (
-        <StepGrid steps={steps} currentStepId={currentStep?.id} />
+        <StepGrid
+          steps={steps.map((s) => ({ ...s, thumbnail: getArtworkThumb(s.ar_content) }))}
+          currentStepId={currentStep?.id}
+        />
       )}
 
       {/* ── Sans progress : aperçu grille + Rejoindre ── */}
       {!progress && (
         <>
           <StepGrid
-            steps={hunt.steps.map((s) => ({ ...s, status: 'locked' as const }))}
+            steps={hunt.steps.map((s) => ({ ...s, status: 'locked' as const, thumbnail: getArtworkThumb(s.ar_content) }))}
           />
           <View style={styles.joinSection}>
             {joinError && <Text style={styles.joinError}>{joinError}</Text>}
