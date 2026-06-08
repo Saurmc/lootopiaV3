@@ -204,7 +204,9 @@
     "colStarted": "Started on",
     "colFinished": "Finished on",
     "inProgress": "In progress",
-    "noParticipants": "No participant for this hunt."
+    "noParticipants": "No participant for this hunt.",
+    "participants": "Participants",
+    "exportCsv": "Export CSV"
   },
   "settings": {
     "title": "Settings",

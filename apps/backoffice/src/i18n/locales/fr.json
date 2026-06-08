@@ -204,7 +204,9 @@
     "colStarted": "Démarré le",
     "colFinished": "Terminé le",
     "inProgress": "En cours",
-    "noParticipants": "Aucun participant pour cette chasse."
+    "noParticipants": "Aucun participant pour cette chasse.",
+    "participants": "Participants",
+    "exportCsv": "Exporter CSV"
   },
   "settings": {
     "title": "Paramètres",
