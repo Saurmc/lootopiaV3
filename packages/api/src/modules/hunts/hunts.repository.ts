@@ -72,6 +72,13 @@ export class HuntsRepository {
     return this.repo.save(hunt);
   }
 
+  async updateCoordinates(huntId: string, lng: number, lat: number): Promise<void> {
+    await this.repo.query(
+      `UPDATE hunts SET coordinates = ST_SetSRID(ST_MakePoint($1, $2), 4326) WHERE id = $3`,
+      [lng, lat, huntId],
+    );
+  }
+
   async deleteById(id: string): Promise<void> {
     await this.repo.delete(id);
   }

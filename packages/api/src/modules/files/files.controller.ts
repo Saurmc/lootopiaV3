@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Query,
+  Res,
   UploadedFile,
   UseInterceptors,
   HttpCode,
@@ -10,6 +11,7 @@ import {
   BadRequestException,
   Request,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { extname } from 'path';
@@ -66,5 +68,22 @@ export class FilesController {
     if (!key) throw new BadRequestException('key requis');
     const url = await this.storageService.getPresignedUrl(key);
     return { url };
+  }
+
+  /**
+   * GET /files/serve?key=minio:…
+   * Endpoint public qui streame le fichier depuis MinIO en passant par l'API.
+   * Permet aux clients (mobile, navigateur) de récupérer les fichiers sans accès
+   * direct à MinIO, indépendamment de l'IP réseau.
+   */
+  @Get('serve')
+  async serveFile(@Query('key') key: string, @Res() res: Response) {
+    if (!key || !key.startsWith('minio:')) {
+      throw new BadRequestException('key minio: requis');
+    }
+    const { stream, contentType } = await this.storageService.streamObject(key);
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    stream.pipe(res);
   }
 }

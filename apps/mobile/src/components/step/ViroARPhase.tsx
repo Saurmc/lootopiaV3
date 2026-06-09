@@ -20,13 +20,7 @@ import {
   Viro3DObject,
 } from '@reactvision/react-viro';
 import type { ArContent3DSpatial } from '@lootopia/shared';
-import { API_BASE_URL } from '../../constants/api.constants';
-
-function resolveUrl(url: string): string {
-  if (!url) return url;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return `${API_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
-}
+import { resolveFileUrl } from '../../utils/url.utils';
 
 // ─── Matériaux & animations — enregistrés une seule fois au niveau module ─────
 
@@ -140,8 +134,8 @@ export default function ViroARPhase({ arContent, onConfirm, isValidating }: Viro
   const [markerDetected, setMarkerDetected] = useState(false);
   const [targetReady, setTargetReady] = useState(false);
 
-  const markerUrl  = resolveUrl(arContent.marker_image);
-  const artworkUrl = resolveUrl(arContent.artwork_image ?? arContent.marker_image);
+  const markerUrl  = resolveFileUrl(arContent.marker_image);
+  const artworkUrl = resolveFileUrl(arContent.artwork_image ?? arContent.marker_image);
 
   // Nom de cible unique par étape — évite que la session AR native continue de
   // reconnaître l'image de l'étape précédente (la cible "markerTarget" fixe restait active)
@@ -156,7 +150,6 @@ export default function ViroARPhase({ arContent, onConfirm, isValidating }: Viro
     ViroARTrackingTargets.createTargets({
       [targetName]: {
         source: { uri: markerUrl },
-        orientation: 'Up',
         physicalWidth: 0.2,
       },
     });
@@ -190,7 +183,7 @@ export default function ViroARPhase({ arContent, onConfirm, isValidating }: Viro
             autofocus
             viroAppProps={{
               artworkImage: artworkUrl,
-              modelUrl: arContent.model_url ? resolveUrl(arContent.model_url) : undefined,
+              modelUrl: arContent.model_url ? resolveFileUrl(arContent.model_url) : undefined,
               targetName,
               onMarkerFound: onMarkerFoundRef.current,
             }}

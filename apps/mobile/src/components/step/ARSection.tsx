@@ -11,6 +11,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import type { BarcodeScanningResult } from 'expo-camera';
 import type { ArContent3DSpatial } from '@lootopia/shared';
 import ViroARPhase from './ViroARPhase';
+import { resolveFileUrl } from '../../utils/url.utils';
 
 export type ArContent2DOverlay = { type: '2d-overlay'; image: string };
 export type ArContentQROverlay = { type: 'qr-overlay'; qr_trigger: string; image: string };
@@ -193,7 +194,7 @@ export default function ARSection({ arContent, onConfirm, validating = false, er
 
   return (
     <OverlayPhase
-      image={arContent.image}
+      image={resolveFileUrl(arContent.image)}
       onConfirm={() => onConfirm(scannedCode)}
       validating={validating}
     />

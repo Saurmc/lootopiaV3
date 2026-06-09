@@ -72,24 +72,25 @@ export class HuntsService {
     });
   }
 
-  createHunt(partnerId: string, dto: CreateHuntDto): Promise<HuntEntity> {
-    const coordinates =
-      dto.lat !== undefined && dto.lng !== undefined
-        ? { type: 'Point', coordinates: [dto.lng, dto.lat] }
-        : null;
-
-    return this.huntsRepository.save({
+  async createHunt(partnerId: string, dto: CreateHuntDto): Promise<HuntEntity> {
+    const hunt = await this.huntsRepository.save({
       partner_id: partnerId,
       title: dto.title,
       description: dto.description ?? null,
       location: dto.location ?? null,
-      coordinates,
+      coordinates: null,
       difficulty: dto.difficulty ?? null,
       duration: dto.duration ?? null,
       points: dto.points ?? 0,
       is_active: dto.is_active ?? false,
       image_url: dto.image_url ?? null,
     });
+
+    if (dto.lat !== undefined && dto.lng !== undefined) {
+      await this.huntsRepository.updateCoordinates(hunt.id, dto.lng, dto.lat);
+    }
+
+    return hunt;
   }
 
   async updateHunt(
@@ -114,11 +115,14 @@ export class HuntsService {
     if (dto.points !== undefined) updates.points = dto.points;
     if (dto.is_active !== undefined) updates.is_active = dto.is_active;
     if (dto.image_url !== undefined) updates.image_url = dto.image_url;
+
+    const saved = await this.huntsRepository.save(updates);
+
     if (dto.lat !== undefined && dto.lng !== undefined) {
-      updates.coordinates = { type: 'Point', coordinates: [dto.lng, dto.lat] } as any;
+      await this.huntsRepository.updateCoordinates(huntId, dto.lng, dto.lat);
     }
 
-    return this.huntsRepository.save(updates);
+    return saved;
   }
 
   async getStats(huntId: string, partnerId: string): Promise<HuntStatsDto> {

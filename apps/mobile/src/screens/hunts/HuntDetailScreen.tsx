@@ -28,6 +28,7 @@ import type { StepDetail, StepStatus, HuntProgress } from '../../services/hunt.s
 import type { AppStackParamList } from '../../navigation/AppNavigator';
 import theme from '../../constants/theme';
 import { useTranslation } from 'react-i18next';
+import { resolveFileUrl } from '../../utils/url.utils';
 
 type RouteProps = RouteProp<AppStackParamList, 'HuntDetail'>;
 type NavProp = NativeStackNavigationProp<AppStackParamList, 'HuntDetail'>;
@@ -98,7 +99,7 @@ function StepGrid({ steps, currentStepId }: { steps: GridStep[]; currentStepId?:
             >
               {thumb ? (
                 <>
-                  <Image source={{ uri: thumb }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
+                  <Image source={{ uri: resolveFileUrl(thumb) }} style={StyleSheet.absoluteFillObject} resizeMode="cover" />
                   {isDone && (
                     <View style={styles.gridThumbOverlay}>
                       <Ionicons name="checkmark-circle" size={30} color="#fff" />

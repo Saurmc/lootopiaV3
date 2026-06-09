@@ -1,4 +1,4 @@
-import { api } from './api';
+import { api, BASE_URL } from './api';
 
 export interface FileUploadDto {
   key: string;           // minio: object key — stored in DB
@@ -25,6 +25,8 @@ export const filesService = {
 
   async getPresignedUrl(key: string): Promise<string> {
     if (key.startsWith('http')) return key;
+    // serve path retourné par rewriteArContentUrls → URL absolue via l'API
+    if (key.startsWith('/files/serve')) return `${BASE_URL}${key}`;
     const res = await api.get<{ url: string }>('/files/presign', { params: { key } });
     return res.data.url;
   },

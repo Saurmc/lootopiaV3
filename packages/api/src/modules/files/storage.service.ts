@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as Minio from 'minio';
+import type { Readable } from 'stream';
 
 const MINIO_PREFIX = 'minio:';
 
@@ -14,8 +15,6 @@ export class StorageService {
     this.internalEndpoint = (process.env.S3_ENDPOINT || 'http://localhost:9000').replace(/\/$/, '');
     this.publicEndpoint = (process.env.S3_PUBLIC_ENDPOINT || this.internalEndpoint).replace(/\/$/, '');
 
-    // On configure le client MinIO avec le public endpoint pour que les presigned URLs
-    // soient générées avec la bonne IP dès le départ (la signature inclut le hostname)
     const url = new URL(this.publicEndpoint);
     this.client = new Minio.Client({
       endPoint: url.hostname,
@@ -36,7 +35,6 @@ export class StorageService {
       .slice(0, 40);
   }
 
-  // Extrait la clé objet depuis une URL absolue MinIO stockée en base (avec ou sans query string)
   private extractKeyFromAbsoluteUrl(url: string): string | null {
     try {
       const parsed = new URL(url);
@@ -46,6 +44,14 @@ export class StorageService {
     } catch {
       return null;
     }
+  }
+
+  private toObjectKey(keyOrUrl: string): string | null {
+    if (keyOrUrl.startsWith(MINIO_PREFIX)) return keyOrUrl.slice(MINIO_PREFIX.length);
+    if (keyOrUrl.includes(`:9000/`) || keyOrUrl.startsWith(this.internalEndpoint)) {
+      return this.extractKeyFromAbsoluteUrl(keyOrUrl);
+    }
+    return null;
   }
 
   async upload(
@@ -71,23 +77,36 @@ export class StorageService {
   }
 
   async getPresignedUrl(keyOrUrl: string, expirySeconds = 3600): Promise<string> {
-    // Clé minio: → presigned URL signée avec le public endpoint
-    if (keyOrUrl.startsWith(MINIO_PREFIX)) {
-      const objectKey = keyOrUrl.slice(MINIO_PREFIX.length);
+    const objectKey = this.toObjectKey(keyOrUrl);
+    if (objectKey) {
       return this.client.presignedGetObject(this.bucket, objectKey, expirySeconds);
     }
-
-    // Ancienne URL absolue MinIO (localhost ou autre) → extraire la clé et re-signer
-    if (keyOrUrl.includes(`:9000/`) || keyOrUrl.startsWith(this.internalEndpoint)) {
-      const objectKey = this.extractKeyFromAbsoluteUrl(keyOrUrl);
-      if (objectKey) {
-        return this.client.presignedGetObject(this.bucket, objectKey, expirySeconds);
-      }
-    }
-
     return keyOrUrl;
   }
 
+  /** Retourne un stream du fichier depuis MinIO + son content-type. */
+  async streamObject(keyOrUrl: string): Promise<{ stream: Readable; contentType: string }> {
+    const objectKey = this.toObjectKey(keyOrUrl);
+    if (!objectKey) throw new Error(`Invalid storage key: ${keyOrUrl}`);
+
+    const [stream, stat] = await Promise.all([
+      this.client.getObject(this.bucket, objectKey),
+      this.client.statObject(this.bucket, objectKey),
+    ]);
+
+    const contentType =
+      (stat.metaData?.['content-type'] as string | undefined) ||
+      'application/octet-stream';
+
+    return { stream, contentType };
+  }
+
+  /**
+   * Réécrit les URLs de contenu AR pour qu'elles passent par l'API (/files/serve?key=…)
+   * au lieu de pointer directement sur MinIO.
+   * Cela permet aux clients (mobile, navigateur) d'accéder aux images sans avoir besoin
+   * d'atteindre MinIO directement.
+   */
   async rewriteArContentUrls(
     arContent: Record<string, unknown> | null,
   ): Promise<Record<string, unknown> | null> {
@@ -95,15 +114,21 @@ export class StorageService {
     const ac = { ...arContent };
 
     if (typeof ac.image === 'string') {
-      ac.image = await this.getPresignedUrl(ac.image);
+      ac.image = this.toServeUrl(ac.image);
     }
     if (typeof ac.marker_image === 'string') {
-      ac.marker_image = await this.getPresignedUrl(ac.marker_image);
+      ac.marker_image = this.toServeUrl(ac.marker_image);
     }
     if (typeof ac.artwork_image === 'string') {
-      ac.artwork_image = await this.getPresignedUrl(ac.artwork_image);
+      ac.artwork_image = this.toServeUrl(ac.artwork_image);
     }
 
     return ac;
+  }
+
+  /** Convertit une clé minio: en chemin relatif /files/serve?key=… */
+  toServeUrl(keyOrUrl: string): string {
+    if (!keyOrUrl.startsWith(MINIO_PREFIX)) return keyOrUrl;
+    return `/files/serve?key=${encodeURIComponent(keyOrUrl)}`;
   }
 }
