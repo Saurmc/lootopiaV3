@@ -2,6 +2,7 @@ import { api } from './api';
 
 export interface AuthResponse {
   access_token: string;
+  refresh_token: string;
 }
 
 export const authService = {

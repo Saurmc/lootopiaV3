@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { authService } from '../services/auth.service';
-import { TOKEN_KEY } from '../services/api';
+import { TOKEN_KEY, REFRESH_TOKEN_KEY } from '../services/api';
 
 export const DEVICE_TOKEN_KEY = 'lootopia_device_token';
 export const CONSENT_GPS_KEY = 'lootopia_consent_gps';
@@ -38,7 +39,7 @@ interface AuthState {
   setConsentGps: (consent: boolean) => Promise<void>;
   logout: () => Promise<void>;
   /** @internal */
-  _setToken: (token: string, isGuest?: boolean) => Promise<void>;
+  _setToken: (token: string, refreshToken: string, isGuest?: boolean) => Promise<void>;
 }
 
 function decodeJwtPayload(token: string): Record<string, unknown> {
@@ -63,11 +64,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   initialize: async () => {
     try {
       const [token, consentRaw] = await Promise.all([
-        AsyncStorage.getItem(TOKEN_KEY),
+        SecureStore.getItemAsync(TOKEN_KEY),
         AsyncStorage.getItem(CONSENT_GPS_KEY),
       ]);
       if (token) {
-        await get()._setToken(token);
+        const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
+        await get()._setToken(token, refreshToken ?? '', false);
       }
       if (consentRaw !== null) {
         set({ consentGps: consentRaw === 'true' });
@@ -77,11 +79,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  _setToken: async (token: string, isGuest = false) => {
+  _setToken: async (token: string, refreshToken: string, isGuest = false) => {
     const [, consentRaw] = await Promise.all([
-      AsyncStorage.setItem(TOKEN_KEY, token),
+      SecureStore.setItemAsync(TOKEN_KEY, token),
       AsyncStorage.getItem(CONSENT_GPS_KEY),
     ]);
+    if (refreshToken) {
+      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, refreshToken);
+    }
     const payload = decodeJwtPayload(token);
     const guestFromPayload =
       typeof payload.is_guest === 'boolean' ? payload.is_guest : isGuest;
@@ -101,13 +106,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   login: async (email: string, password: string) => {
-    const { access_token } = await authService.login(email, password);
-    await get()._setToken(access_token, false);
+    const { access_token, refresh_token } = await authService.login(email, password);
+    await get()._setToken(access_token, refresh_token, false);
   },
 
   register: async (email: string, password: string, pseudo: string) => {
-    const { access_token } = await authService.register(email, password, pseudo);
-    await get()._setToken(access_token, false);
+    const { access_token, refresh_token } = await authService.register(email, password, pseudo);
+    await get()._setToken(access_token, refresh_token, false);
   },
 
   loginAsGuest: async () => {
@@ -116,15 +121,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       deviceToken = generateUUID();
       await AsyncStorage.setItem(DEVICE_TOKEN_KEY, deviceToken);
     }
-    const { access_token } = await authService.loginAsGuest(deviceToken);
-    await get()._setToken(access_token, true);
+    const { access_token, refresh_token } = await authService.loginAsGuest(deviceToken);
+    await get()._setToken(access_token, refresh_token, true);
     set({ pendingGpsConsent: true });
   },
 
   convertAccount: async (email: string, password: string) => {
-    const { access_token } = await authService.convertAccount(email, password);
-    // Le même user_id est conservé côté backend, on reçoit un nouveau JWT non-invité
-    await get()._setToken(access_token, false);
+    const { access_token, refresh_token } = await authService.convertAccount(email, password);
+    await get()._setToken(access_token, refresh_token, false);
   },
 
   setConsentGps: async (consent: boolean) => {
@@ -133,7 +137,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    await Promise.all([
+      SecureStore.deleteItemAsync(TOKEN_KEY),
+      SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY),
+    ]);
     set({
       user: null,
       token: null,

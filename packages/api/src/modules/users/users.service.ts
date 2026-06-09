@@ -107,6 +107,13 @@ export class UsersService {
   }
 
   /**
+   * Invalide tous les refresh tokens existants pour cet utilisateur (logout, password change).
+   */
+  async invalidateRefreshTokens(userId: string): Promise<void> {
+    await this.usersRepository.incrementRefreshVersion(userId);
+  }
+
+  /**
    * Supprime définitivement le compte et toutes ses données associées.
    */
   async deleteAccount(userId: string): Promise<void> {

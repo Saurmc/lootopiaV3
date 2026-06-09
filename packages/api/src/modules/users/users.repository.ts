@@ -45,4 +45,8 @@ export class UsersRepository {
   async setBlocked(id: string, is_blocked: boolean): Promise<void> {
     await this.repo.update(id, { is_blocked });
   }
+
+  async incrementRefreshVersion(id: string): Promise<void> {
+    await this.repo.increment({ id }, 'refresh_token_version', 1);
+  }
 }
