@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import FileUpload from '@/components/ui/file-upload';
 import type { CreateStepPayload, StepDto } from '@/services/steps.service';
 
@@ -11,7 +12,7 @@ export interface StepFormValues {
   title: string;
   description: string;
   ar_image_url: string;
-  ar_content_type: string;
+  ar_content_type: 'ar-3d-spatial' | '2d-overlay';
 }
 
 interface StepFormProps {
@@ -28,6 +29,7 @@ function toPayload(v: StepFormValues): CreateStepPayload {
     order: parseInt(v.order, 10) || 0,
     title: v.title.trim(),
     validation_radius: 50,
+    validation_type: 'ar',
   };
   if (v.description.trim()) payload.description = v.description.trim();
   if (v.ar_image_url) {
@@ -46,7 +48,7 @@ function toPayload(v: StepFormValues): CreateStepPayload {
 
 export function stepDtoToFormValues(step: StepDto): StepFormValues {
   const ac = step.ar_content as { type?: string; image?: string; marker_image?: string } | null;
-  const acType = ac?.type ?? '';
+  const acType = ac?.type === '2d-overlay' ? '2d-overlay' : 'ar-3d-spatial';
   const arImageUrl =
     acType === 'ar-3d-spatial' ? (ac?.marker_image ?? '') : (ac?.image ?? '');
   return {
@@ -78,7 +80,7 @@ export default function StepForm({
       title: '',
       description: '',
       ar_image_url: '',
-      ar_content_type: '',
+      ar_content_type: 'ar-3d-spatial',
     },
   });
 
@@ -130,18 +132,38 @@ export default function StepForm({
         />
       </div>
 
+      {/* Mode AR */}
+      <div className="space-y-1.5">
+        <Label>Mode de réalité augmentée</Label>
+        <Select
+          value={arContentType}
+          onValueChange={(v) => setValue('ar_content_type', v as 'ar-3d-spatial' | '2d-overlay')}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ar-3d-spatial">
+              Reconnaissance d'image (scanner une œuvre physique)
+            </SelectItem>
+            <SelectItem value="2d-overlay">
+              Overlay 2D (afficher une image par-dessus la caméra)
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Image AR */}
       <div className="space-y-1.5">
         <Label>
-          {isArSpatial ? 'Image de référence AR (œuvre à scanner)' : 'Image AR'}
+          {isArSpatial ? 'Image de référence (œuvre à scanner)' : 'Image AR'}
           {' '}<span className="text-red-500">*</span>
         </Label>
         <p className="text-xs text-gray-400">
           {isArSpatial
             ? "Photo du tableau ou de l'œuvre physique que l'app reconnaîtra avec la caméra."
-            : "Image importée que le joueur devra scanner avec la caméra pour valider l'étape."}
+            : "Image qui s'affichera en superposition sur la caméra pour valider l'étape."}
         </p>
-        <input type="hidden" {...register('ar_content_type')} />
         <FileUpload
           value={arImageUrl || undefined}
           onChange={(url) => setValue('ar_image_url', url ?? '')}
