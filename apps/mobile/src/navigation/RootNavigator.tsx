@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { useAuthStore } from '../store/auth.store';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 import AppNavigator from './AppNavigator';
 
 /**
@@ -11,6 +12,7 @@ import AppNavigator from './AppNavigator';
  */
 export default function RootNavigator() {
   const { isLoading, initialize } = useAuthStore();
+  useOfflineSync();
 
   useEffect(() => {
     initialize();

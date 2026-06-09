@@ -1,4 +1,5 @@
 import { api } from './api';
+import { offlineService } from './offline.service';
 
 /** Chasse avec coordonnées GPS garanties (pour les marqueurs carte). */
 export interface HuntMapItem {
@@ -209,15 +210,19 @@ export const huntService = {
 
   /**
    * GET /hunts/:id/progress — progression du joueur sur une chasse.
-   * Retourne null si le joueur n'a pas encore rejoint (404).
+   * Falls back to AsyncStorage cache when offline.
    */
   fetchHuntProgress: async (huntId: string): Promise<HuntProgress | null> => {
     try {
       const res = await api.get<HuntProgress>(`/hunts/${huntId}/progress`);
+      await offlineService.cacheHunt(huntId, res.data);
       return res.data;
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 404) return null;
+      if (offlineService.isNetworkError(err)) {
+        return offlineService.getCachedHunt<HuntProgress>(huntId);
+      }
       throw err;
     }
   },
@@ -225,22 +230,30 @@ export const huntService = {
   /** POST /hunts/:id/join — rejoint la chasse et crée l'entrée de progression. */
   joinHunt: async (huntId: string): Promise<HuntProgress> => {
     const res = await api.post<HuntProgress>(`/hunts/${huntId}/join`);
+    await offlineService.cacheHunt(huntId, res.data);
     return res.data;
   },
 
   /**
    * POST /hunts/:id/steps/:stepId/validate — valide l'étape courante.
-   * - GPS    : payload { lat, lng }     → vérification PostGIS
-   * - QR code: payload { qr_code }      → comparaison avec ar_content.expected_code
-   * Lance une erreur 400 si validation échoue (pas assez proche, QR invalide…).
+   * When offline, queues the request for automatic retry on reconnection.
    */
   validateStep: async (
     huntId: string,
     stepId: string,
     payload: { lat: number; lng: number } | { qr_code: string } | { answer: string } | { file_url: string } | { marker_triggered: boolean } | Record<string, unknown>,
   ): Promise<HuntProgress> => {
-    const res = await api.post<HuntProgress>(`/hunts/${huntId}/steps/${stepId}/validate`, payload);
-    return res.data;
+    try {
+      const res = await api.post<HuntProgress>(`/hunts/${huntId}/steps/${stepId}/validate`, payload);
+      await offlineService.cacheHunt(huntId, res.data);
+      return res.data;
+    } catch (err: unknown) {
+      if (offlineService.isNetworkError(err)) {
+        await offlineService.enqueueValidation(huntId, stepId, payload as Record<string, unknown>);
+        throw Object.assign(new Error('offline'), { isOfflineQueued: true });
+      }
+      throw err;
+    }
   },
 
   /**
